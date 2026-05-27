@@ -4,6 +4,7 @@ import sqlite3
 from typing import Any
 
 from alloccontext.horizon import bars_within_horizon, horizon_days
+from alloccontext.ingest.exchange.portfolio import writes_portfolio_snapshot
 from alloccontext.ingest.coinbase_client import CoinbaseError
 from alloccontext.ingest.coinbase_portfolio import (
     build_coinbase_client,
@@ -28,8 +29,12 @@ def refresh_coinbase_exchange(conn: sqlite3.Connection, config) -> dict[str, Any
 
     client = build_coinbase_client(spot)
     try:
-        snap = fetch_portfolio_snapshot(client, spot)
-        upsert_portfolio_snapshot(conn, snap)
+        snap = None
+        portfolio_rows = 0
+        if writes_portfolio_snapshot(config, "coinbase"):
+            snap = fetch_portfolio_snapshot(client, spot)
+            upsert_portfolio_snapshot(conn, snap)
+            portfolio_rows = 1
         bar_rows = 0
         for product_id in spot.pairs:
             bars = client.get_ohlc(product_id, spot.ohlc_interval_minutes)
@@ -43,13 +48,15 @@ def refresh_coinbase_exchange(conn: sqlite3.Connection, config) -> dict[str, Any
     except CoinbaseError as exc:
         return {"ok": False, "error": str(exc), "rows": 0}
 
-    return {
+    result: dict[str, Any] = {
         "ok": True,
-        "rows": 1 + bar_rows,
-        "portfolio": {
+        "rows": portfolio_rows + bar_rows,
+        "market_bars": bar_rows,
+    }
+    if snap is not None:
+        result["portfolio"] = {
             "ts": snap.ts,
             "nav_usd": snap.nav_usd,
             "cash_usd": snap.cash_usd,
-        },
-        "market_bars": bar_rows,
-    }
+        }
+    return result
