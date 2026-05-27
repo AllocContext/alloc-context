@@ -14,7 +14,7 @@ rollup code but serve different audiences.
 |---------|----------|--------|
 | **MCP server `alloc-context`** | Agents + developers | Shipped (stdio, Tier 1) |
 | **x402 paywall** | Agent wallets | Shipped (Phase B) |
-| **Bazaar listing** | Discovery | Phase C |
+| **Bazaar listing** | Discovery | Shipped (Phase C) |
 | **Multi-exchange + BYOK portfolio** | Agents with exchange keys | Phase D |
 | CLI + systemd ingest | Operator self-host | Shipped (moves to core package) |
 | Email briefs + band alerts + LLM synthesis | Operator (you) | Shipped → **Phase E extract** |
@@ -77,9 +77,9 @@ Bazaar title:
 
 ### Phase C — Discovery
 
-- [ ] Bazaar metadata on all paid routes
-- [ ] Listing copy optimized for agent semantic search
-- [ ] Dogfood via `x402-discovery-mcp` in Cursor
+- [x] Bazaar metadata on all paid routes
+- [x] Listing copy optimized for agent semantic search
+- [x] Dogfood via `x402-discovery-mcp` in Cursor
 
 ### Phase D — Personalization & multi-exchange
 

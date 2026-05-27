@@ -3,6 +3,13 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from alloccontext.mcp.bazaar import (
+    LISTING_DESCRIPTION,
+    build_http_route_extensions,
+    public_mcp_url,
+    resolve_public_base_url,
+)
+from x402.extensions.bazaar import bazaar_resource_server_extension
 from x402.http import FacilitatorConfig, HTTPFacilitatorClient
 from x402.http.constants import DEFAULT_FACILITATOR_URL
 from x402.http.types import PaymentOption, RouteConfig
@@ -50,7 +57,15 @@ def build_x402_resource_server(settings: X402Settings) -> x402ResourceServer:
     facilitator = HTTPFacilitatorClient(FacilitatorConfig(url=settings.facilitator_url))
     server = x402ResourceServer(facilitator)
     server.register(settings.network, ExactEvmServerScheme())
+    server.register_extension(bazaar_resource_server_extension)
     return server
+
+
+def _route_resource_url(settings: X402Settings) -> str | None:
+    public_base = resolve_public_base_url()
+    if not public_base:
+        return None
+    return public_mcp_url(base_url=public_base, mcp_path=settings.mcp_path)
 
 
 def build_x402_routes(settings: X402Settings) -> dict[str, RouteConfig]:
@@ -63,11 +78,10 @@ def build_x402_routes(settings: X402Settings) -> dict[str, RouteConfig]:
     return {
         f"POST {settings.mcp_path}": RouteConfig(
             accepts=[option],
+            resource=_route_resource_url(settings),
             mime_type="application/json",
-            description=(
-                "AllocContext MCP — BTC/ETH market context, rebalance moves, "
-                "and allocation band checks (facts only)."
-            ),
+            description=LISTING_DESCRIPTION,
+            extensions=build_http_route_extensions(),
         ),
     }
 

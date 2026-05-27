@@ -45,6 +45,9 @@ export CDP_API_KEY_SECRET=...
 
 See [Coinbase x402 seller quickstart](https://docs.cdp.coinbase.com/x402/quickstart-for-sellers).
 
+Discovery: [mcp-discovery.md](mcp-discovery.md) — Bazaar metadata, `llms.txt`,
+`/.well-known/x402.json`, and x402-discovery-mcp dogfooding.
+
 ## Staleness: `freshness` on `get_market_context`
 
 | Value | Behavior |
