@@ -116,9 +116,19 @@ def cmd_alerts(args: argparse.Namespace) -> int:
 
 
 def cmd_mcp(args: argparse.Namespace) -> int:
-    from alloccontext.mcp.server import run_stdio
+    if args.transport == "http":
+        from alloccontext.mcp.http import run_http
 
-    run_stdio(config_path=args.config)
+        run_http(
+            config_path=args.config,
+            host=args.host,
+            port=args.port,
+            x402=args.x402,
+        )
+    else:
+        from alloccontext.mcp.server import run_stdio
+
+        run_stdio(config_path=args.config)
     return 0
 
 
@@ -167,7 +177,20 @@ def main(argv: list[str] | None = None) -> int:
     alerts_p.add_argument("--email", action="store_true")
     alerts_p.set_defaults(func=cmd_alerts)
 
-    mcp_p = sub.add_parser("mcp", help="Run MCP server over stdio")
+    mcp_p = sub.add_parser("mcp", help="Run MCP server (stdio or HTTP)")
+    mcp_p.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default="stdio",
+        help="stdio for Cursor; http for streamable MCP + optional x402",
+    )
+    mcp_p.add_argument("--host", default="127.0.0.1", help="HTTP bind host")
+    mcp_p.add_argument("--port", type=int, default=8000, help="HTTP bind port")
+    mcp_p.add_argument(
+        "--x402",
+        action="store_true",
+        help="Require x402 USDC payment on HTTP (needs X402_PAY_TO)",
+    )
     mcp_p.set_defaults(func=cmd_mcp)
 
     args = parser.parse_args(argv)

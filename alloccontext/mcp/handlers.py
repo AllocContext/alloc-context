@@ -20,13 +20,28 @@ def _normalize_pct(values: dict[str, float]) -> dict[str, float]:
     return {asset: float(values.get(asset) or 0) for asset in _ASSETS}
 
 
+Freshness = Literal["cached", "live"]
+
+
+def validate_freshness(freshness: str) -> Freshness:
+    if freshness not in ("cached", "live"):
+        raise ValueError("freshness must be 'cached' or 'live'")
+    return freshness  # type: ignore[return-value]
+
+
 def get_market_context(
     conn: sqlite3.Connection,
     config,
     *,
     scope: Scope = "daily",
     as_of: datetime | None = None,
+    freshness: Freshness = "cached",
 ) -> dict[str, Any]:
+    if freshness == "live":
+        from alloccontext.ingest.runner import run_ingest
+
+        run_ingest(conn, config)
+
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -61,6 +76,7 @@ def get_market_context(
     return with_staleness(
         {
             "scope": scope,
+            "freshness": freshness,
             "sentiment": sentiment,
             "macro": macro_subset,
             "etf": etf_block,

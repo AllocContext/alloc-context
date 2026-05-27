@@ -13,7 +13,7 @@ rollup code but serve different audiences.
 | Surface | Audience | Status |
 |---------|----------|--------|
 | **MCP server `alloc-context`** | Agents + developers | Shipped (stdio, Tier 1) |
-| **x402 paywall** | Agent wallets | Phase B |
+| **x402 paywall** | Agent wallets | Shipped (Phase B) |
 | **Bazaar listing** | Discovery | Phase C |
 | **Multi-exchange + BYOK portfolio** | Agents with exchange keys | Phase D |
 | CLI + systemd ingest | Operator self-host | Shipped (moves to core package) |
@@ -70,10 +70,10 @@ Bazaar title:
 
 ### Phase B — x402 gate
 
-- [ ] HTTP / streamable transport for MCP (alongside stdio)
-- [ ] x402 middleware on paid routes
-- [ ] CDP facilitator + seller wallet
-- [ ] Staleness tiers: cached vs on-demand refresh for paid `live` calls
+- [x] HTTP / streamable transport for MCP (alongside stdio)
+- [x] x402 middleware on paid routes (`alloc-context mcp --transport http --x402`)
+- [x] CDP facilitator + seller wallet via env (`X402_*`, `CDP_API_KEY_*`)
+- [x] Staleness tiers: `freshness=cached|live` on `get_market_context`
 
 ### Phase C — Discovery
 

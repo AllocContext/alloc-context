@@ -18,7 +18,13 @@ def _require_mcp():
     return FastMCP
 
 
-def create_server(*, config_path: str | None = None):
+def create_server(
+    *,
+    config_path: str | None = None,
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    stateless_http: bool = True,
+):
     FastMCP = _require_mcp()
     if config_path:
         os.environ.setdefault("ALLOC_CONTEXT_CONFIG", config_path)
@@ -28,6 +34,9 @@ def create_server(*, config_path: str | None = None):
     mcp = FastMCP(
         "alloc-context",
         json_response=True,
+        host=host,
+        port=port,
+        stateless_http=stateless_http,
         instructions=(
             "BTC/ETH allocation context: fused market backdrop from cached ingest, "
             "USD rebalance moves, and allocation band checks. Facts only — no LLM."
@@ -38,22 +47,29 @@ def create_server(*, config_path: str | None = None):
         name="get_market_context",
         description=(
             "Fused market backdrop: sentiment (Fear & Greed, Kalshi), macro events, "
-            "FRED indicators, ETF flows, and market breadth. Requires local ingest DB."
+            "FRED indicators, ETF flows, and market breadth. freshness=cached uses the "
+            "local ingest DB; freshness=live runs ingest first (requires operator keys)."
         ),
     )
-    def get_market_context(scope: str = "daily") -> dict[str, Any]:
+    def get_market_context(scope: str = "daily", freshness: str = "cached") -> dict[str, Any]:
         """Return ContextBundle subset for daily or weekly scope."""
-        validated = handlers.validate_scope(scope)
+        validated_scope = handlers.validate_scope(scope)
+        validated_freshness = handlers.validate_freshness(freshness)
         conn = connect(config.paths.db)
         try:
-            return handlers.get_market_context(conn, config, scope=validated)
+            return handlers.get_market_context(
+                conn,
+                config,
+                scope=validated_scope,
+                freshness=validated_freshness,
+            )
         finally:
             conn.close()
 
     @mcp.tool(
         name="get_rebalance_plan",
         description=(
-            "USD deltas and Kraken-style move lines to reach a target BTC/ETH/CASH "
+            "USD deltas and exchange-style move lines to reach a target BTC/ETH/CASH "
             "split. Pure math — no exchange keys."
         ),
     )
