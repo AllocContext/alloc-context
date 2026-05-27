@@ -12,8 +12,14 @@ Ensure ingest has populated a local SQLite DB (`python -m alloccontext ingest`).
 
 ## Configure Cursor
 
-Copy [cursor-mcp.example.json](cursor-mcp.example.json) into your Cursor MCP
-settings and set absolute paths for `ALLOC_CONTEXT_CONFIG` and
+This repo includes [`.cursor/mcp.json`](../.cursor/mcp.json) with
+`${workspaceFolder}` paths. Open the **alloc-context** project root in Cursor
+(or use global config below) and reload the window.
+
+Requires `pip install -e ".[mcp]"` so `.venv/bin/alloc-context` exists.
+
+Copy [cursor-mcp.example.json](cursor-mcp.example.json) if you prefer manual
+setup, and set absolute paths for `ALLOC_CONTEXT_CONFIG` and
 `ALLOC_CONTEXT_DB`.
 
 Or merge this block into `.cursor/mcp.json`:

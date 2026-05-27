@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "alloc-context": {
+      "command": "${workspaceFolder}/.venv/bin/alloc-context",
+      "args": ["mcp"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ALLOC_CONTEXT_CONFIG": "${workspaceFolder}/config/config.example.yaml",
+        "ALLOC_CONTEXT_DB": "${workspaceFolder}/state/alloccontext.db"
+      }
+    }
+  }
+}
