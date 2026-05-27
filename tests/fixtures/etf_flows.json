@@ -1,0 +1,44 @@
+{
+  "btc": {
+    "daily": [
+      {
+        "date": "2026-05-20",
+        "totalNetInflow": 131.3
+      },
+      {
+        "date": "2026-05-21",
+        "totalNetInflow": -290.4
+      }
+    ],
+    "by_ticker": [
+      {
+        "ticker": "IBIT",
+        "flow_date": "2026-05-21",
+        "net_flow_usd": 64.1,
+        "institute": "BlackRock"
+      },
+      {
+        "ticker": "FBTC",
+        "flow_date": "2026-05-21",
+        "net_flow_usd": -32.9,
+        "institute": "Fidelity"
+      }
+    ]
+  },
+  "eth": {
+    "daily": [
+      {
+        "date": "2026-05-21",
+        "totalNetInflow": 45.2
+      }
+    ],
+    "by_ticker": [
+      {
+        "ticker": "ETHA",
+        "flow_date": "2026-05-21",
+        "net_flow_usd": 28.0,
+        "institute": "BlackRock"
+      }
+    ]
+  }
+}

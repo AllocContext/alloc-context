@@ -1,0 +1,61 @@
+# Curated US macro events — no API key required.
+# Dynamic releases (CPI, NFP, etc.) come from Finnhub/FMP when configured.
+# FOMC dates from https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+
+schema_version: 1
+timezone: America/New_York
+
+events:
+  - date: "2026-01-28"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-03-18"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-04-29"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-06-17"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-07-29"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-09-16"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-11-04"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-12-16"
+    time: "14:00"
+    name: FOMC statement
+    impact: high
+    category: monetary
+
+  - date: "2026-08-21"
+    time: "10:00"
+    name: Jackson Hole symposium (Powell speech window)
+    impact: high
+    category: monetary

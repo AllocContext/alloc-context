@@ -1,0 +1,39 @@
+{
+  "economicCalendar": [
+    {
+      "country": "US",
+      "event": "Consumer Price Index (CPI) MoM",
+      "impact": "high",
+      "time": "08:30:00",
+      "date": "2026-05-13",
+      "estimate": 0.3,
+      "prev": 0.2,
+      "actual": 0.4,
+      "unit": "%"
+    },
+    {
+      "country": "US",
+      "event": "Initial Jobless Claims",
+      "impact": "low",
+      "time": "08:30:00",
+      "date": "2026-05-22"
+    },
+    {
+      "country": "US",
+      "event": "Non-Farm Payrolls",
+      "impact": "high",
+      "time": "08:30:00",
+      "date": "2026-06-05",
+      "estimate": 180,
+      "prev": 175,
+      "unit": "K"
+    },
+    {
+      "country": "EU",
+      "event": "ECB rate decision",
+      "impact": "high",
+      "time": "08:15:00",
+      "date": "2026-05-28"
+    }
+  ]
+}

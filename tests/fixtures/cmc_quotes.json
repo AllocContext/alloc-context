@@ -1,0 +1,26 @@
+{
+  "data": {
+    "BTC": {
+      "symbol": "BTC",
+      "cmc_rank": 1,
+      "quote": {
+        "USD": {
+          "price": 98450.0,
+          "market_cap": 1948000000000,
+          "percent_change_24h": -1.3
+        }
+      }
+    },
+    "ETH": {
+      "symbol": "ETH",
+      "cmc_rank": 2,
+      "quote": {
+        "USD": {
+          "price": 3448.0,
+          "market_cap": 414500000000,
+          "percent_change_24h": -0.9
+        }
+      }
+    }
+  }
+}

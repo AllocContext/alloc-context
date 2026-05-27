@@ -1,0 +1,1 @@
+"""AllocContext MCP server (stdio)."""

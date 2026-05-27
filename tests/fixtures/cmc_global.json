@@ -1,0 +1,11 @@
+{
+  "data": {
+    "btc_dominance": 62.1,
+    "eth_dominance": 9.4,
+    "quote": {
+      "USD": {
+        "total_market_cap": 3245000000000
+      }
+    }
+  }
+}

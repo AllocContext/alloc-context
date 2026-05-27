@@ -1,0 +1,22 @@
+# FRED series pulled during ingest (requires FRED_API_KEY).
+# See https://fred.stlouisfed.org/docs/api/fred/series_observations.html
+
+series:
+  - id: DGS10
+    label: 10-Year Treasury Yield
+    category: rates
+  - id: DGS2
+    label: 2-Year Treasury Yield
+    category: rates
+  - id: FEDFUNDS
+    label: Fed Funds Effective Rate
+    category: rates
+  - id: DTWEXBGS
+    label: Trade Weighted USD Index (Broad)
+    category: fx
+  - id: CPIAUCSL
+    label: CPI All Urban Consumers
+    category: inflation
+  - id: UNRATE
+    label: Unemployment Rate
+    category: labor

@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "data": [
+    {
+      "date": "2026-05-20",
+      "totalNetInflow": 131.3,
+      "totalValueTraded": 2500.0,
+      "totalNetAssets": 580000.0,
+      "cumNetInflow": 35000.0
+    },
+    {
+      "date": "2026-05-21",
+      "totalNetInflow": -290.4,
+      "totalValueTraded": 2100.0,
+      "totalNetAssets": 579000.0,
+      "cumNetInflow": 34710.0
+    }
+  ]
+}

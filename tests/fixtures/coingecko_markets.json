@@ -1,0 +1,18 @@
+[
+  {
+    "id": "bitcoin",
+    "symbol": "btc",
+    "market_cap_rank": 1,
+    "current_price": 98500.12,
+    "market_cap": 1950000000000,
+    "price_change_percentage_24h": -1.25
+  },
+  {
+    "id": "ethereum",
+    "symbol": "eth",
+    "market_cap_rank": 2,
+    "current_price": 3450.55,
+    "market_cap": 415000000000,
+    "price_change_percentage_24h": -0.85
+  }
+]

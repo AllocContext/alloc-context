@@ -1,0 +1,118 @@
+# Copy to config/config.yaml (gitignored) or set ALLOC_CONTEXT_CONFIG.
+
+paths:
+  db: state/alloccontext.db
+
+# Quarterly retention for stored history (F&G, OHLC, snapshots, rollups).
+horizon:
+  days: 90
+
+portfolio:
+  target_allocations:
+    BTC: 0.70
+    ETH: 0.30
+    CASH: 0.00
+  rebalance_band: 0.15
+  max_cash_risk_off: 0.50
+  notes: >
+    Target 70% BTC / 30% ETH when fully invested. Manual trading on Kraken.
+
+ingest:
+  interval_minutes: 60
+  sources:
+    kraken: true
+    coinbase: false
+    kalshi: true
+    fear_greed: true
+    macro_calendar: true
+    etf_flows: true
+    coingecko: true
+    coinmarketcap: true
+    fred: true
+
+# Primary spot exchange for portfolio + OHLC ingest.
+# Top-level `kraken:` block is still accepted when `exchanges` is omitted.
+exchanges:
+  primary: kraken
+  kraken:
+    enabled: true
+    ohlc_interval_minutes: 1440
+    pairs: [XBTUSD, ETHUSD]
+    retry_backoff_seconds: 2.0
+    max_retries: 3
+  coinbase:
+    enabled: false
+    ohlc_interval_minutes: 1440
+    pairs: [BTC-USD, ETH-USD]
+    retry_backoff_seconds: 2.0
+    max_retries: 3
+
+kalshi:
+  use_api: true
+  base_url: https://api.elections.kalshi.com/trade-api/v2
+  timeout_seconds: 20
+  cf_history_max_age_minutes: 90
+  series:
+    - asset: BTC
+      series: KXBTCD
+      cf_index: BRTI
+    - asset: ETH
+      series: KXETHD
+      cf_index: ETHUSD_RTI
+  fallback_tactical_snapshot: null
+  fallback_state: null
+  fallback_daily_archive: null
+
+rollup:
+  crypto:
+    - asset: BTC
+      cf_index: BRTI
+    - asset: ETH
+      cf_index: ETHUSD_RTI
+  trend_filter:
+    enabled: true
+    lookback_minutes: 60
+    min_samples: 4
+  context_filter:
+    min_samples_short: 2
+    short_drift_5m_minutes: 60
+    short_drift_15m_minutes: 60
+    volatility_lookback_minutes: 60
+    medium_volatility_pct: 0.15
+    high_volatility_pct: 0.25
+  cluster:
+    enabled: true
+    btc_weight: 0.45
+    eth_weight: 0.30
+    leader_assets: [BTC, ETH]
+    drift_lookback_minutes: 60
+
+macro:
+  static_calendar: config/macro-calendar.yaml
+  countries: [US]
+  min_impact: medium
+  fetch_past_days: 7
+  fetch_future_days: 28
+  finnhub_enabled: true
+  fmp_enabled: false
+  timeout_seconds: 20
+
+etf:
+  assets: [BTC, ETH]
+  sosovalue_enabled: true
+  fallback_snapshot: null
+  timeout_seconds: 20
+
+coingecko:
+  coin_ids: [bitcoin, ethereum]
+  use_demo_key: true
+  timeout_seconds: 20
+
+coinmarketcap:
+  symbols: [BTC, ETH]
+  timeout_seconds: 20
+
+fred:
+  series_catalog: config/fred-series.yaml
+  lookback_days: 120
+  timeout_seconds: 20
