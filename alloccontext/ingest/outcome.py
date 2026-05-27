@@ -3,6 +3,22 @@ from __future__ import annotations
 from typing import Any
 
 
+def skipped_source_error(
+    source: str,
+    result: dict[str, Any],
+    optional_sources: frozenset[str],
+) -> str | None:
+    """Map required-source skips to ingest errors."""
+    if not result.get("skipped"):
+        return None
+    if source in optional_sources:
+        return None
+    reason = str(result.get("reason") or "skipped")
+    if reason in {"exchange_disabled", "not_implemented"}:
+        return None
+    return reason
+
+
 def classify_ingest_errors(
     errors: dict[str, str],
     optional_sources: frozenset[str],

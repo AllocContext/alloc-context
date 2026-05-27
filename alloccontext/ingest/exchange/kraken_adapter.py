@@ -21,22 +21,18 @@ def refresh_kraken_exchange(conn: sqlite3.Connection, config) -> dict[str, Any]:
         return {"ok": True, "rows": 0, "skipped": True, "reason": "exchange_disabled"}
 
     creds = load_kraken_credentials()
-    if not creds:
-        return {
-            "ok": True,
-            "rows": 0,
-            "skipped": True,
-            "reason": "missing_kraken_credentials",
-        }
-
     client = build_kraken_client(spot)
+    portfolio_skipped = False
     try:
         snap = None
         portfolio_rows = 0
         if writes_portfolio_snapshot(config, "kraken"):
-            snap = fetch_portfolio_snapshot(client, spot)
-            upsert_portfolio_snapshot(conn, snap)
-            portfolio_rows = 1
+            if creds:
+                snap = fetch_portfolio_snapshot(client, spot)
+                upsert_portfolio_snapshot(conn, snap)
+                portfolio_rows = 1
+            else:
+                portfolio_skipped = True
         bar_rows = 0
         for pair in spot.pairs:
             bars = client.get_ohlc(pair, spot.ohlc_interval_minutes)
@@ -61,4 +57,7 @@ def refresh_kraken_exchange(conn: sqlite3.Connection, config) -> dict[str, Any]:
             "nav_usd": snap.nav_usd,
             "cash_usd": snap.cash_usd,
         }
+    if portfolio_skipped:
+        result["portfolio_skipped"] = True
+        result["portfolio_skip_reason"] = "missing_kraken_credentials"
     return result

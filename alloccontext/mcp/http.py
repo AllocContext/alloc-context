@@ -53,6 +53,11 @@ def _well_known_x402(settings: X402Settings) -> JSONResponse:
     return JSONResponse(payload)
 
 
+def _is_loopback_host(host: str) -> bool:
+    normalized = host.strip().lower()
+    return normalized in {"127.0.0.1", "localhost", "::1"}
+
+
 def build_http_app(
     *,
     config_path: str | None = None,
@@ -61,6 +66,10 @@ def build_http_app(
     stateless_http: bool = True,
     x402: bool = False,
 ) -> Starlette:
+    if not _is_loopback_host(host) and not x402:
+        raise RuntimeError(
+            "HTTP MCP on a non-loopback host requires x402 payment protection"
+        )
     mcp = create_server(
         config_path=config_path,
         host=host,

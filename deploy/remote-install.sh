@@ -34,6 +34,7 @@ install_systemd_unit() {
     sed \
       -e "s|/opt/alloc-context|${REMOTE}|g" \
       -e "s|EnvironmentFile=-.*|EnvironmentFile=${ENV_FILE}|g" \
+      -e "s|EnvironmentFile=/.*|EnvironmentFile=${ENV_FILE}|g" \
       "${src}" > "${dest}"
   else
     cp "${src}" "${dest}"

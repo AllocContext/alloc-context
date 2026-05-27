@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from alloccontext.horizon import horizon_days
-from alloccontext.ingest.outcome import summarize_ingest_outcome
+from alloccontext.ingest.outcome import skipped_source_error, summarize_ingest_outcome
 from alloccontext.ingest.coingecko import refresh_coingecko
 from alloccontext.ingest.coinmarketcap import refresh_coinmarketcap
 from alloccontext.ingest.etf_flows import refresh_etf_flows
@@ -56,8 +56,15 @@ def _run_source(
 
     finished = _now_iso()
     rows = int(result.get("rows") or 0)
+    skip_error = skipped_source_error(
+        source,
+        result,
+        config.ingest.optional_sources,
+    )
     error = None if result.get("ok") else str(result.get("error") or "failed")
-    if result.get("skipped"):
+    if skip_error:
+        error = skip_error
+    elif result.get("skipped"):
         error = None
     record_ingest_run(
         conn,
@@ -92,27 +99,35 @@ def run_ingest(
         result = _run_source(conn, config, source)
         results[source] = result
         counts[source] = int(result.get("rows") or 0)
-        if not result.get("ok") and not result.get("skipped"):
+        skip_error = skipped_source_error(
+            source,
+            result,
+            config.ingest.optional_sources,
+        )
+        if skip_error:
+            errors[source] = skip_error
+        elif not result.get("ok") and not result.get("skipped"):
             errors[source] = str(result.get("error") or "failed")
 
+    outcome = summarize_ingest_outcome(errors, config.ingest.optional_sources)
     pruned: dict[str, int] = {}
     snapshots: dict[str, str] = {}
     if not dry_run:
         pruned = prune_to_horizon(conn, config)
-        from alloccontext.rollup.context import Scope, build_context_bundle
+        if not outcome["fatal_errors"]:
+            from alloccontext.rollup.context import Scope, build_context_bundle
 
-        for scope in ("daily", "weekly"):
-            scope_lit: Scope = scope  # type: ignore[assignment]
-            bundle = build_context_bundle(
-                conn,
-                config,
-                scope=scope_lit,
-                rollup=config.rollup,
-                save_snapshot=True,
-            )
-            snapshots[scope] = bundle["as_of"]
+            for scope in ("daily", "weekly"):
+                scope_lit: Scope = scope  # type: ignore[assignment]
+                bundle = build_context_bundle(
+                    conn,
+                    config,
+                    scope=scope_lit,
+                    rollup=config.rollup,
+                    save_snapshot=True,
+                )
+                snapshots[scope] = bundle["as_of"]
 
-    outcome = summarize_ingest_outcome(errors, config.ingest.optional_sources)
     return {
         "counts": counts,
         "results": results,

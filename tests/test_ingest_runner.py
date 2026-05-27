@@ -83,6 +83,43 @@ def test_run_ingest_optional_source_failure_still_ok(config, conn, monkeypatch) 
     assert result["optional_errors"]["fred"] == "HTTP 502"
 
 
+def test_run_ingest_skips_snapshots_on_fatal_error(config, conn, monkeypatch) -> None:
+    monkeypatch.setenv("KRAKEN_API_KEY", "test-key")
+    monkeypatch.setenv("KRAKEN_API_SECRET", "dGVzdA==")
+    with patch(
+        "alloccontext.ingest.runner.refresh_fear_greed",
+        return_value={"ok": False, "error": "down", "rows": 0},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_kraken",
+        return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_kalshi",
+        return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_macro_calendar",
+        return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_etf_flows",
+        return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_coingecko",
+        return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_coinmarketcap",
+        return_value={"ok": True, "rows": 0, "skipped": True},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_fred",
+        return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.rollup.context.build_context_bundle",
+    ) as mock_bundle:
+        result = run_ingest(conn, config)
+
+    assert result["ok"] is False
+    assert result["snapshots"] == {}
+    mock_bundle.assert_not_called()
+
+
 def test_run_ingest_dry_run(config, conn) -> None:
     result = run_ingest(conn, config, dry_run=True)
     assert result["dry_run"] is True

@@ -3,6 +3,7 @@ from __future__ import annotations
 from alloccontext.ingest.outcome import (
     classify_ingest_errors,
     ingest_ok,
+    skipped_source_error,
     summarize_ingest_outcome,
 )
 
@@ -39,3 +40,24 @@ def test_summarize_ingest_outcome_mixed() -> None:
     assert outcome["partial"] is False
     assert outcome["fatal_errors"] == {"kraken": "down"}
     assert outcome["optional_errors"] == {"fred": "502"}
+
+
+def test_skipped_required_source_is_error() -> None:
+    optional = frozenset({"fred"})
+    result = {"ok": True, "skipped": True, "reason": "rate_limited"}
+    assert skipped_source_error("coingecko", result, optional) == "rate_limited"
+    assert skipped_source_error("fred", result, optional) is None
+    assert (
+        skipped_source_error(
+            "social",
+            {"ok": True, "skipped": True, "reason": "not_implemented"},
+            optional,
+        )
+        is None
+    )
+
+
+def test_skipped_exchange_disabled_not_error() -> None:
+    optional = frozenset()
+    result = {"ok": True, "skipped": True, "reason": "exchange_disabled"}
+    assert skipped_source_error("kraken", result, optional) is None

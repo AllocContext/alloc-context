@@ -77,13 +77,21 @@ def test_upsert_market_bars(conn) -> None:
     assert count == 1
 
 
-def test_refresh_kraken_missing_credentials(conn, config, monkeypatch) -> None:
+def test_refresh_kraken_missing_credentials_still_fetches_ohlc(
+    conn, config, monkeypatch
+) -> None:
     monkeypatch.delenv("KRAKEN_API_KEY", raising=False)
     monkeypatch.delenv("KRAKEN_API_SECRET", raising=False)
-    result = refresh_kraken(conn, config)
+    fake = FakeKrakenClient()
+    with patch(
+        "alloccontext.ingest.exchange.kraken_adapter.build_kraken_client",
+        return_value=fake,
+    ):
+        result = refresh_kraken(conn, config)
     assert result["ok"] is True
-    assert result["skipped"] is True
-    assert result["reason"] == "missing_kraken_credentials"
+    assert result.get("skipped") is not True
+    assert result["portfolio_skipped"] is True
+    assert result["market_bars"] > 0
 
 
 def test_refresh_kraken_success(conn, config, monkeypatch) -> None:

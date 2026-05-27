@@ -62,6 +62,23 @@ def test_build_http_app_without_x402() -> None:
     assert app is not None
 
 
+def test_build_http_app_rejects_public_bind_without_x402() -> None:
+    pytest.importorskip("x402")
+    from alloccontext.mcp.http import build_http_app
+
+    with pytest.raises(RuntimeError, match="non-loopback"):
+        build_http_app(host="0.0.0.0", x402=False)
+
+
+def test_build_http_app_allows_public_bind_with_x402(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("x402")
+    monkeypatch.setenv("X402_PAY_TO", "0xSeller")
+    from alloccontext.mcp.http import build_http_app
+
+    app = build_http_app(host="0.0.0.0", x402=True)
+    assert app is not None
+
+
 def test_build_http_app_with_x402(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("x402")
     monkeypatch.setenv("X402_PAY_TO", "0xSeller")
