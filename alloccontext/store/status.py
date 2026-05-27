@@ -4,6 +4,19 @@ import sqlite3
 from typing import Any
 
 
+def _source_health(last_by_source: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    health: dict[str, dict[str, Any]] = {}
+    for source, row in last_by_source.items():
+        error = row.get("error")
+        health[source] = {
+            "ok": error is None,
+            "finished_at": row.get("finished_at"),
+            "rows_upserted": row.get("rows_upserted"),
+            "error": error,
+        }
+    return health
+
+
 def ingest_status(conn: sqlite3.Connection) -> dict[str, Any]:
     fg = conn.execute(
         """
@@ -42,5 +55,6 @@ def ingest_status(conn: sqlite3.Connection) -> dict[str, Any]:
         "portfolio_latest": dict(portfolio) if portfolio else None,
         "market_bars": [dict(row) for row in bars],
         "last_ingest_by_source": last_by_source,
+        "source_health": _source_health(last_by_source),
         "recent_ingest": [dict(row) for row in recent_ingest[:10]],
     }

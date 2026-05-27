@@ -21,7 +21,10 @@ def _ok(message: str) -> None:
 
 def main() -> None:
     public_url = os.environ.get("X402_PUBLIC_URL", "").rstrip("/")
-    local_url = os.environ.get("X402_CHECK_LOCAL", "").rstrip("/")
+    local_url = os.environ.get(
+        "X402_CHECK_LOCAL",
+        "http://127.0.0.1:8000",
+    ).rstrip("/")
     pay_to = os.environ.get("X402_PAY_TO", "").strip()
     network = os.environ.get("X402_NETWORK", "eip155:84532").strip()
     facilitator = os.environ.get(

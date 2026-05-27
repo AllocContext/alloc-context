@@ -207,6 +207,102 @@ def create_server(
         """Evaluate allocation drift against band width (default 0.15 = 15%)."""
         return handlers.check_band(allocation_pct, target_pct, band)
 
+    @mcp.tool(
+        name="get_context_at",
+        description=(
+            "Load a saved ContextBundle snapshot from ingest history. "
+            "as_of is an ISO timestamp; match=at_or_before returns the latest "
+            "snapshot on or before that time."
+        ),
+    )
+    def get_context_at(
+        as_of: str,
+        scope: str = "daily",
+        match: str = "at_or_before",
+        assets: list[str] | None = None,
+        target_pct: dict[str, float] | None = None,
+        band: float | None = None,
+    ) -> dict[str, Any]:
+        validated_scope = handlers.validate_scope(scope)
+        if match not in ("exact", "at_or_before"):
+            raise ValueError("match must be 'exact' or 'at_or_before'")
+        conn = connect(config.paths.db)
+        try:
+            return handlers.get_context_at(
+                conn,
+                config,
+                scope=validated_scope,
+                as_of=as_of,
+                match=match,  # type: ignore[arg-type]
+                assets=assets,
+                target_pct=target_pct,
+                band=band,
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool(
+        name="get_context_delta",
+        description=(
+            "Compare two ContextBundle snapshots and return notable_shifts. "
+            "prior_as_of is required; omit current_as_of for latest live bundle."
+        ),
+    )
+    def get_context_delta(
+        prior_as_of: str,
+        scope: str = "daily",
+        current_as_of: str | None = None,
+        assets: list[str] | None = None,
+    ) -> dict[str, Any]:
+        validated_scope = handlers.validate_scope(scope)
+        conn = connect(config.paths.db)
+        try:
+            return handlers.get_context_delta(
+                conn,
+                config,
+                scope=validated_scope,
+                prior_as_of=prior_as_of,
+                current_as_of=current_as_of,
+                assets=assets,
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool(
+        name="check_allocation_bands",
+        description=(
+            "Evaluate allocation drift against multiple target_pct/band "
+            "scenarios in one call. Each scenario needs target_pct; optional "
+            "name and band (default 0.15)."
+        ),
+    )
+    def check_allocation_bands(
+        allocation_pct: dict[str, float],
+        scenarios: list[dict[str, float]],
+    ) -> dict[str, Any]:
+        return handlers.check_allocation_bands(allocation_pct, scenarios)
+
+    schema_path = (
+        __import__("pathlib").Path(__file__).resolve().parent.parent.parent
+        / "schemas"
+        / "context-bundle.v1.json"
+    )
+
+    @mcp.resource("context-bundle://schema/v1")
+    def context_bundle_schema() -> str:
+        """ContextBundle JSON Schema for agent validation."""
+        return schema_path.read_text(encoding="utf-8")
+
+    @mcp.resource("alloc-context://tools/rebalance-hints")
+    def rebalance_hint_guide() -> str:
+        """Meaning of portfolio rebalance_hint codes."""
+        return (
+            "rebalance_hint codes: within_band — drift inside band; "
+            "consider_deploy_cash — cash above target; "
+            "consider_trim_to_cash — cash below target; "
+            "consider_rebalance — drift exceeds band."
+        )
+
     return mcp
 
 

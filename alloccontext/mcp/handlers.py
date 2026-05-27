@@ -23,7 +23,13 @@ from alloccontext.mcp.assets import (
     validate_view_assets,
 )
 from alloccontext.mcp.staleness import with_staleness
+from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.regime import build_regime_context
+from alloccontext.rollup.snapshots import (
+    SnapshotNotFoundError,
+    load_context_bundle_snapshot,
+    resolve_context_snapshot_as_of,
+)
 from alloccontext.timeutil import utc_now
 
 _ASSETS = ("BTC", "ETH", "CASH")
@@ -85,6 +91,132 @@ def _apply_allocation_targets(
     return updated
 
 
+def _attach_regime(bundle: dict[str, Any], config) -> dict[str, Any]:
+    bundle["regime"] = build_regime_context(
+        portfolio=bundle.get("portfolio") or {},
+        sentiment=bundle.get("sentiment") or {},
+        delta=bundle.get("delta") or {},
+        prior_as_of=bundle.get("prior_as_of"),
+        max_cash_risk_off=config.portfolio.max_cash_risk_off,
+    )
+    return bundle
+
+
+def get_context_at(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    scope: Scope = "daily",
+    as_of: str,
+    match: Literal["exact", "at_or_before"] = "at_or_before",
+    assets: list[str] | None = None,
+    target_pct: dict[str, float] | None = None,
+    band: float | None = None,
+) -> dict[str, Any]:
+    view_assets = validate_view_assets(assets)
+    resolved = resolve_context_snapshot_as_of(
+        conn,
+        scope=scope,
+        as_of=as_of,
+        mode=match,
+    )
+    bundle = load_context_bundle_snapshot(conn, scope=scope, as_of=resolved)
+    if target_pct is not None or band is not None:
+        bundle["portfolio"] = _apply_allocation_targets(
+            bundle.get("portfolio") or {},
+            config,
+            target_pct=target_pct,
+            band=band,
+        )
+    bundle = apply_assets_filter_to_bundle(bundle, view_assets)
+    bundle = _attach_regime(bundle, config)
+    if target_pct is not None:
+        bundle["target_pct"] = _normalize_pct(target_pct)
+    if band is not None:
+        bundle["band"] = float(band)
+    bundle["snapshot_as_of"] = resolved
+    bundle["requested_as_of"] = as_of
+    bundle["match"] = match
+    return bundle
+
+
+def get_context_delta(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    scope: Scope = "daily",
+    prior_as_of: str,
+    current_as_of: str | None = None,
+    assets: list[str] | None = None,
+) -> dict[str, Any]:
+    view_assets = validate_view_assets(assets)
+    prior_resolved = resolve_context_snapshot_as_of(
+        conn,
+        scope=scope,
+        as_of=prior_as_of,
+        mode="at_or_before",
+    )
+    prior = load_context_bundle_snapshot(conn, scope=scope, as_of=prior_resolved)
+    if current_as_of:
+        current_resolved = resolve_context_snapshot_as_of(
+            conn,
+            scope=scope,
+            as_of=current_as_of,
+            mode="at_or_before",
+        )
+        current = load_context_bundle_snapshot(conn, scope=scope, as_of=current_resolved)
+    else:
+        from alloccontext.rollup.context import build_context_bundle
+
+        current = build_context_bundle(
+            conn,
+            config,
+            scope=scope,
+            rollup=config.rollup,
+            save_snapshot=False,
+        )
+        current_resolved = current.get("as_of")
+
+    prior = apply_assets_filter_to_bundle(prior, view_assets)
+    current = apply_assets_filter_to_bundle(current, view_assets)
+    diff = compare_context_bundles(prior, current)
+    diff["scope"] = scope
+    diff["prior_snapshot_as_of"] = prior_resolved
+    diff["current_snapshot_as_of"] = current_resolved
+    return diff
+
+
+def check_allocation_bands(
+    allocation_pct: dict[str, float],
+    scenarios: list[dict[str, Any]],
+    *,
+    as_of: datetime | None = None,
+) -> dict[str, Any]:
+    now = (as_of or utc_now()).replace(microsecond=0)
+    normalized_allocation = _normalize_pct(allocation_pct)
+    results: list[dict[str, Any]] = []
+    for index, scenario in enumerate(scenarios):
+        name = str(scenario.get("name") or f"scenario_{index + 1}")
+        target = _normalize_pct(scenario.get("target_pct") or {})
+        band = float(scenario.get("band", 0.15))
+        check = check_allocation_band(normalized_allocation, target, band)
+        results.append(
+            {
+                "name": name,
+                "target_pct": target,
+                "band": band,
+                **check,
+            }
+        )
+    return with_staleness(
+        {
+            "allocation_pct": normalized_allocation,
+            "scenarios": results,
+        },
+        as_of=now,
+    )
+
+
 def get_context_bundle(
     conn: sqlite3.Connection,
     config,
@@ -124,12 +256,7 @@ def get_context_bundle(
             band=band,
         )
     bundle = apply_assets_filter_to_bundle(bundle, view_assets)
-    bundle["regime"] = build_regime_context(
-        portfolio=bundle.get("portfolio") or {},
-        sentiment=bundle.get("sentiment") or {},
-        delta=bundle.get("delta") or {},
-        prior_as_of=bundle.get("prior_as_of"),
-    )
+    bundle = _attach_regime(bundle, config)
     if target_pct is not None:
         bundle["target_pct"] = _normalize_pct(target_pct)
     if band is not None:

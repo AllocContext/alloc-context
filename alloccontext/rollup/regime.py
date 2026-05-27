@@ -19,6 +19,7 @@ def build_regime_context(
     sentiment: dict[str, Any],
     delta: dict[str, Any],
     prior_as_of: str | None,
+    max_cash_risk_off: float = 0.50,
 ) -> dict[str, Any]:
     hints: list[dict[str, str]] = []
     allocation: dict[str, Any] = {"available": False}
@@ -112,6 +113,11 @@ def build_regime_context(
     )
     summary_parts = [hint["text"] for hint in hints[:3]]
     summary = " ".join(summary_parts) if summary_parts else None
+    risk_off = _build_risk_off(
+        portfolio=portfolio,
+        sentiment=sentiment,
+        max_cash_risk_off=max_cash_risk_off,
+    )
 
     return {
         "available": available,
@@ -121,6 +127,7 @@ def build_regime_context(
         "comparison": comparison,
         "hints": hints,
         "summary": summary,
+        "risk_off": risk_off,
     }
 
 
@@ -132,3 +139,50 @@ def _allocation_hint_text(code: str) -> str:
         "consider_rebalance": "Allocation drift exceeds the band — consider rebalancing.",
     }
     return mapping.get(code, f"Allocation hint: {code}.")
+
+
+def _build_risk_off(
+    *,
+    portfolio: dict[str, Any],
+    sentiment: dict[str, Any],
+    max_cash_risk_off: float,
+) -> dict[str, Any]:
+    signals: list[str] = []
+    score = 0
+
+    if portfolio.get("available"):
+        cash = float((portfolio.get("allocation_pct") or {}).get("CASH") or 0)
+        if cash >= max_cash_risk_off:
+            score += 40
+            signals.append(f"cash {cash * 100:.1f}% at/above risk-off ceiling")
+        elif cash >= max_cash_risk_off * 0.75:
+            score += 20
+            signals.append(f"cash {cash * 100:.1f}% elevated vs risk-off ceiling")
+        hint = str(portfolio.get("rebalance_hint") or "")
+        if hint == "consider_deploy_cash":
+            score += 15
+            signals.append("rebalance hint favors deploying cash")
+
+    fg = _fear_greed_block(sentiment) if sentiment.get("available") else None
+    if fg and fg.get("value") is not None:
+        value = int(fg["value"])
+        if value <= 25:
+            score += 35
+            signals.append(f"Fear & Greed {value} (extreme fear)")
+        elif value <= 40:
+            score += 20
+            signals.append(f"Fear & Greed {value} (fear)")
+
+    score = min(100, score)
+    level = "low"
+    if score >= 70:
+        level = "high"
+    elif score >= 40:
+        level = "moderate"
+
+    return {
+        "available": bool(signals),
+        "score": score,
+        "level": level,
+        "signals": signals,
+    }

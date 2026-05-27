@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from alloccontext.horizon import horizon_days
+from alloccontext.ingest.outcome import summarize_ingest_outcome
 from alloccontext.ingest.coingecko import refresh_coingecko
 from alloccontext.ingest.coinmarketcap import refresh_coinmarketcap
 from alloccontext.ingest.etf_flows import refresh_etf_flows
@@ -111,13 +112,17 @@ def run_ingest(
             )
             snapshots[scope] = bundle["as_of"]
 
+    outcome = summarize_ingest_outcome(errors, config.ingest.optional_sources)
     return {
         "counts": counts,
         "results": results,
-        "errors": errors,
+        "errors": outcome["errors"],
+        "fatal_errors": outcome["fatal_errors"],
+        "optional_errors": outcome["optional_errors"],
         "pruned": pruned,
         "snapshots": snapshots,
         "dry_run": dry_run,
-        "ok": not errors,
+        "ok": outcome["ok"],
+        "partial": outcome["partial"],
         "horizon_days": horizon_days(config),
     }

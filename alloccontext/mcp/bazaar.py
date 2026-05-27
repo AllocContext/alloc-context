@@ -291,6 +291,113 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
             "max_drift": 0.05,
         },
     },
+    {
+        "tool_name": "get_context_at",
+        "description": (
+            "Load a saved ContextBundle snapshot from ingest history by ISO "
+            "timestamp (match exact or at_or_before)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "as_of": {"type": "string", "description": "ISO timestamp."},
+                "scope": {"type": "string", "enum": ["daily", "weekly"]},
+                "match": {"type": "string", "enum": ["exact", "at_or_before"]},
+                "assets": _ASSET_FILTER_SCHEMA,
+            },
+            "required": ["as_of"],
+        },
+        "example": {
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "scope": "daily",
+            "match": "at_or_before",
+        },
+        "output_example": {
+            "scope": "daily",
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "portfolio": {"available": True},
+            "regime": {"available": True},
+        },
+    },
+    {
+        "tool_name": "get_context_delta",
+        "description": (
+            "Compare two ContextBundle snapshots and return notable_shifts."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "prior_as_of": {"type": "string"},
+                "scope": {"type": "string", "enum": ["daily", "weekly"]},
+                "current_as_of": {"type": "string"},
+                "assets": _ASSET_FILTER_SCHEMA,
+            },
+            "required": ["prior_as_of"],
+        },
+        "example": {
+            "prior_as_of": "2026-05-20T12:00:00+00:00",
+            "scope": "daily",
+        },
+        "output_example": {
+            "prior_as_of": "2026-05-20T12:00:00+00:00",
+            "current_as_of": "2026-05-21T12:00:00+00:00",
+            "notable_shifts": ["F&G 30 → 25 (-5)"],
+        },
+    },
+    {
+        "tool_name": "check_allocation_bands",
+        "description": (
+            "Evaluate allocation drift against multiple target/band scenarios."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "allocation_pct": {
+                    "type": "object",
+                    "properties": {
+                        "BTC": {"type": "number"},
+                        "ETH": {"type": "number"},
+                        "CASH": {"type": "number"},
+                    },
+                    "required": ["BTC", "ETH", "CASH"],
+                },
+                "scenarios": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "target_pct": {
+                                "type": "object",
+                                "properties": {
+                                    "BTC": {"type": "number"},
+                                    "ETH": {"type": "number"},
+                                    "CASH": {"type": "number"},
+                                },
+                            },
+                            "band": {"type": "number"},
+                        },
+                        "required": ["target_pct"],
+                    },
+                },
+            },
+            "required": ["allocation_pct", "scenarios"],
+        },
+        "example": {
+            "allocation_pct": {"BTC": 0.65, "ETH": 0.30, "CASH": 0.05},
+            "scenarios": [
+                {
+                    "name": "base",
+                    "target_pct": {"BTC": 0.70, "ETH": 0.30, "CASH": 0.00},
+                    "band": 0.15,
+                }
+            ],
+        },
+        "output_example": {
+            "allocation_pct": {"BTC": 0.65, "ETH": 0.30, "CASH": 0.05},
+            "scenarios": [{"name": "base", "hint": "within_band"}],
+        },
+    },
 )
 
 _TOOL_NAMES = tuple(spec["tool_name"] for spec in _MCP_TOOLS)
@@ -359,7 +466,9 @@ def build_http_route_extensions() -> dict[str, Any]:
                             "description": (
                                 "AllocContext tool: get_market_context, "
                                 "get_context_bundle, get_rebalance_plan, "
-                                "get_portfolio_state, or check_allocation_band."
+                                "get_portfolio_state, check_allocation_band, "
+                                "get_context_at, get_context_delta, or "
+                                "check_allocation_bands."
                             ),
                         },
                         "arguments": {
@@ -399,6 +508,7 @@ def build_llms_txt(*, public_url: str, mcp_path: str) -> str:
 - Transport: streamable HTTP (`POST {mcp_path}`)
 - Health: `{public_url.rstrip('/')}/health` (free)
 - Payment: x402 exact scheme; unpaid calls return 402 Payment Required.
+- Pricing: **$0.02** cached context/math; **$0.05** live ingest or live portfolio.
 
 ## Tools
 
@@ -411,7 +521,14 @@ market context, sentiment, macro, etf flows, agent tools, mcp, x402
 """
 
 
-def build_well_known_x402(*, public_url: str, mcp_path: str, pay_to: str) -> dict[str, Any]:
+def build_well_known_x402(
+    *,
+    public_url: str,
+    mcp_path: str,
+    pay_to: str,
+    price_light: str = "$0.02",
+    price_heavy: str = "$0.05",
+) -> dict[str, Any]:
     endpoint = public_mcp_url(base_url=public_url, mcp_path=mcp_path)
     return {
         "name": SERVICE_NAME,
@@ -436,5 +553,11 @@ def build_well_known_x402(*, public_url: str, mcp_path: str, pay_to: str) -> dic
         "payment": {
             "scheme": "exact",
             "payTo": pay_to,
+            "pricing": {
+                "cached_context_and_math": price_light,
+                "live_ingest_or_portfolio": price_heavy,
+                "network": "eip155:8453",
+                "asset": "USDC",
+            },
         },
     }

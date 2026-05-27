@@ -13,26 +13,26 @@ from alloccontext.mcp.bazaar import (
 from alloccontext.mcp.x402_config import MCP_HTTP_PATH, build_x402_routes, X402Settings
 
 
+_EXPECTED_TOOLS = {
+    "get_market_context",
+    "get_context_bundle",
+    "get_rebalance_plan",
+    "get_portfolio_state",
+    "check_allocation_band",
+    "get_context_at",
+    "get_context_delta",
+    "check_allocation_bands",
+}
+
+
 def test_mcp_tool_specs_cover_all_tools() -> None:
     names = {spec["tool_name"] for spec in mcp_tool_specs()}
-    assert names == {
-        "get_market_context",
-        "get_context_bundle",
-        "get_rebalance_plan",
-        "get_portfolio_state",
-        "check_allocation_band",
-    }
+    assert names == _EXPECTED_TOOLS
 
 
 def test_mcp_tool_bazaar_extensions() -> None:
     extensions = build_mcp_tool_extensions()
-    assert set(extensions) == {
-        "get_market_context",
-        "get_context_bundle",
-        "get_rebalance_plan",
-        "get_portfolio_state",
-        "check_allocation_band",
-    }
+    assert set(extensions) == _EXPECTED_TOOLS
     for ext in extensions.values():
         bazaar = ext["bazaar"]
         assert bazaar["info"]["input"]["type"] == "mcp"
@@ -45,13 +45,8 @@ def test_http_route_bazaar_extension_lists_tools() -> None:
     tool_enum = ext["info"]["input"]["body"]["params"]["name"]
     assert tool_enum == "get_market_context"
     schema_props = ext["schema"]["properties"]["input"]["properties"]["body"]["properties"]
-    assert schema_props["params"]["properties"]["name"]["enum"] == [
-        "get_market_context",
-        "get_context_bundle",
-        "get_rebalance_plan",
-        "get_portfolio_state",
-        "check_allocation_band",
-    ]
+    expected = [spec["tool_name"] for spec in mcp_tool_specs()]
+    assert schema_props["params"]["properties"]["name"]["enum"] == expected
 
 
 def test_x402_route_includes_bazaar_and_listing_copy(
@@ -89,7 +84,8 @@ def test_llms_txt_and_well_known() -> None:
         pay_to="0xSeller",
     )
     assert manifest["name"] == "AllocContext"
-    assert len(manifest["resources"][0]["tools"]) == 5
+    assert len(manifest["resources"][0]["tools"]) == len(_EXPECTED_TOOLS)
+    assert manifest["payment"]["pricing"]["cached_context_and_math"] == "$0.02"
 
 
 def test_build_x402_resource_server_registers_bazaar(monkeypatch: pytest.MonkeyPatch) -> None:

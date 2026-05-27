@@ -30,10 +30,14 @@ class HorizonConfig:
     days: int
 
 
+DEFAULT_OPTIONAL_INGEST_SOURCES = frozenset({"fred", "coinmarketcap"})
+
+
 @dataclass(frozen=True)
 class IngestConfig:
     interval_minutes: int
     sources: dict[str, bool]
+    optional_sources: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -152,6 +156,14 @@ class AppConfig:
 
 def _path(value: str | None, fallback: str) -> Path:
     return Path(value or fallback)
+
+
+def _optional_ingest_sources(raw: Any) -> frozenset[str]:
+    if raw is None:
+        return DEFAULT_OPTIONAL_INGEST_SOURCES
+    if not isinstance(raw, (list, tuple)):
+        return DEFAULT_OPTIONAL_INGEST_SOURCES
+    return frozenset(str(item).strip() for item in raw if str(item).strip())
 
 
 def _load_fred_series(catalog_path: Path) -> list[FredSeriesSpec]:
@@ -294,6 +306,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         ingest=IngestConfig(
             interval_minutes=int(ingest_raw.get("interval_minutes") or 60),
             sources=ingest_sources,
+            optional_sources=_optional_ingest_sources(ingest_raw.get("optional_sources")),
         ),
         kraken=kraken,
         exchanges=exchanges,

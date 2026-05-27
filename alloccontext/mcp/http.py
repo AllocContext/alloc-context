@@ -47,6 +47,8 @@ def _well_known_x402(settings: X402Settings) -> JSONResponse:
         public_url=public_base,
         mcp_path=settings.mcp_path,
         pay_to=settings.pay_to,
+        price_light=settings.mcp_price,
+        price_heavy=settings.mcp_price_heavy,
     )
     return JSONResponse(payload)
 

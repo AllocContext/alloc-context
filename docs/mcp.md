@@ -25,7 +25,7 @@ Shared optional args on context tools:
 
 | Arg | Tools | Default | Purpose |
 |-----|-------|---------|---------|
-| `assets` | `get_context_bundle`, `get_market_context` | `["BTC","ETH"]` | Filter market and ETF fields |
+| `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields |
 | `target_pct` | `get_context_bundle` | server config | Override target weights for drift math |
 | `band` | `get_context_bundle`, `get_rebalance_plan` | server config / none | Drift band width (e.g. `0.15`) |
 
@@ -36,8 +36,11 @@ for cached portfolio drift with optional overrides).
 |------|-------|--------|
 | `get_market_context` | `scope`, optional `freshness`, optional `assets` | Sentiment, macro, ETF, breadth, `market`, `as_of`, `age_seconds` |
 | `get_context_bundle` | `scope`, optional `freshness`, optional `assets`, optional `target_pct`, optional `band` | Full ContextBundle including `regime` hints |
+| `get_context_at` | `as_of`, optional `scope`, `match`, optional `assets` | Saved snapshot from ingest history |
+| `get_context_delta` | `prior_as_of`, optional `scope`, optional `current_as_of`, optional `assets` | `notable_shifts` between two bundles |
 | `get_rebalance_plan` | `allocation_pct`, `target_pct`, `nav_usd`, optional `band` | USD deltas, move lines, optional `band_check` |
 | `check_allocation_band` | `allocation_pct`, `target_pct`, `band` | Drift, `outside_band`, `hint` |
+| `check_allocation_bands` | `allocation_pct`, `scenarios[]` | Batch band checks for multiple targets |
 
 On a self-hosted install, `freshness=cached` reads the ingest SQLite DB.
 Hosted endpoints serve the host ingested cache unless the client requests
@@ -50,7 +53,22 @@ Hosted endpoints serve the host ingested cache unless the client requests
 | `get_portfolio_state` | `exchange`, read-only credentials, optional `target_pct`, optional `band` | NAV, allocation, drift |
 
 Credentials are **pass-through only** — never stored server-side. Supported
-exchanges: **Kraken** and **Coinbase** Advanced Trade (read-only).
+exchanges: **Kraken** and **Coinbase** Advanced Trade (read-only). Disable
+Coinbase in `ingest.sources` and `exchanges.coinbase.enabled` when unused.
+
+## MCP resources
+
+| URI | Content |
+|-----|---------|
+| `context-bundle://schema/v1` | ContextBundle JSON Schema |
+| `alloc-context://tools/rebalance-hints` | Meaning of `rebalance_hint` codes |
+
+## Ingest reliability
+
+Optional ingest sources (`fred`, `coinmarketcap` by default) may fail without
+failing the hourly ingest run. Check `partial`, `optional_errors`, and
+`fatal_errors` in ingest JSON output; `python -m alloccontext status` includes
+`source_health` per source.
 
 ## x402 pricing
 

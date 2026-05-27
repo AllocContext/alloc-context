@@ -29,6 +29,9 @@ ingest:
     coingecko: true
     coinmarketcap: true
     fred: true
+  optional_sources:
+    - fred
+    - coinmarketcap
 
 # Primary spot exchange for portfolio + OHLC ingest.
 # Top-level `kraken:` block is still accepted when `exchanges` is omitted.
