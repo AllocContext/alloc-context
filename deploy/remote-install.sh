@@ -44,9 +44,14 @@ install_systemd_unit() {
 for unit in \
   alloc-context-ingest.service \
   alloc-context-ingest.timer \
-  alloc-context-mcp-http.service; do
+  alloc-context-mcp-http.service \
+  alloc-context-backup.service \
+  alloc-context-backup.timer; do
   install_systemd_unit "${unit}"
 done
+
+TRADING_ROOT="$(dirname "${REMOTE}")"
+install -d -m 750 -o trading -g trading "${TRADING_ROOT}/backups"
 
 # Disable legacy brief/alert timers if present from older installs.
 CORE_BRIEF_TIMERS=(
@@ -70,6 +75,7 @@ _enable_timer() {
 }
 
 _enable_timer alloc-context-ingest.timer
+_enable_timer alloc-context-backup.timer
 
 systemctl enable alloc-context-mcp-http.service
 systemctl restart alloc-context-mcp-http.service

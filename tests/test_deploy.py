@@ -26,6 +26,7 @@ def test_core_deploy_installs_ingest_and_mcp_http() -> None:
     install_block = text.split("for unit in")[1].split("done")[0]
     assert "alloc-context-ingest.service" in install_block
     assert "alloc-context-mcp-http.service" in install_block
+    assert "alloc-context-backup.timer" in install_block
     assert "daily-brief" not in install_block
     assert "alerts.timer" not in install_block
 

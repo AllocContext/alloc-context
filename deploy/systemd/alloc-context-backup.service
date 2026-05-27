@@ -1,0 +1,16 @@
+[Unit]
+Description=AllocContext SQLite backup (core + operator)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=trading
+Group=trading
+WorkingDirectory=/opt/trading/alloc-context
+ExecStart=/opt/trading/alloc-context/deploy/backup-sqlite.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

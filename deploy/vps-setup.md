@@ -30,6 +30,18 @@ python -m alloccontext rollup --scope daily --stdout
 curl -s http://127.0.0.1:8000/health
 ```
 
+## SQLite backup
+
+Nightly timer `alloc-context-backup.timer` (04:15 UTC) runs
+`deploy/backup-sqlite.sh`. Backups live under `${TRADING_ROOT}/backups/` with
+`manifest.json` per run. See [vps-layout.md](vps-layout.md) for paths; use
+`restore-sqlite.sh` and off-host `rsync` of `/opt/trading/backups/` for DR.
+
+```bash
+systemctl list-timers 'alloc-context-backup*' --no-pager
+sudo -u trading /opt/trading/alloc-context/deploy/backup-sqlite.sh
+```
+
 ## Rollback
 
 ```bash
@@ -37,4 +49,9 @@ systemctl disable --now alloc-context-ingest.timer \
   alloc-context-mcp-http.service alloc-context-mcp-internal.service
 ```
 
-Redeploy a known-good commit or restore from backup.
+Redeploy a known-good commit or restore from backup:
+
+```bash
+sudo bash /opt/trading/alloc-context/deploy/restore-sqlite.sh \
+  /opt/trading/backups/YYYYMMDDTHHMMSSZ
+```

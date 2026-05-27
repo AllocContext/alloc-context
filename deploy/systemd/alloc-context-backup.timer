@@ -1,0 +1,10 @@
+[Unit]
+Description=AllocContext SQLite backup timer (daily)
+Requires=alloc-context-backup.service
+
+[Timer]
+OnCalendar=*-*-* 04:15:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
