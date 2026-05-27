@@ -46,7 +46,7 @@ for unit in \
   install_systemd_unit "${unit}"
 done
 
-# Disable legacy timers from older single-repo or pre-operator installs.
+# Disable core brief timers (briefs run from alloc-context-operator).
 STALE_UNITS=(
   alloc-context-daily-brief.timer
   alloc-context-weekly-brief.timer

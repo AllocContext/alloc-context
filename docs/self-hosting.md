@@ -40,14 +40,12 @@ deploy/systemd/                    # alloc-context-ingest.service / *.timer
 
 When core and [alloc-context-operator](https://github.com/negillett/alloc-context-operator)
 run on one host, point both at the same env file via `ALLOC_CONTEXT_ENV_FILE`
-at install time (default on our VPS: `/opt/trading/shared/.env`).
+at install time (example: `/opt/trading/shared/.env`).
 
 | Variable | Example | Purpose |
 |----------|---------|---------|
 | `ALLOC_CONTEXT_CONFIG` | `/opt/trading/alloc-context/config/config.yaml` | Core config path |
 | `ALLOC_CONTEXT_DB` | `/opt/trading/alloc-context/state/alloccontext.db` | SQLite cache (overrides YAML) |
-
-Do **not** use legacy `MARKET_ANALYST_*` variables — see [migration.md](migration.md).
 
 Operator-specific keys (`OPENAI_API_KEY`, `RESEND_*`, `EMAIL_TO`) live in the
 same shared file; see the operator repo.
@@ -62,9 +60,9 @@ configure — edit the `.service` files or override with drop-ins for your layou
 Run MCP separately (stdio for Cursor, or HTTP + x402 for agents). See
 [docs/mcp-http.md](mcp-http.md).
 
-## CI deploy (maintainer)
+## CI deploy
 
-The upstream repository may run an optional GitHub Actions **deploy** job after
+The repository may run an optional GitHub Actions **deploy** job after
 tests pass on `main`. It requires repository secrets:
 
 | Secret | Required | Purpose |
@@ -96,4 +94,4 @@ VPS_HOST=your.host.example SSH_KEY=~/.ssh/deploy_key ./deploy/rsync-to-vps.sh
 Set `ALLOC_CONTEXT_REMOTE` and optional `ALLOC_CONTEXT_ENV_FILE` when running
 `deploy/remote-install.sh` if your paths differ from the generic unit templates.
 
-The deploy job is gated to the canonical repository only; forks run tests only.
+The deploy job runs only on the primary GitHub repository; forks run tests only.

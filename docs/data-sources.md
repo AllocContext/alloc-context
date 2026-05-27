@@ -141,7 +141,7 @@ Optional `KALSHI_API_KEY` / `KALSHI_API_SECRET` are reserved for future
 authenticated endpoints; sentiment ingest does not use them today.
 
 Stored table: `kalshi_snapshots`. Meta keys: `cf_price_history`,
-`kalshi_markets` (legacy meta key `kalshi_markets_15m` still read as fallback).
+`kalshi_markets` (alternate meta key `kalshi_markets_15m` still read as fallback).
 
 ## F&G contract
 

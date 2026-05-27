@@ -1,6 +1,6 @@
 # Example host layout
 
-Generic paths for optional self-hosting with the operator split. Adjust to
+Generic paths for optional self-hosting with alloc-context-operator. Adjust to
 your environment.
 
 ```text

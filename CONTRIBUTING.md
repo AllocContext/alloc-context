@@ -8,7 +8,7 @@ Please open a GitHub Issue for:
 
 - Bugs or incorrect rollup / rebalance output
 - ContextBundle schema feedback
-- MCP tool design and x402 integration ideas
+- MCP tool and x402 integration feedback
 - Documentation gaps
 
 ## Pull requests
@@ -28,4 +28,4 @@ Do not commit secrets, `config/config.yaml`, or local `state/` databases.
 
 ## Code of conduct
 
-Be constructive and respect maintainer time. No harassment or spam.
+Be constructive and respectful. No harassment or spam.

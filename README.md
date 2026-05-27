@@ -4,8 +4,8 @@
 and a fused market backdrop (Fear & Greed, Kalshi, ETF flows, macro) as
 deterministic JSON over MCP.
 
-The product is an **agent-native MCP API** with x402 pay-per-call discovery —
-see [docs/mcp-roadmap.md](docs/mcp-roadmap.md).
+The product is an **agent-native MCP API** with x402 pay-per-call on Base —
+see [docs/mcp.md](docs/mcp.md).
 
 Read-only exchange access when configured (BYOK Tier 2). Not financial advice.
 
@@ -53,9 +53,10 @@ CLI entry point: `alloc-context` (same as `python -m alloccontext`).
 
 | Document | Purpose |
 |----------|---------|
-| [docs/mcp-roadmap.md](docs/mcp-roadmap.md) | MCP + x402 product plan |
+| [docs/mcp.md](docs/mcp.md) | MCP tools, tiers, and x402 |
 | [docs/mcp-http.md](docs/mcp-http.md) | HTTP MCP + x402 setup |
-| [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor MCP dogfooding |
+| [docs/mcp-discovery.md](docs/mcp-discovery.md) | Bazaar and agent discovery |
+| [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP |
 | [docs/context-bundle.md](docs/context-bundle.md) | ContextBundle schema |
 | [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |
 | [docs/data-sources.md](docs/data-sources.md) | Ingest sources |
@@ -63,7 +64,7 @@ CLI entry point: `alloc-context` (same as `python -m alloccontext`).
 
 ## Contributing
 
-GitHub Issues are welcome for bugs, schema feedback, and MCP API design.
+GitHub Issues are welcome for bugs, schema feedback, and MCP API suggestions.
 Unsolicited pull requests are not expected — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License

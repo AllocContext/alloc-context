@@ -1,7 +1,7 @@
 # MCP HTTP + x402
 
-Streamable HTTP transport for paid/hosted MCP. Stdio remains free for local
-Cursor dogfooding.
+Streamable HTTP transport for paid/hosted MCP. Stdio remains available for
+local Cursor use.
 
 ## Install
 
@@ -62,7 +62,11 @@ and confirm settlement to `X402_PAY_TO`.
 See [Coinbase x402 seller quickstart](https://docs.cdp.coinbase.com/x402/quickstart-for-sellers).
 
 Discovery: [mcp-discovery.md](mcp-discovery.md) — Bazaar metadata, `llms.txt`,
-`/.well-known/x402.json`, and x402-discovery-mcp dogfooding.
+and `/.well-known/x402.json`.
+
+Verification scripts: `scripts/x402-production-check.py`,
+`scripts/x402-paid-smoke-test.py` (buyer wallet required; payer must differ
+from `X402_PAY_TO`).
 
 ## Staleness: `freshness` on `get_market_context`
 

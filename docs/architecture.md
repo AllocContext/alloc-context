@@ -12,7 +12,7 @@ order placement, no gate authority, no bot shadow modes.
 in a separate operator stack that calls MCP — see
 [alloc-context-operator](https://github.com/negillett/alloc-context-operator).
 
-Agent-facing MCP + x402: [mcp-roadmap.md](mcp-roadmap.md).
+Agent-facing MCP + x402: [mcp.md](mcp.md).
 
 ## Pipeline
 

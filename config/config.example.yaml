@@ -30,8 +30,8 @@ ingest:
     coinmarketcap: true
     fred: true
 
-# Primary spot exchange for portfolio + OHLC ingest (Phase D).
-# Legacy top-level `kraken:` block is still accepted when `exchanges` is omitted.
+# Primary spot exchange for portfolio + OHLC ingest.
+# Top-level `kraken:` block is still accepted when `exchanges` is omitted.
 exchanges:
   primary: kraken
   kraken:
