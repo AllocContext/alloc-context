@@ -17,9 +17,10 @@ SERVICE_TITLE = (
 SERVICE_TAGS = ("btc", "eth", "rebalance", "allocation", "crypto")
 
 LISTING_DESCRIPTION = (
-    "Deterministic BTC/ETH allocation facts for agents: fused market context "
-    "(sentiment, macro, ETF flows, breadth), USD rebalance move lines, and "
-    "allocation band drift checks. No LLM — structured JSON only."
+    "Deterministic BTC/ETH allocation facts for agents: full ContextBundle "
+    "(portfolio, market, sentiment, macro, delta), fused market context, USD "
+    "rebalance move lines, and allocation band drift checks. No LLM — "
+    "structured JSON only."
 )
 
 _MCP_TOOLS: tuple[dict[str, Any], ...] = (
@@ -318,8 +319,8 @@ def build_http_route_extensions() -> dict[str, Any]:
                             "enum": list(_TOOL_NAMES),
                             "description": (
                                 "AllocContext tool: get_market_context, "
-                                "get_rebalance_plan, get_portfolio_state, or "
-                                "check_allocation_band."
+                                "get_context_bundle, get_rebalance_plan, "
+                                "get_portfolio_state, or check_allocation_band."
                             ),
                         },
                         "arguments": {

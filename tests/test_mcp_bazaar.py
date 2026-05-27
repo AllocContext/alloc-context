@@ -80,6 +80,7 @@ def test_llms_txt_and_well_known() -> None:
         mcp_path="/mcp",
     )
     assert "get_market_context" in llms
+    assert "get_context_bundle" in llms
     assert "x402" in llms
 
     manifest = build_well_known_x402(

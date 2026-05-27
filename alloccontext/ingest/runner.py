@@ -95,14 +95,28 @@ def run_ingest(
             errors[source] = str(result.get("error") or "failed")
 
     pruned: dict[str, int] = {}
+    snapshots: dict[str, str] = {}
     if not dry_run:
         pruned = prune_to_horizon(conn, config)
+        from alloccontext.rollup.context import Scope, build_context_bundle
+
+        for scope in ("daily", "weekly"):
+            scope_lit: Scope = scope  # type: ignore[assignment]
+            bundle = build_context_bundle(
+                conn,
+                config,
+                scope=scope_lit,
+                rollup=config.rollup,
+                save_snapshot=True,
+            )
+            snapshots[scope] = bundle["as_of"]
 
     return {
         "counts": counts,
         "results": results,
         "errors": errors,
         "pruned": pruned,
+        "snapshots": snapshots,
         "dry_run": dry_run,
         "ok": not errors,
         "horizon_days": horizon_days(config),

@@ -62,3 +62,18 @@ def test_build_http_app_with_x402(monkeypatch: pytest.MonkeyPatch) -> None:
 
     app = build_http_app(x402=True)
     assert app.user_middleware
+
+
+def test_cdp_facilitator_does_not_auto_enable_x402_without_pay_to(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("x402")
+    from alloccontext.mcp.http import build_http_app
+    from alloccontext.mcp.x402_config import CDP_FACILITATOR_URL
+
+    monkeypatch.delenv("X402_PAY_TO", raising=False)
+    monkeypatch.delenv("X402_ENABLED", raising=False)
+    monkeypatch.setenv("X402_FACILITATOR_URL", CDP_FACILITATOR_URL)
+    app = build_http_app(x402=False)
+    assert app is not None
+    assert not app.user_middleware

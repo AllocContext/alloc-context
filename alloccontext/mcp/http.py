@@ -152,7 +152,10 @@ def main() -> None:
     host = os.environ.get("ALLOC_CONTEXT_MCP_HOST", "127.0.0.1")
     port = int(os.environ.get("ALLOC_CONTEXT_MCP_PORT", "8000"))
     x402 = os.environ.get("X402_ENABLED", "").lower() in ("1", "true", "yes")
-    if os.environ.get("X402_FACILITATOR_URL", "").startswith(CDP_FACILITATOR_URL):
+    if (
+        os.environ.get("X402_FACILITATOR_URL", "").startswith(CDP_FACILITATOR_URL)
+        and os.environ.get("X402_PAY_TO", "").strip()
+    ):
         x402 = True
     run_http(host=host, port=port, x402=x402)
 

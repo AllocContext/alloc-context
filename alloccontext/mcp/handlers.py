@@ -35,6 +35,14 @@ def validate_freshness(freshness: str) -> Freshness:
     return freshness  # type: ignore[return-value]
 
 
+def _ingest_summary(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "ok": bool(result.get("ok")),
+        "errors": dict(result.get("errors") or {}),
+        "counts": dict(result.get("counts") or {}),
+    }
+
+
 def get_context_bundle(
     conn: sqlite3.Connection,
     config,
@@ -43,10 +51,11 @@ def get_context_bundle(
     freshness: Freshness = "cached",
     as_of: datetime | None = None,
 ) -> dict[str, Any]:
+    ingest_result: dict[str, Any] | None = None
     if freshness == "live":
         from alloccontext.ingest.runner import run_ingest
 
-        run_ingest(conn, config)
+        ingest_result = run_ingest(conn, config)
 
     from alloccontext.rollup.context import build_context_bundle
 
@@ -59,8 +68,13 @@ def get_context_bundle(
         scope=scope,
         rollup=config.rollup,
         as_of=now,
+        save_snapshot=False,
     )
-    return with_staleness(bundle, as_of=now)
+    payload = with_staleness(bundle, as_of=now)
+    payload["freshness"] = freshness
+    if ingest_result is not None:
+        payload["ingest"] = _ingest_summary(ingest_result)
+    return payload
 
 
 def get_market_context(
@@ -71,10 +85,11 @@ def get_market_context(
     as_of: datetime | None = None,
     freshness: Freshness = "cached",
 ) -> dict[str, Any]:
+    ingest_result: dict[str, Any] | None = None
     if freshness == "live":
         from alloccontext.ingest.runner import run_ingest
 
-        run_ingest(conn, config)
+        ingest_result = run_ingest(conn, config)
 
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
@@ -107,7 +122,7 @@ def get_market_context(
     else:
         breadth = {"available": False, "reason": "no_breadth_data"}
 
-    return with_staleness(
+    payload = with_staleness(
         {
             "scope": scope,
             "freshness": freshness,
@@ -118,6 +133,9 @@ def get_market_context(
         },
         as_of=now,
     )
+    if ingest_result is not None:
+        payload["ingest"] = _ingest_summary(ingest_result)
+    return payload
 
 
 def get_rebalance_plan(

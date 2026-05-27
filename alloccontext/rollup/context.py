@@ -63,7 +63,7 @@ def build_context_bundle(
     scope: Scope,
     rollup: RollupConfig,
     as_of: datetime | None = None,
-    save_snapshot: bool = True,
+    save_snapshot: bool = False,
 ) -> dict[str, Any]:
     now = (as_of or datetime.now(timezone.utc)).replace(microsecond=0)
 

@@ -149,6 +149,26 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def _migrate_brief_archive_to_context_snapshots(conn: sqlite3.Connection) -> None:
+    row = conn.execute(
+        """
+        SELECT name FROM sqlite_master
+        WHERE type = 'table' AND name = 'brief_archive'
+        """
+    ).fetchone()
+    if row is None:
+        return
+    conn.execute(
+        """
+        INSERT INTO context_snapshots(scope, as_of, context_json)
+        SELECT scope, as_of, context_json
+        FROM brief_archive
+        WHERE context_json IS NOT NULL AND context_json != ''
+        ON CONFLICT(scope, as_of) DO NOTHING
+        """
+    )
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     conn.executescript(_SCHEMA)
     row = conn.execute(
@@ -161,6 +181,8 @@ def migrate(conn: sqlite3.Connection) -> None:
         )
         conn.commit()
     elif int(row["value"]) < SCHEMA_VERSION:
+        if int(row["value"]) <= 7:
+            _migrate_brief_archive_to_context_snapshots(conn)
         conn.execute(
             "UPDATE schema_meta SET value = ? WHERE key = 'version'",
             (str(SCHEMA_VERSION),),

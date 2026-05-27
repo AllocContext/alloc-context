@@ -28,6 +28,7 @@ def cmd_rollup(args: argparse.Namespace) -> int:
         config,
         scope=args.scope,
         rollup=config.rollup,
+        save_snapshot=args.save,
     )
     conn.close()
     if args.stdout:
@@ -83,9 +84,14 @@ def main(argv: list[str] | None = None) -> int:
     rollup_p = sub.add_parser("rollup", help="Build ContextBundle JSON")
     rollup_p.add_argument("--scope", choices=["daily", "weekly"], default="daily")
     rollup_p.add_argument("--stdout", action="store_true")
+    rollup_p.add_argument(
+        "--save",
+        action="store_true",
+        help="Persist snapshot for delta chain (normally done by ingest)",
+    )
     rollup_p.set_defaults(func=cmd_rollup)
 
-    status_p = sub.add_parser("status", help="Show ingest and brief history")
+    status_p = sub.add_parser("status", help="Show ingest history and DB status")
     status_p.set_defaults(func=cmd_status)
 
     mcp_p = sub.add_parser("mcp", help="Run MCP server (stdio or HTTP)")

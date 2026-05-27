@@ -4,20 +4,22 @@ Reference for running AllocContext timers on a Linux host. For a lighter path,
 use the local CLI from the [README](../README.md).
 
 See [docs/self-hosting.md](../docs/self-hosting.md) for layout, secrets, and CI
-notes.
+notes. Email briefs and alerts live in the separate
+[alloc-context-operator](https://github.com/negillett/alloc-context-operator)
+repo.
 
 ## systemd timers
 
 | Timer | Cadence |
 |-------|---------|
 | `alloc-context-ingest` | Hourly |
-| `alloc-context-daily-brief` | From `config/config.yaml` |
-| `alloc-context-weekly-brief` | From `config/config.yaml` |
+| `alloc-context-mcp` | On boot (public HTTP MCP, optional x402) |
+| `alloc-context-mcp-internal` | On boot (local MCP for operator, no x402) |
 
 ```bash
 systemctl list-timers 'alloc-context-*' --no-pager
 journalctl -u alloc-context-ingest.service -n 30 --no-pager
-journalctl -u alloc-context-daily-brief.service -n 30 --no-pager
+journalctl -u alloc-context-mcp.service -n 30 --no-pager
 ```
 
 ## Verify
@@ -27,13 +29,14 @@ cd /path/to/alloc-context
 source .venv/bin/activate
 python -m alloccontext status
 python -m alloccontext rollup --scope daily --stdout
+curl -s http://127.0.0.1:8000/health
 ```
 
 ## Rollback
 
 ```bash
 systemctl disable --now alloc-context-ingest.timer \
-  alloc-context-daily-brief.timer alloc-context-weekly-brief.timer
+  alloc-context-mcp.service alloc-context-mcp-internal.service
 ```
 
 Redeploy a known-good commit or restore from backup.
