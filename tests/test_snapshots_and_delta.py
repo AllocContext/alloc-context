@@ -5,7 +5,6 @@ import json
 from alloccontext.mcp.handlers import get_context_at, get_context_delta
 from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.context import build_context_bundle
-from alloccontext.rollup.snapshots import SnapshotNotFoundError
 
 
 def _save_snapshot(conn, scope: str, as_of: str, bundle: dict) -> None:
@@ -39,18 +38,16 @@ def test_get_context_at_loads_snapshot(conn, config) -> None:
     assert loaded["regime"]["risk_off"]["level"] in ("low", "moderate", "high")
 
 
-def test_get_context_at_missing_raises(conn, config) -> None:
-    try:
-        get_context_at(
-            conn,
-            config,
-            scope="daily",
-            as_of="1999-01-01T00:00:00+00:00",
-            match="exact",
-        )
-    except SnapshotNotFoundError:
-        return
-    raise AssertionError("expected SnapshotNotFoundError")
+def test_get_context_at_missing_returns_unavailable(conn, config) -> None:
+    loaded = get_context_at(
+        conn,
+        config,
+        scope="daily",
+        as_of="1999-01-01T00:00:00+00:00",
+        match="exact",
+    )
+    assert loaded["available"] is False
+    assert "1999-01-01" in loaded["reason"]
 
 
 def test_get_context_delta_between_snapshots(conn, config) -> None:

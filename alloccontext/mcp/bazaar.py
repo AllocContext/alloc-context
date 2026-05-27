@@ -528,6 +528,7 @@ def build_well_known_x402(
     pay_to: str,
     price_light: str = "$0.02",
     price_heavy: str = "$0.05",
+    network: str = "eip155:84532",
 ) -> dict[str, Any]:
     endpoint = public_mcp_url(base_url=public_url, mcp_path=mcp_path)
     return {
@@ -556,7 +557,7 @@ def build_well_known_x402(
             "pricing": {
                 "cached_context_and_math": price_light,
                 "live_ingest_or_portfolio": price_heavy,
-                "network": "eip155:8453",
+                "network": network,
                 "asset": "USDC",
             },
         },

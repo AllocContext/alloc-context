@@ -41,3 +41,9 @@ def test_mcp_http_systemd_unit() -> None:
     text = (REPO_ROOT / "deploy/systemd/alloc-context-mcp-http.service").read_text()
     assert "--port 8000" in text
     assert "--x402" in text
+
+
+def test_remote_install_substitutes_environment_file() -> None:
+    text = (REPO_ROOT / "deploy/remote-install.sh").read_text()
+    assert "EnvironmentFile=/.*" in text
+    assert "EnvironmentFile=${ENV_FILE}" in text

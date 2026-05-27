@@ -86,6 +86,17 @@ def test_llms_txt_and_well_known() -> None:
     assert manifest["name"] == "AllocContext"
     assert len(manifest["resources"][0]["tools"]) == len(_EXPECTED_TOOLS)
     assert manifest["payment"]["pricing"]["cached_context_and_math"] == "$0.02"
+    assert manifest["payment"]["pricing"]["network"] == "eip155:84532"
+
+
+def test_build_well_known_x402_honors_network() -> None:
+    manifest = build_well_known_x402(
+        public_url="https://mcp.example.com",
+        mcp_path="/mcp",
+        pay_to="0xSeller",
+        network="eip155:8453",
+    )
+    assert manifest["payment"]["pricing"]["network"] == "eip155:8453"
 
 
 def test_build_x402_resource_server_registers_bazaar(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -67,6 +67,7 @@ def _well_known_x402(settings: X402Settings) -> JSONResponse:
         pay_to=settings.pay_to,
         price_light=settings.mcp_price,
         price_heavy=settings.mcp_price_heavy,
+        network=settings.network,
     )
     return JSONResponse(payload)
 

@@ -114,13 +114,22 @@ def get_context_at(
     band: float | None = None,
 ) -> dict[str, Any]:
     view_assets = validate_view_assets(assets)
-    resolved = resolve_context_snapshot_as_of(
-        conn,
-        scope=scope,
-        as_of=as_of,
-        mode=match,
-    )
-    bundle = load_context_bundle_snapshot(conn, scope=scope, as_of=resolved)
+    try:
+        resolved = resolve_context_snapshot_as_of(
+            conn,
+            scope=scope,
+            as_of=as_of,
+            mode=match,
+        )
+        bundle = load_context_bundle_snapshot(conn, scope=scope, as_of=resolved)
+    except SnapshotNotFoundError as exc:
+        return {
+            "available": False,
+            "reason": str(exc),
+            "scope": scope,
+            "requested_as_of": as_of,
+            "match": match,
+        }
     if target_pct is not None or band is not None:
         bundle["portfolio"] = _apply_allocation_targets(
             bundle.get("portfolio") or {},
@@ -150,32 +159,41 @@ def get_context_delta(
     assets: list[str] | None = None,
 ) -> dict[str, Any]:
     view_assets = validate_view_assets(assets)
-    prior_resolved = resolve_context_snapshot_as_of(
-        conn,
-        scope=scope,
-        as_of=prior_as_of,
-        mode="at_or_before",
-    )
-    prior = load_context_bundle_snapshot(conn, scope=scope, as_of=prior_resolved)
-    if current_as_of:
-        current_resolved = resolve_context_snapshot_as_of(
+    try:
+        prior_resolved = resolve_context_snapshot_as_of(
             conn,
             scope=scope,
-            as_of=current_as_of,
+            as_of=prior_as_of,
             mode="at_or_before",
         )
-        current = load_context_bundle_snapshot(conn, scope=scope, as_of=current_resolved)
-    else:
-        from alloccontext.rollup.context import build_context_bundle
+        prior = load_context_bundle_snapshot(conn, scope=scope, as_of=prior_resolved)
+        if current_as_of:
+            current_resolved = resolve_context_snapshot_as_of(
+                conn,
+                scope=scope,
+                as_of=current_as_of,
+                mode="at_or_before",
+            )
+            current = load_context_bundle_snapshot(conn, scope=scope, as_of=current_resolved)
+        else:
+            from alloccontext.rollup.context import build_context_bundle
 
-        current = build_context_bundle(
-            conn,
-            config,
-            scope=scope,
-            rollup=config.rollup,
-            save_snapshot=False,
-        )
-        current_resolved = current.get("as_of")
+            current = build_context_bundle(
+                conn,
+                config,
+                scope=scope,
+                rollup=config.rollup,
+                save_snapshot=False,
+            )
+            current_resolved = current.get("as_of")
+    except SnapshotNotFoundError as exc:
+        return {
+            "available": False,
+            "reason": str(exc),
+            "scope": scope,
+            "prior_as_of": prior_as_of,
+            "current_as_of": current_as_of,
+        }
 
     prior = apply_assets_filter_to_bundle(prior, view_assets)
     current = apply_assets_filter_to_bundle(current, view_assets)
