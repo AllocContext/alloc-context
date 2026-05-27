@@ -51,10 +51,31 @@ def load_x402_settings(*, require_payment: bool = False) -> X402Settings:
     )
 
 
+def _is_cdp_facilitator_url(url: str) -> bool:
+    return url.rstrip("/").startswith(CDP_FACILITATOR_URL.rstrip("/"))
+
+
+def build_x402_facilitator_client(settings: X402Settings) -> HTTPFacilitatorClient:
+    if _is_cdp_facilitator_url(settings.facilitator_url):
+        try:
+            from cdp.x402 import create_facilitator_config
+        except ImportError as exc:
+            raise RuntimeError(
+                "CDP facilitator requires cdp-sdk (pip install 'alloc-context[hosted]')"
+            ) from exc
+        if not cdp_facilitator_configured():
+            raise RuntimeError(
+                "CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET"
+            )
+        return HTTPFacilitatorClient(create_facilitator_config())
+
+    return HTTPFacilitatorClient(FacilitatorConfig(url=settings.facilitator_url))
+
+
 def build_x402_resource_server(settings: X402Settings) -> x402ResourceServer:
     from x402.mechanisms.evm.exact import ExactEvmServerScheme
 
-    facilitator = HTTPFacilitatorClient(FacilitatorConfig(url=settings.facilitator_url))
+    facilitator = build_x402_facilitator_client(settings)
     server = x402ResourceServer(facilitator)
     server.register(settings.network, ExactEvmServerScheme())
     server.register_extension(bazaar_resource_server_extension)

@@ -5,7 +5,11 @@ import pytest
 from alloccontext.mcp.x402_config import (
     DEFAULT_MCP_PRICE,
     MCP_HTTP_PATH,
+    CDP_FACILITATOR_URL,
+    X402Settings,
+    build_x402_facilitator_client,
     build_x402_routes,
+    cdp_facilitator_configured,
     load_x402_settings,
 )
 
@@ -69,7 +73,6 @@ def test_cdp_facilitator_does_not_auto_enable_x402_without_pay_to(
 ) -> None:
     pytest.importorskip("x402")
     from alloccontext.mcp.http import build_http_app
-    from alloccontext.mcp.x402_config import CDP_FACILITATOR_URL
 
     monkeypatch.delenv("X402_PAY_TO", raising=False)
     monkeypatch.delenv("X402_ENABLED", raising=False)
@@ -77,3 +80,38 @@ def test_cdp_facilitator_does_not_auto_enable_x402_without_pay_to(
     app = build_http_app(x402=False)
     assert app is not None
     assert not app.user_middleware
+
+
+def test_cdp_facilitator_client_requires_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("x402")
+    pytest.importorskip("cdp")
+    monkeypatch.delenv("CDP_API_KEY_ID", raising=False)
+    monkeypatch.delenv("CDP_API_KEY_SECRET", raising=False)
+    settings = X402Settings(
+        enabled=True,
+        pay_to="0xSeller",
+        facilitator_url=CDP_FACILITATOR_URL,
+        network="eip155:8453",
+        mcp_price=DEFAULT_MCP_PRICE,
+        mcp_path=MCP_HTTP_PATH,
+    )
+    with pytest.raises(RuntimeError, match="CDP_API_KEY"):
+        build_x402_facilitator_client(settings)
+
+
+def test_cdp_facilitator_client_with_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("x402")
+    pytest.importorskip("cdp")
+    monkeypatch.setenv("CDP_API_KEY_ID", "test-key-id")
+    monkeypatch.setenv("CDP_API_KEY_SECRET", "test-key-secret")
+    settings = X402Settings(
+        enabled=True,
+        pay_to="0xSeller",
+        facilitator_url=CDP_FACILITATOR_URL,
+        network="eip155:8453",
+        mcp_price=DEFAULT_MCP_PRICE,
+        mcp_path=MCP_HTTP_PATH,
+    )
+    client = build_x402_facilitator_client(settings)
+    assert client.url == CDP_FACILITATOR_URL
+    assert cdp_facilitator_configured()

@@ -41,7 +41,23 @@ export X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402
 export X402_NETWORK=eip155:8453
 export CDP_API_KEY_ID=...
 export CDP_API_KEY_SECRET=...
+export X402_PUBLIC_URL=https://mcp.yourdomain.com
+export X402_PAY_TO=0xYourWallet
 ```
+
+CDP auth is required for verify/settle when using the CDP facilitator URL.
+The hosted install includes `cdp-sdk`, which wires `CDP_API_KEY_*` into the
+facilitator client automatically.
+
+After deploy, run:
+
+```bash
+source /opt/trading/shared/.env
+python scripts/x402-production-check.py
+```
+
+Then complete one paid tool call with an x402 HTTP client (mainnet USDC on Base)
+and confirm settlement to `X402_PAY_TO`.
 
 See [Coinbase x402 seller quickstart](https://docs.cdp.coinbase.com/x402/quickstart-for-sellers).
 

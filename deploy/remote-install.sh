@@ -21,7 +21,7 @@ if [[ ! -x "${PY}" ]]; then
 fi
 
 chown -R trading:trading "${REMOTE}/.venv" "${REMOTE}/config" "${REMOTE}/state"
-"${PIP}" install -e "${REMOTE}" -q
+"${PIP}" install -e "${REMOTE}[hosted]" -q
 chown -R trading:trading "${REMOTE}"
 
 ENV_FILE="${ALLOC_CONTEXT_ENV_FILE:-${REMOTE}/.env}"
