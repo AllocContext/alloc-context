@@ -7,8 +7,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from alloccontext.horizon import bars_within_horizon, horizon_days
-from alloccontext.ingest.kraken_client import KrakenClient, KrakenError, pair_to_symbol
+from alloccontext.ingest.kraken_client import KrakenClient, pair_to_symbol
 
 
 @dataclass
@@ -33,13 +32,13 @@ def load_kraken_credentials() -> tuple[str, str] | None:
     return None
 
 
-def build_kraken_client(config) -> KrakenClient:
+def build_kraken_client(spot) -> KrakenClient:
     creds = load_kraken_credentials()
     return KrakenClient(
         api_key=creds[0] if creds else "",
         api_secret=creds[1] if creds else "",
-        retry_backoff=config.kraken.retry_backoff_seconds,
-        max_retries=config.kraken.max_retries,
+        retry_backoff=spot.retry_backoff_seconds,
+        max_retries=spot.max_retries,
     )
 
 
@@ -80,9 +79,9 @@ def portfolio_from_balances(
     )
 
 
-def fetch_portfolio_snapshot(client: KrakenClient, config) -> PortfolioSnapshot:
+def fetch_portfolio_snapshot(client: KrakenClient, spot) -> PortfolioSnapshot:
     prices: dict[str, float] = {}
-    for pair in config.kraken.pairs:
+    for pair in spot.pairs:
         symbol = pair_to_symbol(pair)
         prices[symbol] = client.get_ticker(pair)["last"]
     balances, cash_breakdown = client.get_balances_with_breakdown()
@@ -159,39 +158,6 @@ def upsert_market_bars(
 
 
 def refresh_kraken(conn: sqlite3.Connection, config) -> dict[str, Any]:
-    creds = load_kraken_credentials()
-    if not creds:
-        return {
-            "ok": True,
-            "rows": 0,
-            "skipped": True,
-            "reason": "missing_kraken_credentials",
-        }
+    from alloccontext.ingest.exchange.registry import refresh_exchange
 
-    client = build_kraken_client(config)
-    try:
-        snap = fetch_portfolio_snapshot(client, config)
-        upsert_portfolio_snapshot(conn, snap)
-        bar_rows = 0
-        for pair in config.kraken.pairs:
-            bars = client.get_ohlc(pair, config.kraken.ohlc_interval_minutes)
-            bars = bars_within_horizon(bars, days=horizon_days(config))
-            bar_rows += upsert_market_bars(
-                conn,
-                pair=pair,
-                interval_minutes=config.kraken.ohlc_interval_minutes,
-                bars=bars,
-            )
-    except KrakenError as exc:
-        return {"ok": False, "error": str(exc), "rows": 0}
-
-    return {
-        "ok": True,
-        "rows": 1 + bar_rows,
-        "portfolio": {
-            "ts": snap.ts,
-            "nav_usd": snap.nav_usd,
-            "cash_usd": snap.cash_usd,
-        },
-        "market_bars": bar_rows,
-    }
+    return refresh_exchange(conn, config, "kraken")

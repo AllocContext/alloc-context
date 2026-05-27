@@ -56,6 +56,26 @@ class KrakenConfig:
 
 
 @dataclass(frozen=True)
+class SpotExchangeConfig:
+    enabled: bool
+    ohlc_interval_minutes: int
+    pairs: list[str]
+    retry_backoff_seconds: float
+    max_retries: int
+
+
+@dataclass(frozen=True)
+class ExchangesConfig:
+    primary: str
+    kraken: SpotExchangeConfig
+
+    def primary_spot(self) -> SpotExchangeConfig:
+        if self.primary == "kraken":
+            return self.kraken
+        raise ValueError(f"unsupported primary exchange: {self.primary}")
+
+
+@dataclass(frozen=True)
 class KalshiSeriesConfig:
     asset: str
     series: str
@@ -167,6 +187,7 @@ class AppConfig:
     portfolio: PortfolioConfig
     ingest: IngestConfig
     kraken: KrakenConfig
+    exchanges: ExchangesConfig
     kalshi: KalshiConfig
     rollup: RollupConfig
     synthesis: SynthesisConfig
@@ -202,6 +223,47 @@ def _load_fred_series(catalog_path: Path) -> list[FredSeriesSpec]:
             )
         )
     return specs
+
+
+def _spot_fields(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "ohlc_interval_minutes": int(raw.get("ohlc_interval_minutes") or 1440),
+        "pairs": [str(p) for p in (raw.get("pairs") or ["XBTUSD", "ETHUSD"])],
+        "retry_backoff_seconds": float(raw.get("retry_backoff_seconds") or 2.0),
+        "max_retries": int(raw.get("max_retries") or 3),
+    }
+
+
+def _kraken_config_from_spot(spot: SpotExchangeConfig) -> KrakenConfig:
+    return KrakenConfig(
+        ohlc_interval_minutes=spot.ohlc_interval_minutes,
+        pairs=list(spot.pairs),
+        retry_backoff_seconds=spot.retry_backoff_seconds,
+        max_retries=spot.max_retries,
+    )
+
+
+def _load_exchanges_config(
+    raw: dict[str, Any],
+    *,
+    kraken_raw: dict[str, Any],
+    ingest_sources: dict[str, bool],
+) -> ExchangesConfig:
+    exchanges_raw = raw.get("exchanges") or {}
+    if exchanges_raw:
+        kr_raw = exchanges_raw.get("kraken") or {}
+        enabled = bool(kr_raw.get("enabled", ingest_sources.get("kraken", True)))
+        primary = str(exchanges_raw.get("primary") or "kraken")
+    else:
+        kr_raw = kraken_raw
+        enabled = bool(ingest_sources.get("kraken", True))
+        primary = "kraken"
+
+    spot = SpotExchangeConfig(
+        enabled=enabled,
+        **_spot_fields(kr_raw),
+    )
+    return ExchangesConfig(primary=primary, kraken=spot)
 
 
 def _resolve_config_path(path: str | Path | None) -> Path:
@@ -249,6 +311,17 @@ def load_config(path: str | Path | None = None) -> AppConfig:
     kalshi_fallback_daily = kalshi_raw.get("fallback_daily_archive")
     etf_fallback = etf_raw.get("fallback_snapshot")
 
+    ingest_sources = {
+        str(k): bool(v)
+        for k, v in (ingest_raw.get("sources") or {}).items()
+    }
+    exchanges = _load_exchanges_config(
+        raw,
+        kraken_raw=kraken_raw,
+        ingest_sources=ingest_sources,
+    )
+    kraken = _kraken_config_from_spot(exchanges.kraken)
+
     return AppConfig(
         paths=PathsConfig(
             db=db,
@@ -276,17 +349,10 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         ),
         ingest=IngestConfig(
             interval_minutes=int(ingest_raw.get("interval_minutes") or 60),
-            sources={
-                str(k): bool(v)
-                for k, v in (ingest_raw.get("sources") or {}).items()
-            },
+            sources=ingest_sources,
         ),
-        kraken=KrakenConfig(
-            ohlc_interval_minutes=int(kraken_raw.get("ohlc_interval_minutes") or 1440),
-            pairs=[str(p) for p in (kraken_raw.get("pairs") or ["XBTUSD", "ETHUSD"])],
-            retry_backoff_seconds=float(kraken_raw.get("retry_backoff_seconds") or 2.0),
-            max_retries=int(kraken_raw.get("max_retries") or 3),
-        ),
+        kraken=kraken,
+        exchanges=exchanges,
         kalshi=KalshiConfig(
             use_api=bool(kalshi_raw.get("use_api", True)),
             base_url=str(

@@ -60,7 +60,7 @@ def test_portfolio_from_balances() -> None:
 
 
 def test_fetch_and_persist_portfolio(config, conn) -> None:
-    snap = fetch_portfolio_snapshot(FakeKrakenClient(), config)
+    snap = fetch_portfolio_snapshot(FakeKrakenClient(), config.exchanges.kraken)
     assert snap.nav_usd > 0
     upsert_portfolio_snapshot(conn, snap)
     row = conn.execute("SELECT nav_usd FROM portfolio_snapshots").fetchone()
@@ -91,10 +91,10 @@ def test_refresh_kraken_success(conn, config, monkeypatch) -> None:
     monkeypatch.setenv("KRAKEN_API_SECRET", "dGVzdA==")
     fake = FakeKrakenClient()
     with patch(
-        "alloccontext.ingest.kraken_portfolio.build_kraken_client",
+        "alloccontext.ingest.exchange.kraken_adapter.build_kraken_client",
         return_value=fake,
     ), patch(
-        "alloccontext.ingest.kraken_portfolio.fetch_portfolio_snapshot",
+        "alloccontext.ingest.exchange.kraken_adapter.fetch_portfolio_snapshot",
         return_value=PortfolioSnapshot(
             ts="2026-05-21T12:00:00+00:00",
             nav_usd=1000.0,

@@ -85,7 +85,7 @@ Bazaar title:
 
 **Exchange & portfolio**
 
-- [ ] Exchange abstraction in ingest + rollup (`kraken`, `coinbase` first)
+- [x] Exchange abstraction in ingest + rollup (`kraken`, `coinbase` first)
 - [ ] Coinbase Advanced Trade read-only: balances, spot positions, USD NAV
 - [ ] MCP `exchange` parameter on portfolio and rebalance tools
 - [ ] `get_portfolio_state` Tier 2 BYOK (credentials in request, never stored)
@@ -106,7 +106,7 @@ Bazaar title:
 
 **Suggested PR slices**
 
-1. `exchange` config schema + Kraken refactor (no new exchange yet)
+1. [x] `exchange` config schema + Kraken refactor (no new exchange yet)
 2. Coinbase ingest + portfolio adapter
 3. MCP Tier 2 BYOK + `exchange` param
 

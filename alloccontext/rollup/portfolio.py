@@ -74,13 +74,14 @@ def build_portfolio_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
 
 
 def build_market_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
-    assets = build_kraken_market_assets(conn, config)
+    spot = config.exchanges.primary_spot()
+    assets = build_spot_market_assets(conn, spot)
     breadth = build_market_breadth_context(conn)
 
     if not assets and not breadth.get("available"):
         return {"available": False, "reason": "no_market_data"}
 
-    result: dict[str, Any] = {"available": True, "interval_minutes": config.kraken.ohlc_interval_minutes}
+    result: dict[str, Any] = {"available": True, "interval_minutes": spot.ohlc_interval_minutes}
     if assets:
         result["assets"] = assets
     if breadth.get("available"):
@@ -90,12 +91,12 @@ def build_market_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
     return result
 
 
-def build_kraken_market_assets(conn: sqlite3.Connection, config) -> dict[str, Any]:
+def build_spot_market_assets(conn: sqlite3.Connection, spot) -> dict[str, Any]:
     from alloccontext.ingest.kraken_client import pair_to_symbol
 
     assets: dict[str, Any] = {}
-    interval = config.kraken.ohlc_interval_minutes
-    for pair in config.kraken.pairs:
+    interval = spot.ohlc_interval_minutes
+    for pair in spot.pairs:
         symbol = pair_to_symbol(pair)
         rows = conn.execute(
             """
@@ -118,3 +119,8 @@ def build_kraken_market_assets(conn: sqlite3.Connection, config) -> dict[str, An
             "change_pct": {"1_bar": change_pct},
         }
     return assets
+
+
+def build_kraken_market_assets(conn: sqlite3.Connection, config) -> dict[str, Any]:
+    """Deprecated alias — use build_spot_market_assets with primary exchange config."""
+    return build_spot_market_assets(conn, config.exchanges.primary_spot())
