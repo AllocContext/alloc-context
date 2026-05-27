@@ -8,6 +8,39 @@ from alloccontext.mcp import handlers
 from alloccontext.store.db import connect
 
 
+def _transport_security_settings(*, host: str):
+    from urllib.parse import urlparse
+
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    from alloccontext.mcp.bazaar import resolve_public_base_url
+
+    public = resolve_public_base_url()
+    if not public:
+        return None
+
+    parsed = urlparse(public if "://" in public else f"https://{public}")
+    hostname = parsed.hostname
+    if not hostname:
+        return None
+
+    scheme = parsed.scheme or "https"
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "127.0.0.1:*",
+            "localhost:*",
+            "[::1]:*",
+            hostname,
+            f"{hostname}:*",
+        ],
+        allowed_origins=[
+            f"{scheme}://{hostname}:*",
+            public.rstrip("/"),
+        ],
+    )
+
+
 def _require_mcp():
     try:
         from mcp.server.fastmcp import FastMCP
@@ -37,6 +70,7 @@ def create_server(
         host=host,
         port=port,
         stateless_http=stateless_http,
+        transport_security=_transport_security_settings(host=host),
         instructions=(
             "BTC/ETH allocation context: fused market backdrop from cached ingest, "
             "USD rebalance moves, and allocation band checks. Facts only — no LLM."

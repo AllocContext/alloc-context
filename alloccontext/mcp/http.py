@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+from collections.abc import AsyncIterator
 from typing import Any
 
 from starlette.applications import Starlette
@@ -66,6 +68,11 @@ def build_http_app(
     inner = mcp.streamable_http_app()
     settings = load_x402_settings(require_payment=x402)
 
+    @contextlib.asynccontextmanager
+    async def mcp_lifespan(_app: Starlette) -> AsyncIterator[None]:
+        async with mcp.session_manager.run():
+            yield
+
     discovery_routes = [
         Route("/health", _health),
         Route("/llms.txt", lambda req: _llms_txt(settings)),
@@ -78,6 +85,7 @@ def build_http_app(
                 *discovery_routes,
                 Mount("/", app=inner),
             ],
+            lifespan=mcp_lifespan,
         )
 
     from x402.http.middleware.fastapi import PaymentMiddlewareASGI
@@ -96,6 +104,7 @@ def build_http_app(
             *discovery_routes,
             Mount("/", app=inner),
         ],
+        lifespan=mcp_lifespan,
     )
 
 
