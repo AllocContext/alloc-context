@@ -1,0 +1,17 @@
+[Unit]
+Description=AllocContext daily brief
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=trading
+Group=trading
+WorkingDirectory=/opt/alloc-context
+EnvironmentFile=-/opt/alloc-context/.env
+ExecStart=/opt/alloc-context/.venv/bin/python -m alloccontext brief daily --email
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

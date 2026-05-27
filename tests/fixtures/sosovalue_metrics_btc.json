@@ -1,0 +1,31 @@
+{
+  "code": 0,
+  "data": {
+    "list": [
+      {
+        "ticker": "IBIT",
+        "institute": "BlackRock",
+        "dailyNetInflow": {
+          "value": 64.1,
+          "lastUpdateDate": "2026-05-21"
+        },
+        "netAssets": {
+          "value": 66570000000,
+          "lastUpdateDate": "2026-05-21"
+        }
+      },
+      {
+        "ticker": "FBTC",
+        "institute": "Fidelity",
+        "dailyNetInflow": {
+          "value": -32.9,
+          "lastUpdateDate": "2026-05-21"
+        },
+        "netAssets": {
+          "value": 14060000000,
+          "lastUpdateDate": "2026-05-21"
+        }
+      }
+    ]
+  }
+}

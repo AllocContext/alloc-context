@@ -1,0 +1,10 @@
+[Unit]
+Description=AllocContext ingest timer
+Requires=alloc-context-ingest.service
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

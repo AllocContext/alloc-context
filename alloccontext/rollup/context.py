@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+from datetime import datetime, timezone
+from typing import Any, Literal
+
+from alloccontext.rollup.cluster_config import RollupConfig, load_rollup_config
+from alloccontext.rollup.delta import build_delta_context
+from alloccontext.rollup.macro import build_macro_context
+from alloccontext.rollup.portfolio import build_market_context, build_portfolio_context
+from alloccontext.rollup.sentiment import build_sentiment_context
+
+Scope = Literal["daily", "weekly"]
+
+
+def _load_prior_context(
+    conn: sqlite3.Connection,
+    *,
+    scope: Scope,
+    prior_as_of: str | None,
+) -> dict[str, Any] | None:
+    if not prior_as_of:
+        return None
+    row = conn.execute(
+        """
+        SELECT context_json FROM brief_archive
+        WHERE scope = ? AND as_of = ?
+        """,
+        (scope, prior_as_of),
+    ).fetchone()
+    if row is None:
+        return None
+    try:
+        return json.loads(row["context_json"])
+    except (TypeError, json.JSONDecodeError):
+        return None
+
+
+def build_context_bundle(
+    conn,
+    config,
+    *,
+    scope: Scope,
+    rollup: RollupConfig,
+    as_of: datetime | None = None,
+) -> dict[str, Any]:
+    now = (as_of or datetime.now(timezone.utc)).replace(microsecond=0)
+
+    prior_row = conn.execute(
+        """
+        SELECT as_of FROM brief_archive
+        WHERE scope = ? AND as_of < ?
+        ORDER BY as_of DESC LIMIT 1
+        """,
+        (scope, now.isoformat()),
+    ).fetchone()
+    prior_as_of = prior_row["as_of"] if prior_row else None
+    prior_context = _load_prior_context(conn, scope=scope, prior_as_of=prior_as_of)
+
+    portfolio = build_portfolio_context(conn, config)
+    market = build_market_context(conn, config)
+    sentiment = build_sentiment_context(conn, config, rollup, now=now)
+    macro = build_macro_context(conn, config, now=now, scope=scope)
+    delta = build_delta_context(
+        conn,
+        now=now,
+        portfolio=portfolio,
+        sentiment=sentiment,
+        market=market,
+        prior_context=prior_context,
+    )
+
+    return {
+        "bundle_id": f"{scope}:{now.isoformat()}",
+        "scope": scope,
+        "as_of": now.isoformat(),
+        "prior_as_of": prior_as_of,
+        "horizon_days": config.horizon.days,
+        "portfolio": portfolio,
+        "market": market,
+        "sentiment": sentiment,
+        "macro": macro,
+        "delta": delta,
+    }

@@ -1,0 +1,24 @@
+{
+  "markets": [
+    {
+      "ticker": "KXBTCD-26MAY2610-T86299.99",
+      "event_ticker": "KXBTCD-26MAY2610",
+      "series_ticker": "KXBTCD",
+      "title": "Bitcoin price on May 26, 2026?",
+      "status": "open",
+      "yes_bid": 48,
+      "yes_ask": 52,
+      "no_ask": 49
+    },
+    {
+      "ticker": "KXETHD-26MAY2610-T2839.99",
+      "event_ticker": "KXETHD-26MAY2610",
+      "series_ticker": "KXETHD",
+      "title": "Ethereum price at May 26, 2026 at 10am EDT?",
+      "status": "open",
+      "yes_bid": 44,
+      "yes_ask": 46,
+      "no_ask": 55
+    }
+  ]
+}

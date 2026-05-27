@@ -1,0 +1,85 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+      - name: Lint GitHub Actions workflows
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12
+          ./actionlint
+
+  deploy:
+    needs: test
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      github.repository == 'negillett/alloc-context'
+    runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require VPS secrets
+        run: |
+          test -n "${{ secrets.VPS_SSH_KEY }}" || {
+            echo "VPS_SSH_KEY secret is not set — see docs/self-hosting.md"
+            exit 1
+          }
+          test -n "${VPS_HOST}" || {
+            echo "VPS_HOST secret is not set — see docs/self-hosting.md"
+            exit 1
+          }
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${VPS_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Rsync to VPS
+        env:
+          REMOTE: ${{ vars.ALLOC_CONTEXT_REMOTE }}
+        run: |
+          REMOTE="${REMOTE:-/opt/alloc-context}"
+          USER="${VPS_USER:-root}"
+          rsync -avz --delete \
+            --exclude '.venv/' \
+            --exclude '.git/' \
+            --exclude '.pytest_cache/' \
+            --exclude '.env' \
+            --exclude '/state/' \
+            --exclude 'config/config.yaml' \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
+            ./ "${USER}@${VPS_HOST}:${REMOTE}/"
+
+      - name: Install on VPS
+        env:
+          DEPLOYED_SHA: ${{ github.sha }}
+          ALLOC_CONTEXT_REMOTE: ${{ vars.ALLOC_CONTEXT_REMOTE }}
+          ALLOC_CONTEXT_ENV_FILE: ${{ vars.ALLOC_CONTEXT_ENV_FILE }}
+        run: |
+          USER="${VPS_USER:-root}"
+          REMOTE="${ALLOC_CONTEXT_REMOTE:-/opt/alloc-context}"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes \
+            "${USER}@${VPS_HOST}" \
+            "DEPLOYED_SHA=${DEPLOYED_SHA} ALLOC_CONTEXT_REMOTE=${REMOTE} ALLOC_CONTEXT_ENV_FILE=${ALLOC_CONTEXT_ENV_FILE} bash -s" \
+            < deploy/remote-install.sh
+
+      - name: Deploy summary
+        run: echo "Deployed ${GITHUB_SHA} to configured host"

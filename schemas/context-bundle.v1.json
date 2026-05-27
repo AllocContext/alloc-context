@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alloc-context/context-bundle.v1.json",
+  "title": "ContextBundle",
+  "type": "object",
+  "required": ["bundle_id", "scope", "as_of", "portfolio", "market", "sentiment", "macro", "delta"],
+  "properties": {
+    "bundle_id": { "type": "string" },
+    "scope": { "enum": ["daily", "weekly"] },
+    "as_of": { "type": "string", "format": "date-time" },
+    "prior_as_of": { "type": ["string", "null"], "format": "date-time" },
+    "horizon_days": { "type": "integer", "minimum": 1 },
+    "portfolio": { "type": "object" },
+    "market": { "type": "object" },
+    "sentiment": { "type": "object" },
+    "macro": { "type": "object" },
+    "delta": { "type": "object" }
+  },
+  "additionalProperties": false
+}

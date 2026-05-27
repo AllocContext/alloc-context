@@ -1,0 +1,9 @@
+[Unit]
+Description=AllocContext weekly brief timer
+Requires=alloc-context-weekly-brief.service
+
+[Timer]
+OnCalendar=Mon *-*-* 07:00:00 America/Chicago
+
+[Install]
+WantedBy=timers.target
