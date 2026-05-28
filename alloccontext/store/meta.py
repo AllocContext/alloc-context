@@ -18,4 +18,3 @@ def set_meta(conn: sqlite3.Connection, key: str, value: str) -> None:
         """,
         (key, value),
     )
-    conn.commit()

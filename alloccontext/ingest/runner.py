@@ -22,8 +22,6 @@ from alloccontext.ingest.macro_calendar import refresh_macro_calendar
 from alloccontext.store.db import record_ingest_run
 from alloccontext.store.retention import prune_to_horizon
 
-_DISABLED_SOURCES = frozenset({"social"})
-
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -53,8 +51,6 @@ def _run_source(
         result = refresh_coinmarketcap(conn, config)
     elif source == "fred":
         result = refresh_fred(conn, config)
-    elif source in _DISABLED_SOURCES:
-        result = {"ok": True, "rows": 0, "skipped": True, "reason": "not_implemented"}
     else:
         result = {"ok": False, "rows": 0, "error": f"unknown_source:{source}"}
 

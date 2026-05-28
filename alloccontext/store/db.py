@@ -190,6 +190,11 @@ def migrate(conn: sqlite3.Connection) -> None:
             (str(SCHEMA_VERSION),),
         )
         conn.commit()
+    elif int(row["value"]) > SCHEMA_VERSION:
+        raise RuntimeError(
+            f"database schema version {row['value']} is newer than "
+            f"supported {SCHEMA_VERSION}; upgrade the application"
+        )
 
 
 def record_ingest_run(

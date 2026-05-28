@@ -67,7 +67,6 @@ def upsert_fear_greed_rows(conn: sqlite3.Connection, rows: list[dict[str, Any]])
             ),
         )
         count += 1
-    conn.commit()
     return count
 
 
@@ -81,8 +80,10 @@ def refresh_fear_greed(
     try:
         rows = fetch_fear_greed(limit=history_limit, timeout=timeout)
     except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+        conn.rollback()
         return {"ok": False, "error": str(exc), "rows": 0}
     if not rows:
         return {"ok": False, "error": "empty_response", "rows": 0}
     upserted = upsert_fear_greed_rows(conn, rows)
+    conn.commit()
     return {"ok": True, "rows": upserted, "latest": rows[0]}
