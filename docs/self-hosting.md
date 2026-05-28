@@ -62,8 +62,9 @@ tests pass on `main`. It requires repository secrets:
 | `VPS_SSH_KEY` | Yes | Private key for SSH/rsync |
 | `VPS_HOST` | Yes | Hostname or IP (not logged in workflow output) |
 | `VPS_USER` | No | SSH user (default `root`) |
+| `EVM_PRIVATE_KEY` | Paid smoke only | Buyer wallet for weekly x402 settlement ([mcp-discovery.md](mcp-discovery.md)) |
 
-Application secrets (Kraken, data APIs) stay on the host — not in GitHub.
+Application secrets (Kraken, data APIs, seller x402 keys) stay on the host — not in GitHub.
 
 Optional repository **variables** (Settings → Secrets and variables → Actions →
 Variables) for non-secret deploy paths:

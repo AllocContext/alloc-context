@@ -1,0 +1,33 @@
+name: paid-smoke
+
+on:
+  schedule:
+    # Wednesdays 06:45 UTC — after Monday VPS smoke and Tuesday x402 check
+    - cron: "45 6 * * 3"
+  workflow_dispatch:
+
+jobs:
+  paid-mcp-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Require buyer wallet secret
+        run: |
+          test -n "${{ secrets.EVM_PRIVATE_KEY }}" || {
+            echo "EVM_PRIVATE_KEY secret is not set — see docs/mcp-discovery.md"
+            exit 1
+          }
+
+      - name: Install hosted extras
+        run: pip install -e ".[hosted]"
+
+      - name: Paid MCP smoke (mainnet x402)
+        env:
+          EVM_PRIVATE_KEY: ${{ secrets.EVM_PRIVATE_KEY }}
+          MCP_SMOKE_TOOL: get_market_context
+        run: python scripts/x402-paid-smoke-test.py
