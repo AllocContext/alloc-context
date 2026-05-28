@@ -119,7 +119,6 @@ def upsert_portfolio_snapshot(conn: sqlite3.Connection, snap: PortfolioSnapshot)
             json.dumps(raw, sort_keys=True),
         ),
     )
-    conn.commit()
 
 
 def upsert_market_bars(
@@ -153,7 +152,6 @@ def upsert_market_bars(
             ),
         )
         count += 1
-    conn.commit()
     return count
 
 

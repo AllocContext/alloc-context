@@ -159,6 +159,7 @@ def refresh_kalshi_api(conn: sqlite3.Connection, config) -> dict[str, Any]:
         now=now,
     )
     if not markets and not cf_history:
+        conn.rollback()
         return {
             "ok": False,
             "error": "no_kalshi_markets_or_cf_history",
@@ -194,4 +195,5 @@ def refresh_kalshi_api(conn: sqlite3.Connection, config) -> dict[str, Any]:
     }
     if cf_errors:
         result["feed_errors"] = cf_errors
+    conn.commit()
     return result

@@ -140,7 +140,6 @@ def upsert_etf_flow_days(
             ),
         )
         count += 1
-    conn.commit()
     return count
 
 
@@ -189,7 +188,6 @@ def upsert_etf_ticker_flows(
             ),
         )
         count += 1
-    conn.commit()
     return count
 
 
@@ -259,6 +257,7 @@ def refresh_etf_flows(conn: sqlite3.Connection, config) -> dict[str, Any]:
                 sources.add("fallback")
 
     if rows_total == 0:
+        conn.rollback()
         if not api_key and not (fallback_path and fallback_path.exists()):
             return {
                 "ok": True,
@@ -274,6 +273,7 @@ def refresh_etf_flows(conn: sqlite3.Connection, config) -> dict[str, Any]:
             "error": "etf_ingest_failed",
         }
 
+    conn.commit()
     return {
         "ok": True,
         "rows": rows_total,

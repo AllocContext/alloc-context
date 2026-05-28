@@ -86,7 +86,6 @@ def upsert_fred_observations(
             (series_id, obs_date, value, fetched_at),
         )
         count += 1
-    conn.commit()
     return count
 
 
@@ -132,6 +131,8 @@ def refresh_fred(conn: sqlite3.Connection, config) -> dict[str, Any]:
             json.JSONDecodeError,
             RuntimeError,
         ) as exc:
-            return {"ok": False, "error": f"{spec.id}: {exc}", "rows": total}
+            conn.rollback()
+            return {"ok": False, "error": f"{spec.id}: {exc}", "rows": 0}
 
+    conn.commit()
     return {"ok": True, "rows": total, "series": series_ids}

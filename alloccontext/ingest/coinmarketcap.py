@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from alloccontext.ingest.env_keys import optional_env_key
+from alloccontext.ingest.parse_helpers import parse_float, parse_int
 
 CMC_BASE = "https://pro-api.coinmarketcap.com/v1"
 
@@ -71,18 +72,22 @@ def normalize_cmc_snapshot(
     eth_q = _quote_usd(eth)
 
     return {
-        "total_market_cap_usd": _float(usd.get("total_market_cap")),
-        "btc_dominance_pct": _float(global_data.get("btc_dominance")),
-        "eth_dominance_pct": _float(global_data.get("eth_dominance")),
-        "btc_rank": _int(btc.get("cmc_rank")),
-        "eth_rank": _int(eth.get("cmc_rank")),
-        "btc_price_usd": _float(btc_q.get("price")),
-        "eth_price_usd": _float(eth_q.get("price")),
-        "btc_market_cap_usd": _float(btc_q.get("market_cap")),
-        "eth_market_cap_usd": _float(eth_q.get("market_cap")),
-        "btc_change_pct_24h": _float(btc_q.get("percent_change_24h")),
-        "eth_change_pct_24h": _float(eth_q.get("percent_change_24h")),
+        "total_market_cap_usd": _rounded(parse_float(usd.get("total_market_cap"))),
+        "btc_dominance_pct": _rounded(parse_float(global_data.get("btc_dominance"))),
+        "eth_dominance_pct": _rounded(parse_float(global_data.get("eth_dominance"))),
+        "btc_rank": parse_int(btc.get("cmc_rank")),
+        "eth_rank": parse_int(eth.get("cmc_rank")),
+        "btc_price_usd": _rounded(parse_float(btc_q.get("price"))),
+        "eth_price_usd": _rounded(parse_float(eth_q.get("price"))),
+        "btc_market_cap_usd": _rounded(parse_float(btc_q.get("market_cap"))),
+        "eth_market_cap_usd": _rounded(parse_float(eth_q.get("market_cap"))),
+        "btc_change_pct_24h": _rounded(parse_float(btc_q.get("percent_change_24h"))),
+        "eth_change_pct_24h": _rounded(parse_float(eth_q.get("percent_change_24h"))),
     }
+
+
+def _rounded(value: float | None) -> float | None:
+    return round(value, 4) if value is not None else None
 
 
 def refresh_coinmarketcap(conn, config) -> dict[str, Any]:
@@ -126,22 +131,5 @@ def refresh_coinmarketcap(conn, config) -> dict[str, Any]:
 
     ts = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     upsert_crypto_market_snapshot(conn, source="coinmarketcap", snapshot_ts=ts, snapshot=snapshot)
+    conn.commit()
     return {"ok": True, "rows": 1, "snapshot_ts": ts, **snapshot}
-
-
-def _float(value: Any) -> float | None:
-    if value is None:
-        return None
-    try:
-        return round(float(value), 4)
-    except (TypeError, ValueError):
-        return None
-
-
-def _int(value: Any) -> int | None:
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None

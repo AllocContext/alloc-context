@@ -27,7 +27,6 @@ def upsert_kalshi_snapshot(conn: sqlite3.Connection, row: dict[str, Any]) -> Non
             row.get("raw_json"),
         ),
     )
-    conn.commit()
 
 
 def _refresh_kalshi_files(conn: sqlite3.Connection, config) -> dict[str, Any]:
@@ -57,6 +56,7 @@ def _refresh_kalshi_files(conn: sqlite3.Connection, config) -> dict[str, Any]:
             if quotes:
                 set_meta(conn, "kalshi_markets", json.dumps(quotes))
 
+    conn.commit()
     return {
         "ok": True,
         "rows": 1,

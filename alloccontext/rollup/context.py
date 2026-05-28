@@ -5,6 +5,8 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Literal
 
+from alloccontext.store.jsonutil import canonical_json
+
 from alloccontext.rollup.cluster_config import RollupConfig, load_rollup_config
 from alloccontext.rollup.delta import build_delta_context
 from alloccontext.rollup.macro import build_macro_context
@@ -52,7 +54,7 @@ def _save_context_snapshot(
         ON CONFLICT(scope, as_of) DO UPDATE SET
           context_json = excluded.context_json
         """,
-        (scope, as_of, json.dumps(context)),
+        (scope, as_of, canonical_json(context)),
     )
     conn.commit()
 

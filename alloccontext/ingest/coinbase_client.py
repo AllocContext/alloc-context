@@ -6,6 +6,8 @@ from typing import Any
 
 import jwt
 import requests
+
+from alloccontext.ingest.exchange_http import should_retry_exchange_attempt
 from cryptography.hazmat.primitives import serialization
 
 COINBASE_API = "https://api.coinbase.com"
@@ -225,6 +227,8 @@ class CoinbaseClient:
                 return body
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
-                if attempt + 1 < self.max_retries:
+                if attempt + 1 < self.max_retries and should_retry_exchange_attempt(exc):
                     time.sleep(self.retry_backoff * (attempt + 1))
+                    continue
+                break
         raise CoinbaseError(str(last_error)) from last_error

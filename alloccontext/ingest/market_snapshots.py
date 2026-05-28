@@ -53,7 +53,6 @@ def upsert_crypto_market_snapshot(
             fetched_at,
         ),
     )
-    conn.commit()
 
 
 def latest_snapshot(conn: sqlite3.Connection, source: str):

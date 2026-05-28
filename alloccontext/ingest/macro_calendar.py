@@ -239,7 +239,6 @@ def upsert_macro_events(conn: sqlite3.Connection, events: list[dict[str, Any]]) 
             ),
         )
         count += 1
-    conn.commit()
     return count
 
 
@@ -299,6 +298,7 @@ def refresh_macro_calendar(conn: sqlite3.Connection, config) -> dict[str, Any]:
 
     merged = merge_events(*feeds)
     upserted = upsert_macro_events(conn, merged)
+    conn.commit()
 
     ok = upserted > 0 or bool(static_rows)
     return {

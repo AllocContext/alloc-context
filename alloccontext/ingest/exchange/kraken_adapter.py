@@ -47,7 +47,9 @@ def refresh_kraken_exchange(conn: sqlite3.Connection, config) -> dict[str, Any]:
                 interval_minutes=spot.ohlc_interval_minutes,
                 bars=bars,
             )
+        conn.commit()
     except KrakenError as exc:
+        conn.rollback()
         return {"ok": False, "error": str(exc), "rows": 0}
 
     result: dict[str, Any] = {
