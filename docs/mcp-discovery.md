@@ -30,9 +30,10 @@ Paid MCP remains `POST /mcp` behind x402 when `--x402` is enabled.
 
 When x402 is enabled, `POST /mcp` declares:
 
-- Listing copy tuned for semantic search (BTC/ETH allocation, rebalance, drift)
-- Bazaar extension with streamable HTTP JSON-RPC example and tool name enum
-- Per-tool MCP schemas (see `alloccontext/mcp/bazaar.py`)
+- Listing copy tuned for semantic search (allocation drift, rebalance, ETF flows)
+- Per-tool MCP Bazaar extensions on `tools/call` (indexed separately on settle)
+- Fallback aggregate JSON-RPC schema for other MCP methods
+- `service_name` and tags on payment resource metadata (CDP index)
 
 Indexing happens after the **first successful settlement** through your
 facilitator. Verify alone does not list the service.
@@ -46,6 +47,14 @@ facilitator. Verify alone does not list the service.
 5. Search CDP Bazaar or use the discovery MCP (below).
 
 Run `scripts/x402-production-check.py` on the host after deploy.
+
+**After discovery copy changes:** refresh the CDP index with one paid call per
+tool (~$0.16 for cached math/context tools):
+
+```bash
+export EVM_PRIVATE_KEY=0x...   # buyer wallet
+python scripts/x402-reindex-burst.py
+```
 
 ## Weekly paid smoke (Bazaar activity)
 
@@ -117,4 +126,5 @@ For unpaid local use, keep stdio `alloc-context mcp`.
 
 > AllocContext — BTC/ETH allocation drift, rebalance moves & market context
 
-Tags: `btc`, `eth`, `rebalance`, `allocation`, `crypto`
+Tags: `btc`, `eth`, `rebalance`, `allocation`, `portfolio` (plus additional
+tags in `/.well-known/x402.json`)

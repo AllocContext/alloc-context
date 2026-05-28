@@ -119,6 +119,41 @@ def check_manifest_pay_to(config: X402CheckConfig) -> None:
         raise X402ProductionCheckError("x402.json payTo does not match X402_PAY_TO")
 
 
+def check_discovery_metadata(config: X402CheckConfig) -> list[str]:
+    """Assert static discovery copy includes Bazaar title, tags, and keywords."""
+    from alloccontext.mcp.bazaar import (
+        BAZAAR_INDEX_TAGS,
+        BAZAAR_SERVICE_NAME,
+        DISCOVERY_KEYWORD_MARKERS,
+        SERVICE_NAME,
+        SERVICE_TITLE,
+    )
+
+    messages: list[str] = []
+    manifest_base = config.local_url or config.public_url
+    _status, manifest_body = _fetch_ok(f"{manifest_base}/.well-known/x402.json")
+    manifest = json.loads(manifest_body)
+    if manifest.get("name") != SERVICE_NAME:
+        raise X402ProductionCheckError("x402.json name missing or wrong")
+    if manifest.get("title") != SERVICE_TITLE:
+        raise X402ProductionCheckError("x402.json title missing or wrong")
+    manifest_tags = manifest.get("tags") or []
+    for tag in BAZAAR_INDEX_TAGS:
+        if tag not in manifest_tags:
+            raise X402ProductionCheckError(f"x402.json missing tag {tag!r}")
+    messages.append(f"x402.json title/tags ok ({len(manifest_tags)} tags)")
+
+    _status, llms_body = _fetch_ok(f"{manifest_base}/llms.txt")
+    llms = llms_body.decode("utf-8")
+    if BAZAAR_SERVICE_NAME not in llms and SERVICE_TITLE not in llms:
+        raise X402ProductionCheckError("llms.txt missing service title")
+    for marker in DISCOVERY_KEYWORD_MARKERS:
+        if marker not in llms.lower():
+            raise X402ProductionCheckError(f"llms.txt missing keyword marker {marker!r}")
+    messages.append("llms.txt discovery keywords ok")
+    return messages
+
+
 def check_mcp_payment_gate(config: X402CheckConfig) -> str:
     mcp_base = config.local_url or config.public_url
     req = urllib.request.Request(
@@ -153,5 +188,6 @@ def run_production_checks(env: Mapping[str, str] | None = None) -> list[str]:
     messages.append(check_cdp_facilitator(config))
     messages.extend(check_discovery_paths(config))
     check_manifest_pay_to(config)
+    messages.extend(check_discovery_metadata(config))
     messages.append(check_mcp_payment_gate(config))
     return messages

@@ -106,6 +106,10 @@ def test_run_production_checks_skips_cdp_when_not_cdp_facilitator(monkeypatch) -
         lambda config: None,
     )
     monkeypatch.setattr(
+        "alloccontext.x402_production_check.check_discovery_metadata",
+        lambda config: ["x402.json title/tags ok"],
+    )
+    monkeypatch.setattr(
         "alloccontext.x402_production_check.check_mcp_payment_gate",
         lambda config: "POST /mcp returns 402 with PAYMENT-REQUIRED",
     )

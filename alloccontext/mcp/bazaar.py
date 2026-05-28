@@ -14,13 +14,38 @@ SERVICE_NAME = "AllocContext"
 SERVICE_TITLE = (
     "AllocContext — BTC/ETH allocation drift, rebalance moves & market context"
 )
-SERVICE_TAGS = ("btc", "eth", "rebalance", "allocation", "crypto")
+# CDP Bazaar indexes service_name (≤32 chars) and up to five tags from payments.
+BAZAAR_SERVICE_NAME = "AllocContext BTC/ETH MCP"
+SERVICE_TAGS = (
+    "btc",
+    "eth",
+    "rebalance",
+    "allocation",
+    "crypto",
+    "portfolio",
+    "drift",
+    "bitcoin",
+    "agent-tools",
+    "mcp",
+    "sentiment",
+    "macro",
+)
+BAZAAR_INDEX_TAGS = ("btc", "eth", "rebalance", "allocation", "portfolio")
+
+DISCOVERY_KEYWORD_MARKERS = (
+    "portfolio allocation",
+    "allocation drift",
+    "rebalance plan",
+    "fear and greed",
+    "etf flows",
+)
 
 LISTING_DESCRIPTION = (
-    "Deterministic BTC/ETH allocation facts for agents: full ContextBundle "
-    "(portfolio, market, sentiment, macro, regime hints, delta), fused market "
-    "context, USD rebalance move lines, and allocation band drift checks. "
-    "No LLM — structured JSON only."
+    "Deterministic BTC/ETH portfolio allocation context for AI agents: "
+    "allocation drift and band checks, USD rebalance plans, fused market "
+    "context (Fear & Greed, Kalshi sentiment, macro calendar, FRED "
+    "indicators, ETF flows), live Kraken/Coinbase portfolio reads, and "
+    "saved ContextBundle snapshots. Structured JSON only — no LLM."
 )
 
 _ASSET_FILTER_SCHEMA = {
@@ -88,9 +113,10 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_context_bundle",
         "description": (
-            "Full ContextBundle JSON: portfolio, market, sentiment, macro, regime "
-            "hints, and delta vs the prior saved snapshot. Optional assets, "
-            "target_pct, and band override server config for drift math."
+            "Full ContextBundle JSON: portfolio allocation drift vs target, "
+            "market, sentiment, macro, regime hints, and delta vs the prior "
+            "saved snapshot. Optional assets, target_pct, and band override "
+            "server config for drift math."
         ),
         "input_schema": {
             "type": "object",
@@ -130,8 +156,9 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_rebalance_plan",
         "description": (
-            "Compute USD deltas and exchange-style move lines to reach a target "
-            "BTC/ETH/CASH split from current allocation and NAV. Pure math."
+            "Compute USD deltas and exchange-style move lines to rebalance a "
+            "BTC/ETH/CASH portfolio toward target allocation from current "
+            "weights and NAV. Pure math — rebalance plan for btc/eth splits."
         ),
         "input_schema": {
             "type": "object",
@@ -522,8 +549,9 @@ def build_llms_txt(
 
 ## Search keywords
 
-bitcoin, ethereum, btc, eth, portfolio allocation, rebalance, drift, band,
-market context, sentiment, macro, etf flows, agent tools, mcp, x402
+bitcoin, ethereum, btc, eth, portfolio allocation, allocation drift,
+rebalance plan, rebalance btc eth, drift band, band check, market context,
+fear and greed, sentiment, macro calendar, etf flows, agent tools, mcp, x402
 """
 
 
