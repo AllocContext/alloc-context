@@ -10,7 +10,11 @@ from alloccontext.ingest.macro_calendar import (
     merge_events,
     refresh_macro_calendar,
 )
-from alloccontext.ingest.macro_normalize import impact_meets_minimum, parse_event_ts
+from alloccontext.ingest.macro_normalize import (
+    calendar_row_date_time,
+    impact_meets_minimum,
+    parse_event_ts,
+)
 from alloccontext.rollup.context import build_context_bundle
 from alloccontext.rollup.macro import build_macro_context
 
@@ -29,6 +33,24 @@ def test_parse_event_ts_us_eastern() -> None:
 def test_impact_filter() -> None:
     assert impact_meets_minimum("high", "medium") is True
     assert impact_meets_minimum("low", "medium") is False
+
+
+def test_calendar_row_date_time_combined_finnhub_time() -> None:
+    when = calendar_row_date_time(
+        {
+            "country": "US",
+            "event": "Building Permits Prel",
+            "time": "2026-05-21 12:30:00",
+        }
+    )
+    assert when == ("2026-05-21", "12:30:00")
+
+
+def test_calendar_row_date_time_separate_date_and_time() -> None:
+    when = calendar_row_date_time(
+        {"date": "2026-05-13", "time": "08:30:00"},
+    )
+    assert when == ("2026-05-13", "08:30:00")
 
 
 def test_load_static_fomc_events() -> None:
@@ -70,6 +92,54 @@ def test_fetch_finnhub_from_fixture(monkeypatch) -> None:
     )
     assert len(rows) == 2
     assert rows[0]["name"].startswith("Consumer Price Index")
+
+
+def test_fetch_finnhub_combined_time_field(monkeypatch) -> None:
+    payload = {
+        "economicCalendar": [
+            {
+                "country": "US",
+                "event": "Building Permits Prel",
+                "impact": "high",
+                "time": "2026-05-21 12:30:00",
+                "actual": 1.442,
+                "estimate": 1.39,
+                "prev": 1.363,
+            },
+            {
+                "country": "US",
+                "event": "Weekly Claim",
+                "impact": "low",
+                "time": "2026-05-22 08:30:00",
+            },
+        ]
+    }
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setattr(
+        "alloccontext.ingest.macro_calendar.urllib.request.urlopen",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    rows = fetch_finnhub_events(
+        start=datetime(2026, 5, 1, tzinfo=timezone.utc).date(),
+        end=datetime(2026, 6, 30, tzinfo=timezone.utc).date(),
+        api_key="test",
+        countries={"US"},
+        min_impact="medium",
+    )
+    assert len(rows) == 1
+    assert rows[0]["name"] == "Building Permits Prel"
+    assert rows[0]["source"] == "finnhub"
+    assert rows[0]["event_ts"].startswith("2026-05-21")
 
 
 def test_merge_prefers_static_over_api() -> None:

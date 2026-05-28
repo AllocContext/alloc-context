@@ -28,6 +28,29 @@ def slug_event_name(name: str) -> str:
     return slug[:80] or "event"
 
 
+def calendar_row_date_time(
+    item: dict[str, Any],
+    *,
+    date_key: str = "date",
+    time_key: str = "time",
+) -> tuple[str, str] | None:
+    """Extract (YYYY-MM-DD, HH:MM:SS) from calendar API rows.
+
+    Finnhub live payloads often use a combined ``time`` field
+    (``2026-05-21 12:30:00``) without a separate ``date`` key.
+    """
+    raw_date = str(item.get(date_key) or "").strip()
+    raw_time = str(item.get(time_key) or "").strip()
+    if raw_date:
+        return raw_date[:10], raw_time or "00:00:00"
+    if not raw_time:
+        return None
+    if " " in raw_time:
+        date_part, clock = raw_time.split(" ", 1)
+        return date_part.strip()[:10], clock.strip()
+    return None
+
+
 def parse_event_ts(
     *,
     date: str,
