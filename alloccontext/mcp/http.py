@@ -151,14 +151,14 @@ def build_http_app(
             lifespan=mcp_lifespan,
         )
 
-    from x402.http.middleware.fastapi import PaymentMiddlewareASGI
+    from alloccontext.mcp.payment_middleware import AllocContextPaymentMiddlewareASGI
 
     resource_server = build_x402_resource_server(settings)
     routes = build_x402_routes(settings)
     return Starlette(
         middleware=[
             Middleware(
-                PaymentMiddlewareASGI,
+                AllocContextPaymentMiddlewareASGI,
                 routes=routes,
                 server=resource_server,
             ),
