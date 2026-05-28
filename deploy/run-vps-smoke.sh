@@ -19,7 +19,8 @@ if [[ -n "${SMOKE_EXPECT_CORE_SHA:-}" ]]; then
   remote_env+=("SMOKE_EXPECT_CORE_SHA=${SMOKE_EXPECT_CORE_SHA}")
 fi
 
-remote_cmd="cd \"${OPERATOR_REMOTE}\" && env ${remote_env[*]} \
+remote_cmd="bash \"${CORE_REMOTE}/deploy/wait-for-mcp-ready.sh\" && \
+cd \"${OPERATOR_REMOTE}\" && env ${remote_env[*]} \
 .venv/bin/python -m alloccontext_operator --config config/config.yaml smoke"
 
 ssh -i "${SSH_KEY}" -o IdentitiesOnly=yes \

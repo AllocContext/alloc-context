@@ -85,19 +85,7 @@ if systemctl cat alloc-context-mcp-internal.service &>/dev/null; then
   systemctl restart alloc-context-mcp-internal.service
 fi
 
-if curl -sf -o /dev/null http://127.0.0.1:8000/health; then
-  echo "public MCP ok: http://127.0.0.1:8000/health"
-else
-  echo "warning: public MCP health check failed on :8000" >&2
-fi
-
-if curl -sf -o /dev/null \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -X POST http://127.0.0.1:8001/mcp \
-  -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}'; then
-  echo "internal MCP ok: http://127.0.0.1:8001/mcp"
-fi
+bash "${REMOTE}/deploy/wait-for-mcp-ready.sh"
 
 if [[ -n "${DEPLOYED_SHA:-}" ]]; then
   printf '%s\n' "${DEPLOYED_SHA}" > "${REMOTE}/.deployed-sha"

@@ -35,7 +35,15 @@ def test_remote_install_restarts_mcp_services() -> None:
     text = (REPO_ROOT / "deploy/remote-install.sh").read_text()
     assert "systemctl restart alloc-context-mcp-http.service" in text
     assert "alloc-context-mcp-internal.service" in text
+    assert "wait-for-mcp-ready.sh" in text
+
+
+def test_wait_for_mcp_ready_script_exists() -> None:
+    path = REPO_ROOT / "deploy/wait-for-mcp-ready.sh"
+    assert path.is_file()
+    text = path.read_text()
     assert "8000/health" in text
+    assert "8001/mcp" in text
 
 
 def test_mcp_http_systemd_unit() -> None:
