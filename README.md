@@ -38,6 +38,9 @@ See [docs/cursor-mcp.md](docs/cursor-mcp.md).
 **Hosted MCP + x402:** `pip install -e ".[hosted]"` then
 `alloc-context mcp --transport http --x402`. See [docs/mcp-http.md](docs/mcp-http.md).
 
+**Local dev stack (internal MCP on :8001):** `./scripts/dev-up.sh`.
+See [docs/local-dev.md](docs/local-dev.md).
+
 CLI entry point: `alloc-context` (same as `python -m alloccontext`).
 
 ## Commands
@@ -76,6 +79,7 @@ See [docs/mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 | [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |
 | [docs/data-sources.md](docs/data-sources.md) | Ingest sources |
 | [docs/self-hosting.md](docs/self-hosting.md) | Optional Linux/systemd ingest + MCP |
+| [docs/local-dev.md](docs/local-dev.md) | Local internal MCP + dev ingest |
 
 ## Contributing
 

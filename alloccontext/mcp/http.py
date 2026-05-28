@@ -34,34 +34,42 @@ def _health_verbose_enabled() -> bool:
     )
 
 
-def _health(_: Any) -> JSONResponse:
-    payload: dict[str, Any] = {"ok": True, "service": "alloc-context-mcp"}
-    verbose = _health_verbose_enabled()
-    try:
-        from alloccontext.config import load_config
-        from alloccontext.store.db import connect
-        from alloccontext.status_report import mcp_health_ingest_summary
-
-        config = load_config(None)
-        conn = connect(config.paths.db)
+def _make_health_handler(config_path: str | None) -> Any:
+    def _health(_: Any) -> JSONResponse:
+        payload: dict[str, Any] = {"ok": True, "service": "alloc-context-mcp"}
+        verbose = _health_verbose_enabled()
         try:
-            summary = mcp_health_ingest_summary(config, conn)
-            payload["ingest_ok"] = summary["ingest_ok"]
-            optional_failures = summary.get("optional_feed_failures") or []
-            if optional_failures:
-                payload["optional_feed_failures"] = optional_failures
-            if verbose:
-                payload["source_health"] = summary.get("source_health")
-                required_failures = summary.get("required_failures") or []
-                if required_failures:
-                    payload["required_failures"] = required_failures
-        finally:
-            conn.close()
-    except Exception:
-        payload["status_detail"] = "database_unavailable"
-        payload["ok"] = False
-        payload["ingest_ok"] = False
-    return JSONResponse(payload)
+            from alloccontext.config import load_config
+            from alloccontext.store.db import connect
+            from alloccontext.status_report import mcp_health_ingest_summary
+
+            config = load_config(config_path)
+            conn = connect(config.paths.db)
+            try:
+                summary = mcp_health_ingest_summary(config, conn)
+                payload["ingest_ok"] = summary["ingest_ok"]
+                optional_failures = summary.get("optional_feed_failures") or []
+                if optional_failures:
+                    payload["optional_feed_failures"] = optional_failures
+                if verbose:
+                    payload["source_health"] = summary.get("source_health")
+                    required_failures = summary.get("required_failures") or []
+                    if required_failures:
+                        payload["required_failures"] = required_failures
+            finally:
+                conn.close()
+        except Exception:
+            payload["status_detail"] = "database_unavailable"
+            payload["ok"] = False
+            payload["ingest_ok"] = False
+        return JSONResponse(payload)
+
+    return _health
+
+
+def _health(_: Any) -> JSONResponse:
+    """Default handler for tests; production apps use _make_health_handler."""
+    return _make_health_handler(None)(_)
 
 
 def _llms_txt(settings: X402Settings) -> PlainTextResponse:
@@ -129,7 +137,7 @@ def build_http_app(
             yield
 
     discovery_routes = [
-        Route("/health", _health),
+        Route("/health", _make_health_handler(config_path)),
         Route("/llms.txt", lambda req: _llms_txt(settings)),
         Route("/.well-known/x402.json", lambda req: _well_known_x402(settings)),
     ]
