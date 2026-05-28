@@ -25,7 +25,8 @@ journalctl -u alloc-context-mcp-http.service -n 30 --no-pager
 ```bash
 cd /path/to/alloc-context
 source .venv/bin/activate
-python -m alloccontext status
+python -m alloccontext status          # human summary (SSH)
+python -m alloccontext status --json   # full JSON
 python -m alloccontext rollup --scope daily --stdout
 curl -s http://127.0.0.1:8000/health
 ```

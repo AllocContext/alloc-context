@@ -7,8 +7,12 @@ import sys
 from alloccontext.config import load_config
 from alloccontext.ingest.runner import run_ingest
 from alloccontext.rollup.context import build_context_bundle
-from alloccontext.store.db import SCHEMA_VERSION, connect
-from alloccontext.store.status import ingest_status
+from alloccontext.status_report import (
+    build_status_report,
+    default_mcp_health_url,
+    format_status_report,
+)
+from alloccontext.store.db import connect
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
@@ -41,18 +45,21 @@ def cmd_rollup(args: argparse.Namespace) -> int:
 def cmd_status(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     conn = connect(config.paths.db)
-    snapshot = ingest_status(conn)
-    conn.close()
-    payload = {
-        "ok": True,
-        "db": str(config.paths.db),
-        "schema_version": SCHEMA_VERSION,
-        "horizon_days": config.horizon.days,
-        "ingest_sources_enabled": config.ingest.sources,
-        **snapshot,
-    }
-    print(json.dumps(payload, indent=2))
-    return 0
+    try:
+        report = build_status_report(
+            config,
+            conn,
+            probe_mcp=not args.no_mcp,
+            mcp_health_url=args.mcp_url,
+            mcp_timeout_seconds=args.mcp_timeout,
+        )
+    finally:
+        conn.close()
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print(format_status_report(report))
+    return 0 if report.get("ok") else 1
 
 
 def cmd_mcp(args: argparse.Namespace) -> int:
@@ -91,7 +98,31 @@ def main(argv: list[str] | None = None) -> int:
     )
     rollup_p.set_defaults(func=cmd_rollup)
 
-    status_p = sub.add_parser("status", help="Show ingest history and DB status")
+    status_p = sub.add_parser(
+        "status",
+        help="Ingest ages, snapshot freshness, optional MCP /health probe",
+    )
+    status_p.add_argument(
+        "--json",
+        action="store_true",
+        help="Machine-readable JSON (default: human text for SSH)",
+    )
+    status_p.add_argument(
+        "--no-mcp",
+        action="store_true",
+        help="Skip HTTP GET to MCP /health",
+    )
+    status_p.add_argument(
+        "--mcp-url",
+        default=None,
+        help=f"MCP health URL (default: {default_mcp_health_url()})",
+    )
+    status_p.add_argument(
+        "--mcp-timeout",
+        type=float,
+        default=5.0,
+        help="Seconds to wait for MCP /health",
+    )
     status_p.set_defaults(func=cmd_status)
 
     mcp_p = sub.add_parser("mcp", help="Run MCP server (stdio or HTTP)")

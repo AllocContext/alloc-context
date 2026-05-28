@@ -46,7 +46,7 @@ CLI entry point: `alloc-context` (same as `python -m alloccontext`).
 |---------|---------|
 | `python -m alloccontext ingest` | Pull configured sources → SQLite |
 | `python -m alloccontext rollup --scope daily --stdout` | ContextBundle JSON (facts) |
-| `python -m alloccontext status` | Ingest freshness, DB path |
+| `python -m alloccontext status` | Per-source ingest ages, snapshots, MCP `/health` |
 | `alloc-context mcp` | MCP server (stdio or HTTP) |
 
 ## MCP tools

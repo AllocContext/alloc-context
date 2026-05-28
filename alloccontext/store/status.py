@@ -1,23 +1,51 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime
 from typing import Any
 
+from alloccontext.mcp.staleness import age_seconds, parse_as_of
+from alloccontext.timeutil import utc_now
 
-def _source_health(last_by_source: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+
+def _finished_age_seconds(
+    finished_at: str | None,
+    *,
+    now: datetime | None = None,
+) -> int | None:
+    if not finished_at:
+        return None
+    try:
+        return age_seconds(parse_as_of(str(finished_at)), now=now)
+    except (TypeError, ValueError):
+        return None
+
+
+def _source_health(
+    last_by_source: dict[str, dict[str, Any]],
+    *,
+    now: datetime | None = None,
+) -> dict[str, dict[str, Any]]:
+    ref = now or utc_now()
     health: dict[str, dict[str, Any]] = {}
     for source, row in last_by_source.items():
         error = row.get("error")
+        finished_at = row.get("finished_at")
         health[source] = {
             "ok": error is None,
-            "finished_at": row.get("finished_at"),
+            "finished_at": finished_at,
+            "age_seconds": _finished_age_seconds(finished_at, now=ref),
             "rows_upserted": row.get("rows_upserted"),
             "error": error,
         }
     return health
 
 
-def ingest_status(conn: sqlite3.Connection) -> dict[str, Any]:
+def ingest_status(
+    conn: sqlite3.Connection,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
     fg = conn.execute(
         """
         SELECT ts, value, classification, fetched_at
@@ -50,11 +78,12 @@ def ingest_status(conn: sqlite3.Connection) -> dict[str, Any]:
         if source not in last_by_source:
             last_by_source[source] = dict(row)
 
+    ref = now or utc_now()
     return {
         "fear_greed_latest": dict(fg) if fg else None,
         "portfolio_latest": dict(portfolio) if portfolio else None,
         "market_bars": [dict(row) for row in bars],
         "last_ingest_by_source": last_by_source,
-        "source_health": _source_health(last_by_source),
+        "source_health": _source_health(last_by_source, now=ref),
         "recent_ingest": [dict(row) for row in recent_ingest[:10]],
     }
