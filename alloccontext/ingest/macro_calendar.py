@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from alloccontext.ingest.macro_normalize import (
+    calendar_row_date_time,
     impact_meets_minimum,
     normalize_impact,
     normalized_event,
@@ -89,12 +90,13 @@ def fetch_finnhub_events(
         impact = normalize_impact(str(item.get("impact") or "medium"))
         if not impact_meets_minimum(impact, min_impact):
             continue
-        event_date = str(item.get("date") or "").strip()
-        if not event_date:
+        when = calendar_row_date_time(item)
+        if when is None:
             continue
+        event_date, event_time = when
         event_ts = parse_event_ts(
             date=event_date,
-            time=str(item.get("time") or "00:00:00"),
+            time=event_time,
             tz_name="America/New_York",
         )
         rows.append(
