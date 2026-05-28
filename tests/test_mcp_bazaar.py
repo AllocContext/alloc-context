@@ -9,6 +9,7 @@ from alloccontext.mcp.bazaar import (
     build_mcp_tool_extensions,
     build_well_known_x402,
     mcp_tool_specs,
+    smoke_tool_arguments,
 )
 from alloccontext.mcp.x402_config import MCP_HTTP_PATH, build_x402_routes, X402Settings
 
@@ -28,6 +29,15 @@ _EXPECTED_TOOLS = {
 def test_mcp_tool_specs_cover_all_tools() -> None:
     names = {spec["tool_name"] for spec in mcp_tool_specs()}
     assert names == _EXPECTED_TOOLS
+
+
+def test_smoke_tool_arguments_use_bazaar_examples() -> None:
+    args = smoke_tool_arguments("get_rebalance_plan")
+    assert "allocation_pct" in args
+    assert "nav_usd" in args
+    args = smoke_tool_arguments("get_context_at")
+    assert args["match"] == "at_or_before"
+    assert "as_of" in args
 
 
 def test_mcp_tool_bazaar_extensions() -> None:
