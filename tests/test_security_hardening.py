@@ -84,7 +84,10 @@ def test_live_context_bundle_fails_on_fatal_ingest(config, conn, monkeypatch) ->
             "counts": {},
         },
     )
+    from alloccontext.mcp.contracts import validate_tool_response
+
     result = get_context_bundle(conn, config, freshness="live")
     assert result.get("available") is False
     assert result.get("reason") == "live_ingest_failed"
     assert result["fatal_errors"] == {"kraken": "timeout"}
+    validate_tool_response("get_context_bundle", result)

@@ -63,6 +63,25 @@ def test_get_market_context_contract(conn, config) -> None:
     validate_tool_response("get_market_context", payload)
 
 
+def test_live_ingest_failure_contracts(config, conn, monkeypatch) -> None:
+    ingest_result = {
+        "ok": False,
+        "fatal_errors": {"kraken": "missing_kraken_credentials"},
+        "errors": {"kraken": "missing_kraken_credentials"},
+        "counts": {},
+    }
+    monkeypatch.setattr(
+        "alloccontext.ingest.runner.run_ingest",
+        lambda _c, _cfg: ingest_result,
+    )
+    bundle = get_context_bundle(conn, config, freshness="live")
+    market = get_market_context(conn, config, freshness="live")
+    validate_tool_response("get_context_bundle", bundle)
+    validate_tool_response("get_market_context", market)
+    assert bundle["reason"] == "live_ingest_failed"
+    assert market["reason"] == "live_ingest_failed"
+
+
 def test_get_rebalance_plan_contract() -> None:
     payload = get_rebalance_plan(
         {"BTC": 0.60, "ETH": 0.30, "CASH": 0.10},

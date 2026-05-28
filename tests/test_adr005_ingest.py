@@ -51,6 +51,9 @@ def test_live_market_context_fail_closed(config, conn, monkeypatch) -> None:
     )
     from alloccontext.mcp.handlers import get_market_context
 
+    from alloccontext.mcp.contracts import validate_tool_response
+
     payload = get_market_context(conn, config, freshness="live")
     assert payload.get("available") is False
     assert payload.get("reason") == "live_ingest_failed"
+    validate_tool_response("get_market_context", payload)

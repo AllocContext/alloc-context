@@ -62,7 +62,24 @@ def assert_available_block(
         assert_has_keys(block, when_unavailable, label=f"{label} (unavailable)")
 
 
+LIVE_INGEST_UNAVAILABLE_KEYS = (
+    "available",
+    "reason",
+    "fatal_errors",
+    "ingest",
+    "freshness",
+    *STALENESS_KEYS,
+)
+
+
 def validate_context_bundle(payload: dict[str, Any]) -> None:
+    if payload.get("available") is False:
+        assert_has_keys(
+            payload,
+            LIVE_INGEST_UNAVAILABLE_KEYS,
+            label="get_context_bundle",
+        )
+        return
     assert_has_keys(
         payload,
         (
@@ -94,6 +111,13 @@ def validate_context_bundle(payload: dict[str, Any]) -> None:
 
 
 def validate_market_context(payload: dict[str, Any]) -> None:
+    if payload.get("available") is False:
+        assert_has_keys(
+            payload,
+            LIVE_INGEST_UNAVAILABLE_KEYS,
+            label="get_market_context",
+        )
+        return
     assert_has_keys(
         payload,
         (
