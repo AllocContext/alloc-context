@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pay once against the hosted MCP and call get_market_context (mainnet smoke test)."""
+"""Pay once against the hosted MCP and call an MCP tool (mainnet smoke test)."""
 
 from __future__ import annotations
 
@@ -8,6 +8,15 @@ import json
 import os
 import sys
 
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+
+from _script_runtime import ensure_importable
+
+ensure_importable()
+
+from alloccontext.mcp.bazaar import smoke_tool_arguments
 from alloccontext.x402_smoke_redact import redact_evm_addresses, smoke_log
 
 MCP_URL = os.environ.get("MCP_URL", "https://mcp.alloc-context.com/mcp")
@@ -17,6 +26,13 @@ TOOL = os.environ.get("MCP_SMOKE_TOOL", "get_market_context")
 def _fail(message: str) -> None:
     print(redact_evm_addresses(message), file=sys.stderr)
     sys.exit(1)
+
+
+def _tool_arguments() -> dict:
+    try:
+        return smoke_tool_arguments(TOOL)
+    except KeyError:
+        _fail(f"Unknown MCP_SMOKE_TOOL: {TOOL}")
 
 
 def _decode_payment_required(response) -> dict | None:
@@ -47,6 +63,26 @@ def _print_payment_required(response) -> None:
         )
 
 
+def _check_tool_text(text: str) -> None:
+    if text.startswith("Error executing tool"):
+        _fail(text[:800])
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return
+    if isinstance(payload, dict) and payload.get("available") is False:
+        _fail(json.dumps(payload, indent=2)[:800])
+
+
+def _tools_call_payload(*, tool: str, arguments: dict) -> dict:
+    return {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {"name": tool, "arguments": arguments},
+    }
+
+
 def main() -> None:
     private_key = os.environ.get("EVM_PRIVATE_KEY", "").strip()
     if not private_key:
@@ -63,24 +99,20 @@ def main() -> None:
     except ImportError as exc:
         _fail(f"Missing dependency: {exc}. Run: pip install 'alloc-context[hosted]' eth-account")
 
+    tool_args = _tool_arguments()
     account = Account.from_key(private_key)
     payer = account.address
     smoke_log(f"Payer wallet: {payer}")
     smoke_log(f"MCP URL: {MCP_URL}")
+    smoke_log(f"Tool: {TOOL}")
 
     import requests as _requests
 
+    preflight_payload = _tools_call_payload(tool=TOOL, arguments=tool_args)
+    preflight_payload["id"] = 0
     preflight = _requests.post(
         MCP_URL,
-        json={
-            "jsonrpc": "2.0",
-            "id": 0,
-            "method": "tools/call",
-            "params": {
-                "name": TOOL,
-                "arguments": {"scope": "daily", "freshness": "cached"},
-            },
-        },
+        json=preflight_payload,
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         timeout=30,
     )
@@ -100,15 +132,7 @@ def main() -> None:
     register_exact_evm_client(client, EthAccountSigner(account))
     http_client = x402HTTPClientSync(client)
 
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": TOOL,
-            "arguments": {"scope": "daily", "freshness": "cached"},
-        },
-    }
+    payload = _tools_call_payload(tool=TOOL, arguments=tool_args)
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -141,15 +165,20 @@ def main() -> None:
         _fail(json.dumps(body["error"], indent=2)[:800])
 
     result = body.get("result", {})
+    if result.get("isError"):
+        _fail(json.dumps(result, indent=2)[:800])
+
     content = result.get("content") or []
     if content and isinstance(content[0], dict) and content[0].get("text"):
+        text = content[0]["text"]
+        _check_tool_text(text)
         try:
-            tool_json = json.loads(content[0]["text"])
+            tool_json = json.loads(text)
             smoke_log("Tool response keys: " + ", ".join(sorted(tool_json.keys())[:8]))
             if "as_of" in tool_json:
                 smoke_log(f"as_of: {tool_json['as_of']}")
         except json.JSONDecodeError:
-            smoke_log("Tool response (truncated): " + content[0]["text"][:200])
+            smoke_log("Tool response (truncated): " + text[:200])
     else:
         smoke_log("Raw result: " + json.dumps(result)[:400])
 

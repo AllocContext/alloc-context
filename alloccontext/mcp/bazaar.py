@@ -434,6 +434,28 @@ def mcp_tool_specs() -> tuple[dict[str, Any], ...]:
     return _MCP_TOOLS
 
 
+def smoke_tool_arguments(tool_name: str) -> dict[str, Any]:
+    """Example args for paid smoke / re-index scripts (hosted-safe defaults)."""
+    from datetime import datetime, timedelta, timezone
+
+    for spec in _MCP_TOOLS:
+        if spec["tool_name"] != tool_name:
+            continue
+        args = dict(spec["example"])
+        now = datetime.now(timezone.utc)
+        if tool_name == "get_context_at":
+            args["as_of"] = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+            args["match"] = "at_or_before"
+            args.setdefault("scope", "daily")
+        elif tool_name == "get_context_delta":
+            # Hosted ingest keeps recent hourly snapshots; 2h back finds a prior point.
+            prior = now - timedelta(hours=2)
+            args["prior_as_of"] = prior.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+            args.setdefault("scope", "daily")
+        return args
+    raise KeyError(f"unknown MCP tool: {tool_name}")
+
+
 def public_mcp_url(*, base_url: str, mcp_path: str) -> str:
     return f"{base_url.rstrip('/')}{mcp_path}"
 

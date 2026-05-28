@@ -7,6 +7,12 @@ import os
 import subprocess
 import sys
 
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+
+from _script_runtime import repo_root, require_hosted_python, script_env
+
 TOOLS = (
     "get_market_context",
     "get_context_bundle",
@@ -23,12 +29,13 @@ def main() -> None:
         print("Set EVM_PRIVATE_KEY (buyer wallet, not X402_PAY_TO)", file=sys.stderr)
         sys.exit(1)
 
-    script = os.path.join(os.path.dirname(__file__), "x402-paid-smoke-test.py")
+    python = require_hosted_python()
+    script = os.path.join(repo_root(), "scripts", "x402-paid-smoke-test.py")
     failures = 0
     for tool in TOOLS:
         print(f"--- {tool} ---")
-        env = {**os.environ, "MCP_SMOKE_TOOL": tool}
-        result = subprocess.run([sys.executable, script], env=env, check=False)
+        env = script_env({"MCP_SMOKE_TOOL": tool})
+        result = subprocess.run([python, script], env=env, check=False)
         if result.returncode != 0:
             failures += 1
     if failures:

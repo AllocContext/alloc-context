@@ -53,7 +53,7 @@ tool (~$0.16 for cached math/context tools):
 
 ```bash
 export EVM_PRIVATE_KEY=0x...   # buyer wallet
-python scripts/x402-reindex-burst.py
+.venv/bin/python scripts/x402-reindex-burst.py
 ```
 
 ## Weekly paid smoke (Bazaar activity)
@@ -81,8 +81,11 @@ Testnet USDC does **not** count toward Bazaar visibility — production uses
 ```bash
 pip install -e ".[hosted]"
 export EVM_PRIVATE_KEY=0x...   # buyer wallet; must differ from X402_PAY_TO
-python scripts/x402-paid-smoke-test.py
+.venv/bin/python scripts/x402-paid-smoke-test.py
 ```
+
+Or from repo root with a venv: `python scripts/x402-reindex-burst.py` (uses
+`.venv/bin/python` when present).
 
 Optional: `MCP_URL` (default `https://mcp.alloc-context.com/mcp`),
 `MCP_SMOKE_TOOL` (default `get_market_context`).
