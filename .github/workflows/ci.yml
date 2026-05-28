@@ -81,5 +81,12 @@ jobs:
             "DEPLOYED_SHA=${DEPLOYED_SHA} ALLOC_CONTEXT_REMOTE=${REMOTE} ALLOC_CONTEXT_ENV_FILE=${ALLOC_CONTEXT_ENV_FILE} bash -s" \
             < deploy/remote-install.sh
 
+      - name: Post-deploy smoke
+        env:
+          SMOKE_EXPECT_CORE_SHA: ${{ github.sha }}
+          ALLOC_CONTEXT_OPERATOR_REMOTE: ${{ vars.ALLOC_CONTEXT_OPERATOR_REMOTE }}
+          ALLOC_CONTEXT_REMOTE: ${{ vars.ALLOC_CONTEXT_REMOTE }}
+        run: bash deploy/run-vps-smoke.sh
+
       - name: Deploy summary
         run: echo "Deployed ${GITHUB_SHA} to configured host"
