@@ -64,10 +64,12 @@ Coinbase in `ingest.sources` and `exchanges.coinbase.enabled` when unused.
 
 ## Ingest reliability
 
-Optional ingest sources (`fred`, `coinmarketcap` by default) may fail without
-failing the hourly ingest run. Check `partial`, `optional_errors`, and
-`fatal_errors` in ingest JSON output; `python -m alloccontext status` includes
-`source_health` per source.
+Optional ingest APIs (`fred`, `finnhub`, `fmp`, `coingecko`, `coinmarketcap`,
+`sosovalue` by default) may fail without failing the hourly ingest run. Finnhub,
+FMP, and SoSoValue failures are tracked under those names in `source_health` even
+when the parent source is `macro_calendar` or `etf_flows`. Check `partial`,
+`optional_errors`, and `fatal_errors` in ingest JSON output; `python -m
+alloccontext status` includes `source_health` per source.
 
 ## x402 pricing
 

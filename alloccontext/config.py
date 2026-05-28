@@ -30,7 +30,16 @@ class HorizonConfig:
     days: int
 
 
-DEFAULT_OPTIONAL_INGEST_SOURCES = frozenset({"fred", "coinmarketcap"})
+DEFAULT_OPTIONAL_INGEST_SOURCES = frozenset(
+    {
+        "fred",
+        "finnhub",
+        "fmp",
+        "coingecko",
+        "coinmarketcap",
+        "sosovalue",
+    }
+)
 
 
 @dataclass(frozen=True)

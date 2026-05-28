@@ -31,7 +31,11 @@ ingest:
     fred: true
   optional_sources:
     - fred
+    - finnhub
+    - fmp
+    - coingecko
     - coinmarketcap
+    - sosovalue
 
 # Primary spot exchange for portfolio + OHLC ingest.
 # Top-level `kraken:` block is still accepted when `exchanges` is omitted.
