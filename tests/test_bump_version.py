@@ -55,7 +55,7 @@ def test_check_version_passes_when_in_sync(tmp_path: Path):
         dest = tmp_path / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(src, dest)
-    check_version("0.1.0", root=tmp_path)
+    check_version(read_current_version(REPO_ROOT), root=tmp_path)
 
 
 def test_check_version_fails_when_out_of_sync(tmp_path: Path):
