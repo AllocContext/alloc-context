@@ -1,6 +1,6 @@
 [project]
 name = "alloc-context"
-version = "0.1.1"
+version = "0.1.2"
 description = "AllocContext — BTC/ETH allocation context, drift, and rebalance facts"
 readme = "README.md"
 license = { text = "MIT" }
