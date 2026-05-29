@@ -3,6 +3,9 @@
 Paid AllocContext endpoints expose Bazaar metadata so CDP and other
 facilitators can index the service after the first successful settlement.
 
+For GitHub topics, PyPI, and the official MCP Registry, see
+[distribution.md](distribution.md).
+
 ## Public URL
 
 Set the HTTPS origin agents will call (required for catalog `resource` URLs):

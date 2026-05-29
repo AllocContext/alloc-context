@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Break-glass: sync this repo to a remote host and reinstall the package.
 #
-# Normal releases deploy automatically when CI passes on main (if configured).
+# Normal releases use the GitHub Actions **release** workflow (see
+# docs/publishing.md). Operator repo still deploys on main push.
 # Requires environment variables — no host or key defaults are baked in.
 #
 # Usage:

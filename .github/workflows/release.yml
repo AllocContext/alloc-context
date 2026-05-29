@@ -1,0 +1,297 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver increment (ignored when exact_version or tag_only)
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      exact_version:
+        description: Exact version (e.g. 0.2.0); overrides bump
+        required: false
+        type: string
+      tag_only:
+        description: Release current version without bumping (e.g. first v0.1.0)
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  gate:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'negillett/alloc-context'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require green CI on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RESULT=$(gh run list --branch main --workflow ci.yml --limit 1 \
+            --json conclusion,status)
+          STATUS=$(echo "$RESULT" | jq -r '.[0].status')
+          CONCLUSION=$(echo "$RESULT" | jq -r '.[0].conclusion')
+          if [ "$STATUS" != "completed" ] || [ "$CONCLUSION" != "success" ]; then
+            echo "Latest ci on main not successful (status=$STATUS conclusion=$CONCLUSION)"
+            exit 1
+          fi
+
+  test:
+    needs: gate
+    if: >-
+      always() &&
+      (needs.gate.result == 'success' || needs.gate.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
+  prepare:
+    needs: test
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'negillett/alloc-context'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync main
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+
+      - name: Resolve version
+        id: version
+        env:
+          TAG_ONLY: ${{ inputs.tag_only }}
+          EXACT_VERSION: ${{ inputs.exact_version }}
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          if [ "$TAG_ONLY" = "true" ]; then
+            VERSION=$(python3 scripts/bump_version.py --current)
+            python3 scripts/bump_version.py --check "$VERSION"
+          elif [ -n "$EXACT_VERSION" ]; then
+            VERSION=$(python3 scripts/bump_version.py "$EXACT_VERSION" --write --print)
+          else
+            VERSION=$(python3 scripts/bump_version.py --bump "$BUMP" --write --print)
+          fi
+          if git ls-remote --tags origin "refs/tags/v${VERSION}" | grep -q .; then
+            echo "Tag v${VERSION} already exists on remote"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        if: inputs.tag_only != true
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml server.json alloccontext/__init__.py
+          if git diff --staged --quiet; then
+            echo "No version changes to commit"
+            exit 1
+          fi
+          git commit -m "Bump version to ${VERSION}."
+          git pull --rebase origin main
+          git push origin main
+
+  validate-version:
+    needs: [test, prepare]
+    if: >-
+      always() &&
+      needs.test.result == 'success' &&
+      (needs.prepare.result == 'success' || needs.prepare.result == 'skipped')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+          fetch-depth: 0
+      - name: Sync main
+        if: github.event_name == 'workflow_dispatch'
+        run: git pull origin main
+      - name: Verify release version
+        id: resolve
+        env:
+          PREPARE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="$PREPARE_VERSION"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          python3 scripts/bump_version.py --check "$VERSION"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+  publish-pypi:
+    needs: validate-version
+    if: github.repository == 'negillett/alloc-context'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+          fetch-depth: 0
+      - if: github.event_name == 'workflow_dispatch'
+        run: git pull origin main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install build
+      - run: python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  deploy:
+    needs: [validate-version, publish-pypi]
+    if: >-
+      github.repository == 'negillett/alloc-context' &&
+      needs.publish-pypi.result == 'success'
+    runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+          fetch-depth: 0
+      - if: github.event_name == 'workflow_dispatch'
+        run: git pull origin main
+
+      - name: Record release SHA
+        id: checkout
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Require VPS secrets
+        run: |
+          test -n "${{ secrets.VPS_SSH_KEY }}" || {
+            echo "VPS_SSH_KEY secret is not set — see docs/self-hosting.md"
+            exit 1
+          }
+          test -n "${VPS_HOST}" || {
+            echo "VPS_HOST secret is not set — see docs/self-hosting.md"
+            exit 1
+          }
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${VPS_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Rsync to VPS
+        env:
+          REMOTE: ${{ vars.ALLOC_CONTEXT_REMOTE }}
+        run: |
+          REMOTE="${REMOTE:-/opt/alloc-context}"
+          USER="${VPS_USER:-root}"
+          rsync -avz --delete \
+            --exclude '.venv/' \
+            --exclude '.git/' \
+            --exclude '.pytest_cache/' \
+            --exclude '.env' \
+            --exclude '/state/' \
+            --exclude 'config/config.yaml' \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
+            ./ "${USER}@${VPS_HOST}:${REMOTE}/"
+
+      - name: Install on VPS
+        env:
+          DEPLOYED_SHA: ${{ steps.checkout.outputs.sha }}
+          ALLOC_CONTEXT_REMOTE: ${{ vars.ALLOC_CONTEXT_REMOTE }}
+          ALLOC_CONTEXT_ENV_FILE: ${{ vars.ALLOC_CONTEXT_ENV_FILE }}
+        run: |
+          USER="${VPS_USER:-root}"
+          REMOTE="${ALLOC_CONTEXT_REMOTE:-/opt/alloc-context}"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes \
+            "${USER}@${VPS_HOST}" \
+            "DEPLOYED_SHA=${DEPLOYED_SHA} ALLOC_CONTEXT_REMOTE=${REMOTE} ALLOC_CONTEXT_ENV_FILE=${ALLOC_CONTEXT_ENV_FILE} bash -s" \
+            < deploy/remote-install.sh
+
+      - name: Post-deploy smoke
+        env:
+          SMOKE_EXPECT_CORE_SHA: ${{ steps.checkout.outputs.sha }}
+          ALLOC_CONTEXT_OPERATOR_REMOTE: ${{ vars.ALLOC_CONTEXT_OPERATOR_REMOTE }}
+          ALLOC_CONTEXT_REMOTE: ${{ vars.ALLOC_CONTEXT_REMOTE }}
+        run: bash deploy/run-vps-smoke.sh
+
+      - name: Post-deploy x402 check
+        env:
+          ALLOC_CONTEXT_REMOTE: ${{ vars.ALLOC_CONTEXT_REMOTE }}
+          ALLOC_CONTEXT_ENV_FILE: ${{ vars.ALLOC_CONTEXT_ENV_FILE }}
+        run: bash deploy/run-vps-x402-check.sh
+
+      - name: Deploy summary
+        run: |
+          echo "Released v${{ needs.validate-version.outputs.version }} (${{ steps.checkout.outputs.sha }}) to configured host"
+
+  finalize-tag:
+    needs: [prepare, validate-version, publish-pypi, deploy]
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'negillett/alloc-context' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Tag successful release
+        env:
+          VERSION: ${{ needs.validate-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git pull origin main
+          TAG="v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q .; then
+            echo "Tag ${TAG} already exists on remote"
+            exit 1
+          fi
+          git tag -a "$TAG" -m "Release ${VERSION}"
+          git push origin "$TAG"
