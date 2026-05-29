@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-_ASSETS = ("BTC", "ETH", "CASH")
+from alloccontext.constants import ALLOCATION_ASSETS as _ASSETS
+
 _PCT_SUM_TOLERANCE = 0.02
 
 

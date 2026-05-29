@@ -18,6 +18,7 @@ from alloccontext.ingest.macro_normalize import (
     normalized_event,
     parse_event_ts,
 )
+from alloccontext.timeutil import utc_now_iso
 
 FINNHUB_URL = "https://finnhub.io/api/v1/calendar/economic"
 FMP_URL = "https://financialmodelingprep.com/stable/economic-calendar"
@@ -198,7 +199,7 @@ def merge_events(*feeds: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def upsert_macro_events(conn: sqlite3.Connection, events: list[dict[str, Any]]) -> int:
-    fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    fetched_at = utc_now_iso()
     count = 0
     for event in events:
         conn.execute(

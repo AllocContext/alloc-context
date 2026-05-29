@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
 from typing import Any
+
+from alloccontext.timeutil import utc_now_iso
 
 
 def upsert_crypto_market_snapshot(
@@ -12,7 +13,7 @@ def upsert_crypto_market_snapshot(
     snapshot_ts: str,
     snapshot: dict[str, Any],
 ) -> None:
-    fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    fetched_at = utc_now_iso()
     conn.execute(
         """
         INSERT INTO crypto_market_snapshots(

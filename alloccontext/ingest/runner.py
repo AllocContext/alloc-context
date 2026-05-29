@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
 from typing import Any
 
 from alloccontext.horizon import horizon_days
@@ -21,10 +20,7 @@ from alloccontext.ingest.kraken_portfolio import refresh_kraken
 from alloccontext.ingest.macro_calendar import refresh_macro_calendar
 from alloccontext.store.db import record_ingest_run
 from alloccontext.store.retention import prune_to_horizon
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+from alloccontext.timeutil import utc_now_iso
 
 
 def _run_source(
@@ -32,7 +28,7 @@ def _run_source(
     config,
     source: str,
 ) -> dict[str, Any]:
-    started = _now_iso()
+    started = utc_now_iso()
     if source == "fear_greed":
         result = refresh_fear_greed(conn, history_limit=horizon_days(config))
     elif source == "kraken":
@@ -54,7 +50,7 @@ def _run_source(
     else:
         result = {"ok": False, "rows": 0, "error": f"unknown_source:{source}"}
 
-    finished = _now_iso()
+    finished = utc_now_iso()
     rows = int(result.get("rows") or 0)
     source_errors = ingest_errors_from_source(
         source,

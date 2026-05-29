@@ -9,6 +9,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from alloccontext.timeutil import utc_now_iso
+
 SOSO_BASE = "https://openapi.sosovalue.com"
 SOSO_HISTORICAL = "/openapi/v2/etf/historicalInflowChart"
 SOSO_METRICS = "/openapi/v2/etf/currentEtfDataMetrics"
@@ -106,7 +108,7 @@ def upsert_etf_flow_days(
     rows: list[dict[str, Any]],
     source: str,
 ) -> int:
-    fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    fetched_at = utc_now_iso()
     count = 0
     for row in rows:
         flow_date = str(row.get("date") or row.get("flow_date") or "")[:10]
@@ -150,7 +152,7 @@ def upsert_etf_ticker_flows(
     rows: list[dict[str, Any]],
     source: str,
 ) -> int:
-    fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    fetched_at = utc_now_iso()
     count = 0
     for row in rows:
         ticker = str(row.get("ticker") or "").upper()

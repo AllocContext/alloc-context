@@ -4,11 +4,11 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
 from typing import Any
 
 from alloccontext.ingest.env_keys import optional_env_key
 from alloccontext.ingest.parse_helpers import parse_float, parse_int
+from alloccontext.timeutil import utc_now_iso
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 
@@ -142,7 +142,7 @@ def refresh_coingecko(conn, config) -> dict[str, Any]:
 
     from alloccontext.ingest.market_snapshots import upsert_crypto_market_snapshot
 
-    ts = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    ts = utc_now_iso()
     upsert_crypto_market_snapshot(conn, source="coingecko", snapshot_ts=ts, snapshot=snapshot)
     conn.commit()
     return {"ok": True, "rows": 1, "snapshot_ts": ts, **snapshot}

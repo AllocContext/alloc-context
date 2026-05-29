@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-_ASSETS = ("BTC", "ETH", "CASH")
+from alloccontext.constants import ALLOCATION_ASSETS as _ASSETS
 
 
 def _pct(allocation: dict[str, float], key: str) -> float:

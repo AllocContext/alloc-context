@@ -130,8 +130,3 @@ def build_spot_market_assets(conn: sqlite3.Connection, spot) -> dict[str, Any]:
             "change_pct": {"1_bar": change_pct},
         }
     return assets
-
-
-def build_kraken_market_assets(conn: sqlite3.Connection, config) -> dict[str, Any]:
-    """Compatibility alias — use build_spot_market_assets with primary exchange config."""
-    return build_spot_market_assets(conn, config.exchanges.primary_spot())

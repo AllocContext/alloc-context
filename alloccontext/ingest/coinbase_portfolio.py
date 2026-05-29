@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from datetime import datetime, timezone
 from typing import Any
 
 from alloccontext.ingest.coinbase_client import (
@@ -10,6 +9,7 @@ from alloccontext.ingest.coinbase_client import (
     normalize_pem_secret,
     product_to_symbol,
 )
+from alloccontext.timeutil import utc_now_iso
 from alloccontext.ingest.kraken_portfolio import (
     PortfolioSnapshot,
     portfolio_from_balances,
@@ -43,7 +43,7 @@ def fetch_portfolio_snapshot(client: CoinbaseClient, spot) -> PortfolioSnapshot:
         prices[symbol] = client.get_ticker(product_id)["last"]
     balances, cash_breakdown = client.get_balances_with_breakdown()
     snap = portfolio_from_balances(balances, prices, cash_breakdown=cash_breakdown)
-    snap.ts = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    snap.ts = utc_now_iso()
     return snap
 
 

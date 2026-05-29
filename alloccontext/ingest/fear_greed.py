@@ -4,8 +4,9 @@ import json
 import sqlite3
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
 from typing import Any
+
+from alloccontext.timeutil import utc_now_iso
 
 FNG_API = "https://api.alternative.me/fng/"
 
@@ -47,7 +48,7 @@ def fetch_fear_greed(*, limit: int = 1, timeout: float = 15.0) -> list[dict[str,
 
 
 def upsert_fear_greed_rows(conn: sqlite3.Connection, rows: list[dict[str, Any]]) -> int:
-    fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    fetched_at = utc_now_iso()
     count = 0
     for row in rows:
         conn.execute(

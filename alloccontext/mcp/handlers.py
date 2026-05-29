@@ -31,9 +31,8 @@ from alloccontext.rollup.snapshots import (
     load_context_bundle_snapshot,
     resolve_context_snapshot_as_of,
 )
+from alloccontext.constants import ALLOCATION_ASSETS as _ASSETS
 from alloccontext.timeutil import utc_now
-
-_ASSETS = ("BTC", "ETH", "CASH")
 
 
 def _normalize_pct(values: dict[str, float]) -> dict[str, float]:

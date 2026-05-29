@@ -9,6 +9,8 @@ import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from alloccontext.timeutil import utc_now_iso
+
 FRED_OBSERVATIONS_URL = "https://api.stlouisfed.org/fred/series/observations"
 
 
@@ -68,7 +70,7 @@ def upsert_fred_observations(
     series_id: str,
     observations: list[dict[str, Any]],
 ) -> int:
-    fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    fetched_at = utc_now_iso()
     count = 0
     for row in observations:
         parsed = _parse_observation(row)
