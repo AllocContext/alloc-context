@@ -35,6 +35,7 @@ One-time setup:
 | **PyPI trusted publisher** | Owner `negillett`, repo `alloc-context`, workflow `release.yml`, environment *(blank)* |
 | **VPS secrets** | `VPS_SSH_KEY`, `VPS_HOST` — see [self-hosting.md](self-hosting.md) |
 | **Workflow permissions** | Repo Settings → Actions → General → **Read and write** for `GITHUB_TOKEN` |
+| **Actions can open PRs** | Repo Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests** (required for **release-pr**) |
 
 Version files updated by the bump script:
 
