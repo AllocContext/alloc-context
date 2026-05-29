@@ -1,5 +1,7 @@
 # AllocContext
 
+mcp-name: io.github.negillett/alloc-context
+
 **Allocation context for BTC/ETH** — drift, band checks, USD rebalance moves,
 and a fused market backdrop (Fear & Greed, Kalshi, ETF flows, macro) as
 deterministic JSON over MCP.

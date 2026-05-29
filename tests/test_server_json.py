@@ -28,3 +28,8 @@ def test_server_json_version_matches_pyproject():
     data = json.loads(SERVER_JSON.read_text(encoding="utf-8"))
     assert data["version"] == py_ver
     assert data["packages"][0]["version"] == py_ver
+
+
+def test_readme_includes_mcp_registry_name_for_pypi():
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert "mcp-name: io.github.negillett/alloc-context" in readme

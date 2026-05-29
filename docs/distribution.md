@@ -58,6 +58,8 @@ This repo ships [`server.json`](../server.json) at the root with:
 ### Publish steps
 
 1. Ensure PyPI has the release — see [publishing.md](publishing.md).
+   The package **README** must include `mcp-name: io.github.negillett/alloc-context`
+   (registry ownership check against the PyPI long description).
 2. **Automated (recommended):** Actions → **publish-mcp-registry** → Run workflow.
    Future **release** runs also publish after PyPI upload.
 3. **Local (optional):**
