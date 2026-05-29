@@ -574,6 +574,11 @@ def build_llms_txt(
 bitcoin, ethereum, btc, eth, portfolio allocation, allocation drift,
 rebalance plan, rebalance btc eth, drift band, band check, market context,
 fear and greed, sentiment, macro calendar, etf flows, agent tools, mcp, x402
+
+## Examples
+
+Redacted tool JSON samples (evaluate before paying):
+https://github.com/negillett/alloc-context/blob/main/docs/examples.md
 """
 
 

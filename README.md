@@ -7,6 +7,24 @@ deterministic JSON over MCP.
 The product is an **agent-native MCP API** with x402 pay-per-call on Base —
 see [docs/mcp.md](docs/mcp.md).
 
+## Hosted MCP (production)
+
+Try the public endpoint without self-hosting:
+
+| | |
+|--|--|
+| **URL** | `https://mcp.alloc-context.com/mcp` |
+| **Discovery** | [llms.txt](https://mcp.alloc-context.com/llms.txt), [x402 manifest](https://mcp.alloc-context.com/.well-known/x402.json) |
+| **Pricing** | **$0.02** cached context/math · **$0.05** live ingest or portfolio |
+| **Payment** | x402 on Base — USDC or EURC |
+
+Agents find the service via [CDP Bazaar](docs/mcp-discovery.md). Integration
+guide: [docs/agent-integration.md](docs/agent-integration.md). Example JSON:
+[docs/examples.md](docs/examples.md).
+
+**Try free locally** (no payment): `./scripts/dev-up.sh` — see
+[docs/local-dev.md](docs/local-dev.md).
+
 Optional live portfolio reads use read-only exchange credentials passed in
 each request. Not financial advice.
 
@@ -74,7 +92,9 @@ See [docs/mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 | [docs/mcp.md](docs/mcp.md) | MCP tools and x402 |
 | [docs/mcp-http.md](docs/mcp-http.md) | HTTP MCP + x402 setup |
 | [docs/mcp-discovery.md](docs/mcp-discovery.md) | Bazaar and agent discovery |
+| [docs/agent-integration.md](docs/agent-integration.md) | Paid HTTP MCP + Bazaar for agents |
 | [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP |
+| [docs/examples.md](docs/examples.md) | Sample tool JSON (redacted) |
 | [docs/context-bundle.md](docs/context-bundle.md) | ContextBundle schema |
 | [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |
 | [docs/data-sources.md](docs/data-sources.md) | Ingest sources |

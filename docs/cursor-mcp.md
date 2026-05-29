@@ -2,6 +2,9 @@
 
 Use AllocContext cached context tools in Cursor over stdio.
 
+For the **hosted paid endpoint** (x402 on `mcp.alloc-context.com`) and CDP
+Bazaar discovery, see [agent-integration.md](agent-integration.md).
+
 ## Install
 
 ```bash

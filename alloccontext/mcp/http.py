@@ -34,6 +34,12 @@ def _health_verbose_enabled() -> bool:
     )
 
 
+def _discovery_link_headers() -> dict[str, str]:
+    if resolve_public_base_url():
+        return {"Link": '</llms.txt>; rel="describedby"'}
+    return {}
+
+
 def _make_health_handler(config_path: str | None) -> Any:
     def _health(_: Any) -> JSONResponse:
         payload: dict[str, Any] = {"ok": True, "service": "alloc-context-mcp"}
@@ -62,7 +68,7 @@ def _make_health_handler(config_path: str | None) -> Any:
             payload["status_detail"] = "database_unavailable"
             payload["ok"] = False
             payload["ingest_ok"] = False
-        return JSONResponse(payload)
+        return JSONResponse(payload, headers=_discovery_link_headers())
 
     return _health
 

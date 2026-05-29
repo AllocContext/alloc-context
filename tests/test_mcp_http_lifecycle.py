@@ -53,3 +53,22 @@ def test_health_verbose_includes_source_health(monkeypatch: pytest.MonkeyPatch) 
     body = resp.json()
     assert body["ok"] is True
     assert "source_health" in body or "status_detail" in body
+
+
+def test_health_includes_llms_link_when_public_url_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("mcp")
+    from starlette.testclient import TestClient
+
+    from alloccontext.mcp.http import build_http_app
+
+    monkeypatch.setenv("ALLOC_CONTEXT_CONFIG", "config/config.example.yaml")
+    monkeypatch.setenv("X402_PUBLIC_URL", "https://mcp.example.com")
+    app = build_http_app(x402=False, config_path="config/config.example.yaml")
+
+    with TestClient(app) as client:
+        resp = client.get("/health")
+
+    assert resp.status_code == 200
+    assert resp.headers.get("link") == '</llms.txt>; rel="describedby"'

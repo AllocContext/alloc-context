@@ -125,6 +125,10 @@ Add the CDP discovery MCP alongside local stdio AllocContext:
 
 For unpaid local use, keep stdio `alloc-context mcp`.
 
+Paid HTTP integration (x402 client, Bazaar search flow):
+[agent-integration.md](agent-integration.md). Example tool JSON:
+[examples.md](examples.md).
+
 ## Listing title
 
 > AllocContext — BTC/ETH allocation drift, rebalance moves & market context

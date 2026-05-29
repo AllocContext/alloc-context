@@ -91,6 +91,7 @@ def test_llms_txt_and_well_known() -> None:
     assert "get_market_context" in llms
     assert "get_context_bundle" in llms
     assert "x402" in llms
+    assert "examples.md" in llms
 
     manifest = build_well_known_x402(
         public_url="https://mcp.example.com",
