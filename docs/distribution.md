@@ -97,7 +97,7 @@ endpoint automatically via `[project.urls]`.
 | **Glama** | [glama.ai](https://glama.ai) MCP directory | Remote URL + tags |
 | **awesome-mcp** | PR to a maintained awesome list | Link `docs/agent-integration.md` |
 
-Document stable inbound links in the workspace discoverability roadmap when live.
+Track stable inbound links here as directories pick up the listing.
 
 ## Coinbase / x402 ecosystem
 
