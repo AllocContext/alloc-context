@@ -1,0 +1,78 @@
+name: release-pr
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver increment (ignored when exact_version is set)
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      exact_version:
+        description: Exact version (e.g. 0.2.0); overrides bump
+        required: false
+        type: string
+
+concurrency:
+  group: release-pr-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  open-release-pr:
+    if: github.repository == 'negillett/alloc-context'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Bump version files
+        id: bump
+        env:
+          EXACT_VERSION: ${{ inputs.exact_version }}
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          if [ -n "$EXACT_VERSION" ]; then
+            VERSION=$(python3 scripts/bump_version.py "$EXACT_VERSION" --write --print)
+          else
+            VERSION=$(python3 scripts/bump_version.py --bump "$BUMP" --write --print)
+          fi
+          if git ls-remote --tags origin "refs/tags/v${VERSION}" | grep -q .; then
+            echo "Tag v${VERSION} already exists on remote"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          BRANCH="release/v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${BRANCH}"
+          git add pyproject.toml server.json alloccontext/__init__.py
+          if git diff --staged --quiet; then
+            echo "No version changes to commit"
+            exit 1
+          fi
+          git commit -m "Bump version to ${VERSION}."
+          git push -u origin "${BRANCH}"
+          gh pr create --base main --head "${BRANCH}" \
+            --title "Release v${VERSION}" \
+            --body "Automated version bump to ${VERSION}. Merging this PR to \`main\` tags \`v${VERSION}\` and runs the release (PyPI, MCP Registry, VPS deploy)."

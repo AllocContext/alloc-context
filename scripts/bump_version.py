@@ -121,21 +121,18 @@ def resolve_target_version(
     current: str,
     bump: BumpPart | None,
     exact: str | None,
-    allow_unchanged: bool = False,
 ) -> str:
     if exact:
         parse_version(exact)
         if parse_version(exact) < parse_version(current):
             raise ValueError(f"refusing downgrade: {exact} < {current}")
-        if exact == current and not allow_unchanged:
-            raise ValueError(
-                f"version already {current}; use tag-only release or bump"
-            )
+        if exact == current:
+            raise ValueError(f"version already {current}; choose a higher version")
         return exact
     if bump is None:
         raise ValueError("provide --bump, --check, --current, or an exact version")
     target = bump_version(current, bump)
-    if target == current and not allow_unchanged:
+    if target == current:
         raise ValueError(f"version already {current}")
     return target
 

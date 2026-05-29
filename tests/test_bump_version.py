@@ -45,7 +45,7 @@ def test_resolve_target_version_rejects_downgrade():
 
 
 def test_resolve_target_version_rejects_unchanged_exact():
-    with pytest.raises(ValueError, match="tag-only"):
+    with pytest.raises(ValueError, match="already"):
         resolve_target_version(current="0.1.0", bump=None, exact="0.1.0")
 
 

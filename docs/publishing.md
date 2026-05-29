@@ -1,25 +1,29 @@
-# Publishing `alloc-context` to PyPI
+# Releasing `alloc-context`
 
-Production releases use a single GitHub Actions **release** workflow. One run
-bumps versions (optional), publishes to PyPI, deploys to the VPS, and creates
-the `vX.Y.Z` tag **after** success. Pushes to `main` run tests only (no deploy).
+Releases follow a **release-PR** flow. A version bump is reviewed as a normal
+pull request; merging it to `main` automatically tags the version and runs the
+release (PyPI, MCP Registry, VPS deploy). Production always runs what is on
+`main`, and every `vX.Y.Z` tag points at a real `main` commit.
 
 The operator repo (`alloc-context-operator`) still deploys on every `main` push.
 
-## Architecture
+## How it works
 
-| Trigger | Use case |
-|---------|----------|
-| **workflow_dispatch** | Normal releases from GitHub Actions UI |
-| **Tag push** `vX.Y.Z` | Manual local tag (break-glass or signed tags) |
+Two workflows:
 
-The automated path does **not** rely on tag pushes to start another workflow
-(which fails when the tag is pushed by `GITHUB_TOKEN`). Tagging happens in the
-same run after PyPI publish and VPS deploy succeed.
+| Workflow | Trigger | Does |
+|----------|---------|------|
+| **release-pr** | `workflow_dispatch` | Bumps version files, opens `release/vX.Y.Z` PR to `main`. No publish. |
+| **release** | push to `main` | If the current version has **no tag yet**: test → PyPI → MCP Registry + VPS → tag + GitHub release. |
 
-Pipeline order: **gate** (green `main` CI) → **test** → **prepare** (bump) →
-**validate-version** → **publish-pypi** → **publish-mcp-registry** + **deploy**
-(parallel) → **finalize-tag**.
+The release workflow keys off "version on `main` has no matching tag". Normal
+pushes (no version change) see the tag already exists and exit immediately.
+Because the tag is created **after** publish and deploy succeed — in the same
+run that the merge triggered — there is no reliance on tag-push events (which a
+`GITHUB_TOKEN`-pushed tag cannot trigger).
+
+Pipeline order: **check** (untagged version?) → **test** → **publish-pypi** →
+**publish-mcp-registry** + **deploy** (parallel) → **finalize** (tag + release).
 
 ## Prerequisites
 
@@ -31,7 +35,6 @@ One-time setup:
 | **PyPI trusted publisher** | Owner `negillett`, repo `alloc-context`, workflow `release.yml`, environment *(blank)* |
 | **VPS secrets** | `VPS_SSH_KEY`, `VPS_HOST` — see [self-hosting.md](self-hosting.md) |
 | **Workflow permissions** | Repo Settings → Actions → General → **Read and write** for `GITHUB_TOKEN` |
-| **Branch protection** | Release bumps push to `release/vX.Y.Z`, then open a PR to `main` (no bypass needed) |
 
 Version files updated by the bump script:
 
@@ -39,65 +42,38 @@ Version files updated by the bump script:
 - `server.json` (top-level and `packages[0].version`)
 - `alloccontext/__init__.py` (`__version__`)
 
-## Release from GitHub Actions (recommended)
+## Cut a release
 
-1. Merge changes to `main`; wait for **ci** to pass.
-2. Actions → **release** → **Run workflow** (branch: `main`).
-3. Choose one mode:
+1. Actions → **release-pr** → **Run workflow**.
 
-| Mode | Inputs |
-|------|--------|
-| **Patch / minor / major** | `bump` = increment; leave `exact_version` empty; `tag_only` = false |
-| **Exact version** | `exact_version` = e.g. `0.2.0`; `tag_only` = false |
-| **First release / no bump** | `tag_only` = true (releases current version, e.g. `0.1.0`) |
+   | Mode | Inputs |
+   |------|--------|
+   | **Patch / minor / major** | `bump` = increment; leave `exact_version` empty |
+   | **Exact version** | `exact_version` = e.g. `0.2.0` (overrides `bump`) |
 
-4. Watch the run: test → `release/vX.Y.Z` branch (if bumping) → PyPI → MCP Registry
-   + VPS → tag → PR to sync `main`.
+2. Review the opened **`release/vX.Y.Z`** PR; wait for **ci** to pass.
+3. **Merge to `main`.** The **release** workflow runs automatically: test →
+   PyPI → MCP Registry + VPS deploy → tag `vX.Y.Z` + GitHub release.
 
-Concurrency: only one **release** run at a time per repository.
+Concurrency: one **release** run at a time per repository.
 
 ## Branch protection on `main`
 
-If `main` requires pull requests, the workflow **does not push to `main`**. It
-pushes `release/vX.Y.Z`, publishes from that branch, tags it, then opens a PR to
-merge the version bump into `main` (auto-merge when allowed).
+The release PR is the human gate. The **release** workflow never pushes commits
+to `main` — it only pushes the `vX.Y.Z` tag after a successful publish and
+deploy, so no branch-protection bypass is required.
 
-Optional bypass (not required): **Settings** → **Rules** → `main` ruleset →
-**Bypass list** → add the **release** workflow or a machine-user PAT with
-`contents: write`.
+## Re-running a failed release
 
-## First release (`v0.1.0`)
-
-When version files are already `0.1.0` and no tag exists:
-
-1. Configure PyPI trusted publisher.
-2. Run **release** with **`tag_only` = true**.
-3. Workflow validates files, publishes, deploys, then pushes `v0.1.0`.
-
-## Manual local tag (optional)
-
-For a signed tag or offline bump:
-
-```bash
-cd alloc-context
-python3 scripts/bump_version.py --bump patch --write
-git add pyproject.toml server.json alloccontext/__init__.py
-git commit -m "Bump version to 0.1.1."
-git tag -s v0.1.1 -m "Release 0.1.1"
-git push origin main && git push origin v0.1.1
-```
-
-A local tag push triggers **release** (validate → PyPI → deploy). No
-`finalize-tag` job — the tag already exists.
-
-Dry-run bump: `python3 scripts/bump_version.py --bump minor` (omit `--write`).
-
-Verify sync: `python3 scripts/bump_version.py --check 0.1.0`
+If a release fails before tagging (e.g. PyPI hiccup), `main` stays untagged.
+**Re-run the failed `release` run** — `check` re-evaluates, PyPI publish uses
+`skip-existing`, the registry publish is idempotent, and the VPS deploy is
+repeatable, so a re-run completes safely.
 
 ## Verify PyPI
 
 ```bash
-pip install alloc-context==0.1.0
+pip install alloc-context==0.1.1
 alloc-context --help
 pip install "alloc-context[mcp]"
 alloc-context mcp --help
@@ -106,19 +82,30 @@ alloc-context mcp --help
 Confirm the [PyPI project page](https://pypi.org/project/alloc-context/) shows
 README, keywords, and **MCP Server** URL.
 
-## After PyPI publish
+## Manual local tag (optional)
 
-1. Publish to the MCP Registry — **publish-mcp-registry** workflow or the next
-   **release** run; see [distribution.md](distribution.md).
-2. Wait for directory mirrors or submit manually.
+For a signed tag or offline bump, push the bump to `main` via PR as usual; the
+**release** workflow tags it. To tag entirely by hand instead:
+
+```bash
+cd alloc-context
+git checkout main && git pull
+python3 scripts/bump_version.py --check "$(python3 scripts/bump_version.py --current)"
+git tag -s "v$(python3 scripts/bump_version.py --current)" -m "Release"
+git push origin "v$(python3 scripts/bump_version.py --current)"
+```
+
+Dry-run bump: `python3 scripts/bump_version.py --bump minor` (omit `--write`).
+
+Verify sync: `python3 scripts/bump_version.py --check 0.1.1`
 
 ## Break-glass
 
 | Situation | Action |
 |-----------|--------|
-| CI publish failed | Manual `twine upload` — see below |
+| CI publish failed | Re-run the **release** run, or manual `twine upload` below |
 | VPS-only hotfix | `deploy/rsync-to-vps.sh` — [self-hosting.md](self-hosting.md) |
-| Re-run failed release | Fix root cause; re-run **release** (`tag_only` if bump already on `main`) |
+| Registry-only publish | Actions → **publish-mcp-registry** → Run workflow |
 
 Manual PyPI upload:
 

@@ -55,35 +55,65 @@ def test_bump_release_workflow_removed():
     assert not (WORKFLOWS_DIR / "bump-release.yml").exists()
 
 
-def test_release_workflow_unified_pipeline():
-    workflow = _load_workflow("release.yml")
+def test_release_pr_workflow_opens_pr():
+    workflow = _load_workflow("release-pr.yml")
     on = _workflow_on(workflow)
     assert "workflow_dispatch" in on
     inputs = on["workflow_dispatch"]["inputs"]
     assert "bump" in inputs
     assert "exact_version" in inputs
-    assert "tag_only" in inputs
-    assert on["push"]["tags"] == ["v[0-9]+.[0-9]+.[0-9]+"]
+    # Opening a release PR must not publish or deploy.
+    assert "tag_only" not in inputs
+
+    steps = _job_steps(workflow, "open-release-pr")
+    runs = [step.get("run", "") for step in steps]
+    assert any("scripts/bump_version.py" in run for run in runs)
+    assert any("git push -u origin" in run and "release/v" in run for run in runs)
+    assert any("gh pr create" in run for run in runs)
+
+
+def test_release_workflow_triggers_on_main_push_only():
+    workflow = _load_workflow("release.yml")
+    on = _workflow_on(workflow)
+    assert on["push"]["branches"] == ["main"]
+    # No manual or tag trigger — releases are driven by merges to main.
+    assert "workflow_dispatch" not in on
+    assert "tags" not in on["push"]
     assert workflow["concurrency"]["group"].startswith("release-")
 
+
+def test_release_workflow_gates_on_untagged_version():
+    workflow = _load_workflow("release.yml")
+    check = workflow["jobs"]["check"]
+    assert check["outputs"]["release"]
+    check_runs = [step.get("run", "") for step in _job_steps(workflow, "check")]
+    assert any("--current" in run for run in check_runs)
+    assert any("ls-remote --tags" in run for run in check_runs)
+    # Every downstream job is conditioned on the release decision.
+    for job_name in ("test", "publish-pypi", "publish-mcp-registry", "deploy", "finalize"):
+        cond = workflow["jobs"][job_name]["if"]
+        assert "needs.check.outputs.release" in cond
+
+
+def test_release_workflow_publishes_then_deploys_then_finalizes():
+    workflow = _load_workflow("release.yml")
     jobs = workflow["jobs"]
-    assert jobs["deploy"]["needs"] == ["validate-version", "publish-pypi"]
-    assert jobs["finalize-tag"]["needs"] == [
-        "prepare",
-        "validate-version",
-        "publish-pypi",
-        "publish-mcp-registry",
-        "deploy",
-    ]
 
-    prepare_runs = [step.get("run", "") for step in _job_steps(workflow, "prepare")]
-    assert any("scripts/bump_version.py" in run for run in prepare_runs)
-    assert any("release/v" in run and "git push" in run for run in prepare_runs)
+    publish_steps = _job_steps(workflow, "publish-pypi")
+    publish_runs = [step.get("run", "") for step in publish_steps]
+    assert any("python -m build" in run for run in publish_runs)
+    pypi_step = next(
+        step
+        for step in publish_steps
+        if step.get("uses", "").startswith("pypa/gh-action-pypi-publish")
+    )
+    # Idempotent re-runs must not fail on an already-uploaded version.
+    assert pypi_step["with"]["skip-existing"] is True
 
-    validate_runs = [
-        step.get("run", "") for step in _job_steps(workflow, "validate-version")
+    registry_runs = [
+        step.get("run", "") for step in _job_steps(workflow, "publish-mcp-registry")
     ]
-    assert any("scripts/bump_version.py --check" in run for run in validate_runs)
+    assert any("publish-mcp-registry.sh" in run for run in registry_runs)
 
     deploy_steps = _job_steps(workflow, "deploy")
     names = [step.get("name", "") for step in deploy_steps]
@@ -92,28 +122,23 @@ def test_release_workflow_unified_pipeline():
     install = next(step for step in deploy_steps if step.get("name") == "Install on VPS")
     assert "deploy/remote-install.sh" in install["run"]
 
-    publish_steps = _job_steps(workflow, "publish-pypi")
-    publish_runs = [step.get("run", "") for step in publish_steps]
-    assert any("python -m build" in run for run in publish_runs)
-    assert any(
-        step.get("uses", "").startswith("pypa/gh-action-pypi-publish")
-        for step in publish_steps
-    )
+    finalize = jobs["finalize"]
+    assert set(finalize["needs"]) == {
+        "check",
+        "publish-pypi",
+        "publish-mcp-registry",
+        "deploy",
+    }
+    finalize_runs = [step.get("run", "") for step in _job_steps(workflow, "finalize")]
+    assert any("git tag" in run for run in finalize_runs)
+    assert any("gh release create" in run for run in finalize_runs)
 
-    registry = workflow["jobs"]["publish-mcp-registry"]
-    assert registry["needs"] in (
-        ["publish-pypi", "validate-version"],
-        ["validate-version", "publish-pypi"],
-    )
-    registry_runs = [
-        step.get("run", "") for step in _job_steps(workflow, "publish-mcp-registry")
-    ]
-    assert any("publish-mcp-registry.sh" in run for run in registry_runs)
 
-    finalize = workflow["jobs"]["finalize-tag"]
-    assert "publish-mcp-registry" in finalize["needs"]
-
-    assert "sync-main" in workflow["jobs"]
+def test_release_workflow_drops_branch_juggling_jobs():
+    workflow = _load_workflow("release.yml")
+    jobs = workflow["jobs"]
+    for removed in ("gate", "prepare", "validate-version", "finalize-tag", "sync-main"):
+        assert removed not in jobs
 
 
 def test_publish_mcp_registry_workflow_dispatch():
