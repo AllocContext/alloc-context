@@ -73,7 +73,11 @@ def check_cdp_facilitator(config: X402CheckConfig) -> str:
 
 
 def _fetch_ok(url: str, *, timeout: float = 20) -> tuple[int, bytes]:
-    with urllib.request.urlopen(url, timeout=timeout) as response:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "alloc-context-x402-check/1.0"},
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.status, response.read()
 
 
