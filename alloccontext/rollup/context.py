@@ -115,6 +115,7 @@ def build_context_bundle(
             portfolio=portfolio,
             sentiment=sentiment,
             delta=delta,
+            market=market,
             prior_as_of=prior_as_of,
             max_cash_risk_off=config.portfolio.max_cash_risk_off,
         ),

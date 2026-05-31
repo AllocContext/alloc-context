@@ -4,11 +4,23 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+_BAND_KEYS = frozenset({"btc", "eth"})
+_NOTABLE_MARKET_MOVE_PCT = 2.0
+
+
+def _market_block(context: dict[str, Any] | None) -> dict[str, Any]:
+    if not context:
+        return {}
+    if "market" in context:
+        block = context.get("market")
+        return block if isinstance(block, dict) else {}
+    if "assets" in context or context.get("available") is not None:
+        return context
+    return {}
+
 
 def _asset_price(context: dict[str, Any] | None, symbol: str) -> float | None:
-    if not context:
-        return None
-    market = context.get("market") or {}
+    market = _market_block(context)
     if not market.get("available"):
         return None
     assets = market.get("assets") or {}
@@ -23,6 +35,42 @@ def _pct_change(current: float | None, prior: float | None) -> float | None:
     if current is None or prior is None or prior == 0:
         return None
     return round((current - prior) / prior * 100, 2)
+
+
+def _alt_market_symbols(
+    market: dict[str, Any],
+    prior_context: dict[str, Any] | None,
+) -> list[str]:
+    keys: set[str] = set()
+    for block in (_market_block(market), _market_block(prior_context)):
+        if not block.get("available"):
+            continue
+        for key in block.get("assets") or {}:
+            lower = str(key).lower()
+            if lower not in _BAND_KEYS:
+                keys.add(lower)
+    return sorted(keys)
+
+
+def _append_market_moves(
+    delta: dict[str, Any],
+    market_changes: dict[str, float | None],
+    *,
+    market: dict[str, Any],
+    prior_context: dict[str, Any] | None,
+    symbols: tuple[str, ...],
+) -> None:
+    for symbol in symbols:
+        current = _asset_price(market, symbol)
+        prior = _asset_price(prior_context, symbol)
+        change = _pct_change(current, prior)
+        if change is None:
+            continue
+        market_changes[f"{symbol}_change_pct_since_prior"] = change
+        if abs(change) >= _NOTABLE_MARKET_MOVE_PCT:
+            delta["notable_shifts"].append(
+                f"{symbol.upper()} {change:+.2f}% since prior snapshot"
+            )
 
 
 def build_delta_context(
@@ -84,16 +132,20 @@ def build_delta_context(
                     )
 
     market_changes: dict[str, float | None] = {}
-    for symbol in ("btc", "eth"):
-        current = _asset_price(market, symbol)
-        prior = _asset_price(prior_context, symbol)
-        change = _pct_change(current, prior)
-        if change is not None:
-            market_changes[f"{symbol}_change_pct_since_prior"] = change
-            if abs(change) >= 2:
-                delta["notable_shifts"].append(
-                    f"{symbol.upper()} {change:+.2f}% since prior snapshot"
-                )
+    _append_market_moves(
+        delta,
+        market_changes,
+        market=market,
+        prior_context=prior_context,
+        symbols=("btc", "eth"),
+    )
+    _append_market_moves(
+        delta,
+        market_changes,
+        market=market,
+        prior_context=prior_context,
+        symbols=tuple(_alt_market_symbols(market, prior_context)),
+    )
     if market_changes:
         delta["market"] = market_changes
 

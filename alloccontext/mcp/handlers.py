@@ -213,6 +213,7 @@ def _attach_regime(bundle: dict[str, Any], config) -> dict[str, Any]:
         portfolio=regime_portfolio,
         sentiment=bundle.get("sentiment") or {},
         delta=bundle.get("delta") or {},
+        market=bundle.get("market") or {},
         prior_as_of=bundle.get("prior_as_of"),
         max_cash_risk_off=config.portfolio.max_cash_risk_off,
     )

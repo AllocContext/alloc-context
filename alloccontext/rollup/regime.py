@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from alloccontext.ingest.asset_registry import BAND_ASSETS, is_stable, normalize_canonical_symbol
+
+_ALT_REGIME_WEIGHT_THRESHOLD = 0.10
+_ALT_REGIME_MOVE_THRESHOLD_PCT = 5.0
+
 
 def _kalshi_block(sentiment: dict[str, Any]) -> dict[str, Any]:
     kalshi = sentiment.get("kalshi")
@@ -18,6 +23,7 @@ def build_regime_context(
     portfolio: dict[str, Any],
     sentiment: dict[str, Any],
     delta: dict[str, Any],
+    market: dict[str, Any] | None = None,
     prior_as_of: str | None,
     max_cash_risk_off: float = 0.50,
 ) -> dict[str, Any]:
@@ -58,6 +64,14 @@ def build_regime_context(
                     "text": _allocation_hint_text(str(hint)),
                 }
             )
+
+    hints.extend(
+        _alt_holding_move_hints(
+            portfolio=portfolio,
+            market=market or {},
+            delta=delta,
+        )
+    )
 
     kalshi = _kalshi_block(sentiment)
     if kalshi.get("available"):
@@ -143,6 +157,56 @@ def build_regime_context(
         "summary": summary,
         "risk_off": risk_off,
     }
+
+
+def _alt_holding_move_hints(
+    *,
+    portfolio: dict[str, Any],
+    market: dict[str, Any],
+    delta: dict[str, Any],
+) -> list[dict[str, str]]:
+    if not portfolio.get("available"):
+        return []
+
+    market_assets = market.get("assets") if market.get("available") else {}
+    if not isinstance(market_assets, dict):
+        market_assets = {}
+    market_changes = delta.get("market") if delta.get("available") else {}
+    if not isinstance(market_changes, dict):
+        market_changes = {}
+
+    hints: list[dict[str, str]] = []
+    for row in portfolio.get("holdings") or []:
+        if not isinstance(row, dict):
+            continue
+        symbol = normalize_canonical_symbol(str(row.get("symbol") or ""))
+        if not symbol or symbol in BAND_ASSETS or symbol in {"USD", "CASH"} or is_stable(symbol):
+            continue
+        weight = row.get("weight_pct")
+        if weight is None or float(weight) < _ALT_REGIME_WEIGHT_THRESHOLD:
+            continue
+
+        key = symbol.lower()
+        block = market_assets.get(key) if isinstance(market_assets.get(key), dict) else {}
+        move = (block.get("change_pct") or {}).get("24h") if isinstance(block, dict) else None
+        if move is None:
+            move = market_changes.get(f"{key}_change_pct_since_prior")
+
+        if move is None or abs(float(move)) < _ALT_REGIME_MOVE_THRESHOLD_PCT:
+            continue
+
+        move_f = float(move)
+        hints.append(
+            {
+                "kind": "holding_move",
+                "code": f"{key}_large_move",
+                "text": (
+                    f"{symbol} ({float(weight) * 100:.1f}% weight) moved "
+                    f"{move_f:+.1f}% — material for portfolio."
+                ),
+            }
+        )
+    return hints
 
 
 def _allocation_hint_text(code: str) -> str:
