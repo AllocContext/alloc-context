@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
@@ -29,6 +30,8 @@ from x402.schemas.hooks import VerifiedPaymentCancelOptions
 if TYPE_CHECKING:
     from x402.http.x402_http_server import PaywallProvider
     from x402.server import x402ResourceServer
+
+logger = logging.getLogger(__name__)
 
 
 def alloc_payment_middleware(
@@ -150,8 +153,18 @@ def alloc_payment_middleware(
                 )
             except FacilitatorResponseError as error:
                 return _facilitator_error_response(error)
-            except Exception:
-                return JSONResponse(content={}, status_code=402)
+            except Exception as exc:
+                logger.error(
+                    "post-handler payment settlement failed (%s)",
+                    type(exc).__name__,
+                )
+                return JSONResponse(
+                    content={
+                        "error": "settlement_failed",
+                        "reason": "internal_settlement_error",
+                    },
+                    status_code=402,
+                )
 
             if not settle_result.success:
                 resp = settle_result.response

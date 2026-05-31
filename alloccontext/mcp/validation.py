@@ -7,6 +7,7 @@ from typing import Any
 from alloccontext.constants import ALLOCATION_ASSETS as _ASSETS
 
 _PCT_SUM_TOLERANCE = 0.02
+MAX_ALLOCATION_BAND_SCENARIOS = 32
 
 
 class McpValidationError(ValueError):

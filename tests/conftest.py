@@ -22,3 +22,18 @@ def conn(config):
     connection = connect(config.paths.db)
     yield connection
     connection.close()
+
+
+@pytest.fixture
+def mock_live_ingest_ok(monkeypatch):
+    """Stub successful full ingest for freshness=live MCP handler tests."""
+
+    def _ok_ingest(_conn, _config):
+        return {
+            "ok": True,
+            "errors": {},
+            "counts": {},
+            "fatal_errors": {},
+        }
+
+    monkeypatch.setattr("alloccontext.ingest.runner.run_ingest", _ok_ingest)

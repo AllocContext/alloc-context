@@ -34,6 +34,14 @@ def _health_verbose_enabled() -> bool:
     )
 
 
+def _health_verbose_allowed(request: Any) -> bool:
+    if not _health_verbose_enabled():
+        return False
+    client = getattr(request, "client", None)
+    host = getattr(client, "host", None) if client is not None else None
+    return host in ("127.0.0.1", "::1", "localhost")
+
+
 def _discovery_link_headers() -> dict[str, str]:
     if resolve_public_base_url():
         return {"Link": '</llms.txt>; rel="describedby"'}
@@ -41,9 +49,9 @@ def _discovery_link_headers() -> dict[str, str]:
 
 
 def _make_health_handler(config_path: str | None) -> Any:
-    def _health(_: Any) -> JSONResponse:
+    def _health(request: Any) -> JSONResponse:
         payload: dict[str, Any] = {"ok": True, "service": "alloc-context-mcp"}
-        verbose = _health_verbose_enabled()
+        verbose = _health_verbose_allowed(request)
         try:
             from alloccontext.config import load_config
             from alloccontext.store.db import connect

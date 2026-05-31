@@ -65,7 +65,9 @@ def test_mcp_get_context_bundle_does_not_pollute_snapshots(conn, config) -> None
     assert rows[0]["as_of"] == "2026-05-20T12:00:00+00:00"
 
 
-def test_get_context_bundle_live_fails_closed_on_alt_refresh(config, conn) -> None:
+def test_get_context_bundle_live_fails_closed_on_alt_refresh(
+    config, conn, mock_live_ingest_ok
+) -> None:
     """Live bundle calls fail closed when requested alt quote refresh fails."""
     import json
 
@@ -107,8 +109,10 @@ def test_get_context_bundle_live_fails_closed_on_alt_refresh(config, conn) -> No
     assert "bundle_id" not in payload
 
 
-def test_get_context_bundle_live_serves_without_alt_request(config, conn) -> None:
-    """Live bundle without alt symbols still serves cached bundle data."""
+def test_get_context_bundle_live_serves_without_alt_request(
+    config, conn, mock_live_ingest_ok
+) -> None:
+    """Live bundle without alt symbols runs ingest then serves fresh bundle data."""
     import json
 
     conn.execute(
@@ -129,6 +133,7 @@ def test_get_context_bundle_live_serves_without_alt_request(config, conn) -> Non
 
     assert payload.get("available") is not False
     assert payload["freshness"] == "live"
+    assert payload["ingest"]["ok"] is True
     assert "bundle_id" in payload
 
 

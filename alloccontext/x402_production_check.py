@@ -81,39 +81,42 @@ def check_discovery_paths(config: X402CheckConfig) -> list[str]:
     messages: list[str] = []
     paths = ("/health", "/llms.txt", "/.well-known/x402.json")
     for path in paths:
-        checked = False
-        for base in (config.local_url, config.public_url):
-            if not base:
-                continue
-            url = f"{base}{path}"
-            try:
-                status, _body = _fetch_ok(url)
-            except urllib.error.HTTPError as exc:
-                if base == config.local_url:
-                    continue
-                raise X402ProductionCheckError(f"{path} returned HTTP {exc.code}") from exc
-            except urllib.error.URLError:
-                if base == config.local_url:
-                    continue
-                raise
-            else:
-                if status != 200:
-                    if base == config.local_url:
-                        continue
-                    raise X402ProductionCheckError(f"{path} returned HTTP {status}")
-                messages.append(f"GET {path} -> 200 ({base})")
-                checked = True
-                break
-        if not checked:
+        public_url = f"{config.public_url}{path}"
+        try:
+            status, _body = _fetch_ok(public_url)
+        except urllib.error.HTTPError as exc:
             raise X402ProductionCheckError(
-                f"could not reach {path} on local or public URL"
+                f"{path} returned HTTP {exc.code} on public URL"
+            ) from exc
+        except urllib.error.URLError as exc:
+            raise X402ProductionCheckError(
+                f"{path} unreachable on public URL"
+            ) from exc
+        if status != 200:
+            raise X402ProductionCheckError(
+                f"{path} returned HTTP {status} on public URL"
             )
+        messages.append(f"GET {path} -> 200 ({config.public_url})")
+        if config.local_url and config.local_url != config.public_url:
+            local_url = f"{config.local_url}{path}"
+            try:
+                local_status, _ = _fetch_ok(local_url)
+            except (urllib.error.HTTPError, urllib.error.URLError):
+                messages.append(
+                    f"GET {path} -> local unreachable ({config.local_url})"
+                )
+            else:
+                if local_status != 200:
+                    messages.append(
+                        f"GET {path} -> HTTP {local_status} on local ({config.local_url})"
+                    )
+                else:
+                    messages.append(f"GET {path} -> 200 ({config.local_url})")
     return messages
 
 
 def check_manifest_pay_to(config: X402CheckConfig) -> None:
-    manifest_base = config.local_url or config.public_url
-    _status, body = _fetch_ok(f"{manifest_base}/.well-known/x402.json")
+    _status, body = _fetch_ok(f"{config.public_url}/.well-known/x402.json")
     manifest = json.loads(body)
     if manifest.get("payment", {}).get("payTo") != config.pay_to:
         raise X402ProductionCheckError("x402.json payTo does not match X402_PAY_TO")
@@ -132,8 +135,7 @@ def check_discovery_metadata(config: X402CheckConfig) -> list[str]:
     )
 
     messages: list[str] = []
-    manifest_base = config.local_url or config.public_url
-    _status, manifest_body = _fetch_ok(f"{manifest_base}/.well-known/x402.json")
+    _status, manifest_body = _fetch_ok(f"{config.public_url}/.well-known/x402.json")
     manifest = json.loads(manifest_body)
     if manifest.get("name") != SERVICE_NAME:
         raise X402ProductionCheckError("x402.json name missing or wrong")
@@ -145,7 +147,7 @@ def check_discovery_metadata(config: X402CheckConfig) -> list[str]:
             raise X402ProductionCheckError(f"x402.json missing tag {tag!r}")
     messages.append(f"x402.json title/tags ok ({len(manifest_tags)} tags)")
 
-    _status, llms_body = _fetch_ok(f"{manifest_base}/llms.txt")
+    _status, llms_body = _fetch_ok(f"{config.public_url}/llms.txt")
     llms = llms_body.decode("utf-8")
     llms_lower = llms.lower()
     if BAZAAR_SERVICE_NAME not in llms and SERVICE_TITLE not in llms:

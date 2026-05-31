@@ -39,7 +39,7 @@ def test_run_ingest_fatal_when_kraken_primary_missing_credentials(
     assert result["fatal_errors"].get("kraken") == "missing_kraken_credentials"
 
 
-def test_live_market_context_fail_closed(config, conn, monkeypatch) -> None:
+def test_live_market_context_fail_closed(config, conn, monkeypatch, mock_live_ingest_ok) -> None:
     monkeypatch.setattr(
         "alloccontext.ingest.alt_quotes.refresh_alt_quotes",
         lambda _c, _cfg, symbols: {
@@ -63,3 +63,36 @@ def test_live_market_context_fail_closed(config, conn, monkeypatch) -> None:
     assert payload.get("available") is False
     assert payload.get("reason") == "live_alt_quote_refresh_failed"
     validate_tool_response("get_market_context", payload)
+
+
+def test_live_context_bundle_fail_closed_on_ingest(config, conn, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alloccontext.ingest.runner.run_ingest",
+        lambda _c, _cfg: {
+            "ok": False,
+            "errors": {"kraken": "missing_kraken_credentials"},
+            "counts": {},
+            "fatal_errors": {"kraken": "missing_kraken_credentials"},
+        },
+    )
+    payload = get_context_bundle(conn, config, freshness="live")
+    assert payload.get("available") is False
+    assert payload.get("reason") == "live_ingest_failed"
+    assert payload["ingest"]["ok"] is False
+
+
+def test_live_market_context_fail_closed_on_ingest(config, conn, monkeypatch) -> None:
+    from alloccontext.mcp.handlers import get_market_context
+
+    monkeypatch.setattr(
+        "alloccontext.ingest.runner.run_ingest",
+        lambda _c, _cfg: {
+            "ok": False,
+            "errors": {"kraken": "missing_kraken_credentials"},
+            "counts": {},
+            "fatal_errors": {"kraken": "missing_kraken_credentials"},
+        },
+    )
+    payload = get_market_context(conn, config, freshness="live")
+    assert payload.get("available") is False
+    assert payload.get("reason") == "live_ingest_failed"

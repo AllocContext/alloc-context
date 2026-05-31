@@ -53,14 +53,41 @@ def test_health_default_omits_source_health() -> None:
 
 
 def test_health_verbose_includes_source_health(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import MagicMock
+
+    from alloccontext.mcp.http import _make_health_handler
+
     monkeypatch.setenv("ALLOC_CONTEXT_HEALTH_VERBOSE", "1")
-    app = build_http_app()
-    client = TestClient(app)
-    response = client.get("/health")
+    handler = _make_health_handler(None)
+    request = MagicMock()
+    request.client.host = "127.0.0.1"
+    response = handler(request)
     assert response.status_code == 200
-    body = response.json()
-    assert "ingest_ok" in body
-    assert "source_health" in body
+    body = response.body.decode()
+    import json
+
+    payload = json.loads(body)
+    assert "ingest_ok" in payload
+    assert "source_health" in payload
+
+
+def test_health_verbose_omits_source_health_off_loopback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import MagicMock
+
+    from alloccontext.mcp.http import _make_health_handler
+
+    monkeypatch.setenv("ALLOC_CONTEXT_HEALTH_VERBOSE", "1")
+    handler = _make_health_handler(None)
+    request = MagicMock()
+    request.client.host = "203.0.113.50"
+    response = handler(request)
+    import json
+
+    payload = json.loads(response.body.decode())
+    assert "ingest_ok" in payload
+    assert "source_health" not in payload
 
 
 async def _heavy_price_for_invalid_json() -> str:
@@ -84,7 +111,7 @@ def test_unparseable_mcp_body_prices_heavy() -> None:
     assert price == "$0.05"
 
 
-def test_live_context_bundle_serves_without_alt_request(config, conn) -> None:
+def test_live_context_bundle_serves_without_alt_request(config, conn, mock_live_ingest_ok) -> None:
     from alloccontext.mcp.contracts import validate_tool_response
 
     result = get_context_bundle(conn, config, freshness="live")

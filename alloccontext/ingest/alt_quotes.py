@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from typing import Any
 
@@ -19,6 +20,8 @@ from alloccontext.ingest.quote_resolver import (
     quote_resolver_config_from_app,
 )
 from alloccontext.timeutil import utc_now_iso
+
+logger = logging.getLogger(__name__)
 
 
 def parse_cmc_alt_quotes(quotes: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -54,8 +57,11 @@ def _fetch_alt_quotes(
                 timeout=resolver_config.timeout_seconds,
             )
             quotes.update(parse_cmc_alt_quotes(payload))
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "coinmarketcap alt quote fetch failed (%s)",
+                type(exc).__name__,
+            )
     remaining = [symbol for symbol in remaining if symbol not in quotes]
     if not remaining:
         return quotes
@@ -86,8 +92,11 @@ def _fetch_alt_quotes(
                     "change_pct_24h": float(change) if change is not None else None,
                     "source": "coingecko",
                 }
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "coingecko markets alt quote fetch failed (%s)",
+                type(exc).__name__,
+            )
 
     remaining = [symbol for symbol in remaining if symbol not in quotes]
     if remaining:
@@ -109,8 +118,11 @@ def _fetch_alt_quotes(
                             "change_pct_24h": None,
                             "source": "coingecko",
                         }
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "coingecko simple alt quote fetch failed (%s)",
+                type(exc).__name__,
+            )
 
     return quotes
 
