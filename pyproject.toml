@@ -52,6 +52,9 @@ hosted = [
 ]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=6.0",
+    "bandit>=1.8",
+    "pip-audit>=2.9",
     "mcp>=1.6",
     "x402[fastapi,evm]>=2.0",
     "cdp-sdk>=1.46",
@@ -74,3 +77,17 @@ include = ["alloccontext*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["alloccontext"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 75
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+]

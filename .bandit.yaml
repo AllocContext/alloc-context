@@ -1,0 +1,14 @@
+# Bandit SAST — skips are documented false positives for this codebase.
+# See docs/security-ci.md and CI bandit job.
+exclude_dirs:
+  - tests
+  - .venv
+skips:
+  # Controlled HTTPS ingest / discovery fetches (fixed vendor URLs).
+  - B310
+  # Empty credential defaults on exchange client constructors.
+  - B107
+  # Bazaar/docs example placeholder strings, not secrets.
+  - B105
+  # Resilient parse loops over external API payloads.
+  - B112
