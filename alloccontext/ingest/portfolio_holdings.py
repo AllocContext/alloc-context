@@ -4,6 +4,7 @@ from typing import Any, Callable
 
 from alloccontext.constants import ALLOCATION_ASSETS
 from alloccontext.ingest.asset_registry import BAND_ASSETS, holding_kind, is_stable
+from alloccontext.ingest.quote_resolver import QuoteResolverConfig, resolve_balance_prices
 
 
 def band_allocation_pct(holdings: list[dict[str, Any]]) -> dict[str, float]:
@@ -92,17 +93,14 @@ def resolve_prices_for_balances(
     spot_prices: dict[str, float],
     *,
     fetch_price: Callable[[str], float | None],
+    resolver_config: QuoteResolverConfig | None = None,
 ) -> dict[str, float]:
-    prices = dict(spot_prices)
-    for symbol, qty in balances.items():
-        if qty <= 0 or symbol == "USD" or is_stable(symbol):
-            continue
-        if symbol in prices:
-            continue
-        mark = fetch_price(symbol)
-        if mark is not None:
-            prices[symbol] = mark
-    return prices
+    return resolve_balance_prices(
+        balances,
+        spot_prices,
+        exchange_price=fetch_price,
+        resolver_config=resolver_config,
+    )
 
 
 def legacy_holdings_from_allocation(

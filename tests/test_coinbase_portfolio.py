@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from alloccontext.ingest.coinbase_client import (
+    CoinbaseError,
     normalize_coinbase_balances,
     normalize_pem_secret,
     product_to_symbol,
@@ -15,10 +16,13 @@ from alloccontext.ingest.coinbase_portfolio import (
     refresh_coinbase,
 )
 from alloccontext.ingest.kraken_portfolio import PortfolioSnapshot
+from alloccontext.ingest.quote_resolver import QuoteResolverConfig
 
 
 class FakeCoinbaseClient:
     def get_ticker(self, product_id: str) -> dict[str, float]:
+        if product_id.startswith("HYPE"):
+            raise CoinbaseError("unknown product")
         return {"last": 100_000.0 if product_id.startswith("BTC") else 3_000.0}
 
     def get_ohlc(self, product_id: str, interval_minutes: int = 1440) -> list[dict[str, float]]:
@@ -79,6 +83,36 @@ def test_fetch_and_persist_coinbase_portfolio(config, conn) -> None:
     spot = config.exchanges.coinbase
     snap = fetch_portfolio_snapshot(FakeCoinbaseClient(), spot)
     assert snap.nav_usd > 0
+
+
+def test_fetch_portfolio_prices_hype_via_cmc_fallback(config, monkeypatch) -> None:
+    class HypeClient(FakeCoinbaseClient):
+        def get_balances_with_breakdown(self):
+            return ({"BTC": 0.0, "HYPE": 10.0, "USD": 0.0}, {})
+
+    def fake_cmc(*, symbols, api_key, timeout):  # noqa: ARG001
+        return {
+            "32196": {
+                "symbol": "HYPE",
+                "quote": {"USD": {"price": 25.0}},
+            }
+        }
+
+    monkeypatch.setattr(
+        "alloccontext.ingest.coinmarketcap.fetch_cmc_quotes",
+        fake_cmc,
+    )
+    monkeypatch.setenv("COINMARKETCAP_API_KEY", "test-key")
+
+    snap = fetch_portfolio_snapshot(
+        HypeClient(),
+        config.exchanges.coinbase,
+        resolver_config=QuoteResolverConfig(coinmarketcap_api_key="test-key"),
+    )
+    hype = next(row for row in snap.holdings if row["symbol"] == "HYPE")
+    assert hype["price_usd"] == pytest.approx(25.0)
+    assert hype["value_usd"] == pytest.approx(250.0)
+    assert snap.unrecognized == []
 
 
 def test_refresh_coinbase_missing_credentials(conn, tmp_path, monkeypatch) -> None:
