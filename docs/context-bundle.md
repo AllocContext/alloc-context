@@ -112,6 +112,23 @@ Band assets (BTC/ETH) use exchange OHLC bars. Alt holdings (e.g. HYPE) use
 cached quote snapshots when available; missing alts appear in `assets_omitted[]`.
 
 Use the `assets` tool argument to filter market/ETF fields (default `BTC`, `ETH`).
+On the stdio bridge, omit `assets` to auto-scope from local portfolio holdings
+(symbols only sent upstream).
+
+## Market coverage
+
+What each symbol class gets in a ContextBundle (ADR-009):
+
+| Class | Symbols | Ingest | ContextBundle fields |
+|-------|---------|--------|----------------------|
+| **Band** | BTC, ETH | CF benchmarks OHLC (Kraken); SoSoValue ETF flows | `market.assets.btc`, `market.assets.eth` — OHLC price + `change_pct.1_bar` |
+| **Alt holdings** | Non-band, non-stable (e.g. HYPE) | Bounded quote snapshots (exchange mark → CMC → CoinGecko); scheduled + on-demand | `market.assets.{symbol}` — `price_usd`, `change_pct.24h`, `source` |
+| **Stables / cash** | USD, USDC, … | Portfolio marks only | `portfolio.holdings[]`, `cash_usd`; excluded from market `assets` filter |
+| **Global feeds** | Market-wide | Fear & Greed, Kalshi, macro calendar, FRED, breadth | `sentiment`, `macro`, `market.breadth`; ETF flows remain BTC/ETH-centric |
+
+Missing alt data for a requested symbol → `assets_omitted[]` (fail-soft on
+`freshness=cached`). `freshness=live` refreshes quotes for requested symbols
+only (heavy x402 tier on hosted).
 
 ## sentiment
 

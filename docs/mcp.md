@@ -44,7 +44,20 @@ pass `target_pct` (and optional `band`) to attach `allocation_analysis`.
 
 On a self-hosted install, `freshness=cached` reads the ingest SQLite DB.
 Hosted endpoints serve the host ingested cache unless the client requests
-`freshness=live` (requires API keys on the host).
+`freshness=live` (targeted alt quote refresh for requested symbols; heavy x402
+tier).
+
+### Market coverage
+
+| Class | Symbols | Ingest | Response |
+|-------|---------|--------|----------|
+| **Band** | BTC, ETH | OHLC bars + ETF flows | `market.assets.btc`, `market.assets.eth` with bar-based change |
+| **Alt holdings** | e.g. HYPE | Quote snapshots (CMC/CG/exchange) | `market.assets.{symbol}` with mark + 24h change |
+| **Stables** | USD, USDC, … | Portfolio only | Not in market `assets` filter |
+| **Global** | Market-wide | Sentiment, macro, breadth | `sentiment`, `macro`; ETF BTC/ETH only |
+
+Details: [context-bundle.md#market-coverage](context-bundle.md#market-coverage).
+Missing symbols → `assets_omitted[]`.
 
 ### Response staleness
 
@@ -122,6 +135,7 @@ pip install "alloc-context[hosted]"   # HTTP + x402
 - LLM on any paid MCP path
 - Storing user exchange secrets on a shared server (credentials in request only)
 - Automated trade execution
-- Asset universes beyond BTC / ETH / CASH unless explicitly expanded
+- Per-alt ETF flow ingest (ETF remains BTC/ETH-centric)
+- New exchanges beyond Kraken and Coinbase
 
 See [context-bundle.md](context-bundle.md) for the facts schema.

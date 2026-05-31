@@ -84,6 +84,11 @@ combines local portfolio reads with this upstream for market context.
 | `check_allocation_bands` | Batch band checks for multiple target scenarios |
 | `get_portfolio_state` | Live NAV and holdings from Kraken or Coinbase |
 
+Market context is **holdings-scoped**: band assets (BTC/ETH) use OHLC bars; alt
+holdings (e.g. HYPE) use quote snapshots when cached. The bridge auto-scopes
+`assets` from your portfolio (symbols only upstream). See
+[context-bundle.md#market-coverage](docs/context-bundle.md#market-coverage).
+
 See [mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 
 ## Self-host and development
