@@ -90,6 +90,10 @@ sentiment, and delta. No LLM.
 | `volatility` | Kalshi short-horizon volatility regime when available |
 | `sentiment` | Fear & Greed and Kalshi tape fields |
 | `comparison` | `prior_as_of`, `notable_shifts` when a prior snapshot exists |
+| `hints[].kind=holding_move` | Large alt weight (≥10% NAV) + move (≥5% 24h or since prior) |
+
+Alt holding hints use `market.assets.{symbol}.change_pct.24h` or delta
+`market.{symbol}_change_pct_since_prior` when both snapshots had marks.
 
 ## market
 
@@ -137,7 +141,8 @@ Computed vs the prior saved snapshot when `prior_as_of` is set:
 - `fear_greed_change`
 - `market.btc_change_pct_since_prior`
 - `market.eth_change_pct_since_prior`
-- `notable_shifts[]` — deterministic rule hits for LLM emphasis
+- `market.{symbol}_change_pct_since_prior` — held alt keys when both snapshots had marks
+- `notable_shifts[]` — deterministic rule hits (≥2% since prior for market moves)
 
 ## Migration from v1 portfolio fields
 
