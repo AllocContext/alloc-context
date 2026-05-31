@@ -6,7 +6,7 @@ from typing import Any
 
 from alloccontext.ingest.asset_registry import (
     coingecko_ids_for_symbols,
-    is_stable,
+    normalize_canonical_symbol,
     symbols_needing_quotes,
 )
 from alloccontext.ingest.env_keys import optional_env_key
@@ -28,10 +28,31 @@ def quote_resolver_config_from_env(*, timeout_seconds: float = 20.0) -> QuoteRes
     )
 
 
+def quote_resolver_config_from_app(config) -> QuoteResolverConfig:
+    """Build resolver config from ingest app config (timeouts + optional keys)."""
+    cg_key = (
+        optional_env_key("COINGECKO_API_KEY")
+        if config.coingecko.use_demo_key
+        else None
+    )
+    return QuoteResolverConfig(
+        coingecko_api_key=cg_key,
+        coinmarketcap_api_key=optional_env_key("COINMARKETCAP_API_KEY"),
+        timeout_seconds=max(
+            config.coingecko.timeout_seconds,
+            config.coinmarketcap.timeout_seconds,
+        ),
+    )
+
+
 def parse_cmc_symbol_prices(quotes: dict[str, Any]) -> dict[str, float]:
+    """Extract symbol → USD price from CMC quotes/latest `data` payload."""
     prices: dict[str, float] = {}
-    for symbol, payload in quotes.items():
+    for payload in quotes.values():
         if not isinstance(payload, dict):
+            continue
+        raw_symbol = payload.get("symbol")
+        if not raw_symbol:
             continue
         quote_block = payload.get("quote")
         if not isinstance(quote_block, dict):
@@ -41,7 +62,7 @@ def parse_cmc_symbol_prices(quotes: dict[str, Any]) -> dict[str, float]:
             continue
         price = parse_float(quote.get("price"))
         if price is not None and price > 0:
-            prices[str(symbol).upper()] = float(price)
+            prices[normalize_canonical_symbol(str(raw_symbol))] = float(price)
     return prices
 
 
@@ -53,8 +74,16 @@ def resolve_balance_prices(
     resolver_config: QuoteResolverConfig | None = None,
 ) -> dict[str, float]:
     """Resolve USD marks: configured spot pairs, exchange ticker, CMC, CoinGecko."""
-    prices = dict(spot_prices)
-    missing = [symbol for symbol in symbols_needing_quotes(balances) if symbol not in prices]
+    prices = {
+        normalize_canonical_symbol(symbol): float(value)
+        for symbol, value in spot_prices.items()
+        if value is not None and float(value) > 0
+    }
+    missing = [
+        symbol
+        for symbol in symbols_needing_quotes(balances)
+        if symbol not in prices
+    ]
 
     still_missing: list[str] = []
     for symbol in missing:

@@ -13,6 +13,7 @@ from alloccontext.ingest.kraken_portfolio import (
     upsert_market_bars,
     upsert_portfolio_snapshot,
 )
+from alloccontext.ingest.quote_resolver import quote_resolver_config_from_app
 
 
 def refresh_kraken_exchange(conn: sqlite3.Connection, config) -> dict[str, Any]:
@@ -34,7 +35,11 @@ def refresh_kraken_exchange(conn: sqlite3.Connection, config) -> dict[str, Any]:
         snap = None
         portfolio_rows = 0
         if writes_portfolio_snapshot(config, "kraken"):
-            snap = fetch_portfolio_snapshot(client, spot)
+            snap = fetch_portfolio_snapshot(
+                client,
+                spot,
+                resolver_config=quote_resolver_config_from_app(config),
+            )
             upsert_portfolio_snapshot(conn, snap)
             portfolio_rows = 1
         bar_rows = 0

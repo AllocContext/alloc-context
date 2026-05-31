@@ -60,10 +60,18 @@ def test_portfolio_from_balances_includes_hype_when_priced() -> None:
 
 
 def test_resolve_prices_for_balances_hype_via_cmc(monkeypatch) -> None:
-    from alloccontext.ingest.portfolio_holdings import resolve_prices_for_balances
+    from alloccontext.ingest.portfolio_holdings import (
+        build_holdings,
+        resolve_prices_for_balances,
+    )
 
     def fake_cmc(*, symbols, api_key, timeout):  # noqa: ARG001
-        return {"HYPE": {"quote": {"USD": {"price": "30.0"}}}}
+        return {
+            "HYPE": {
+                "symbol": "HYPE",
+                "quote": {"USD": {"price": "30.0"}},
+            }
+        }
 
     monkeypatch.setattr(
         "alloccontext.ingest.coinmarketcap.fetch_cmc_quotes",
@@ -77,6 +85,12 @@ def test_resolve_prices_for_balances_hype_via_cmc(monkeypatch) -> None:
         fetch_price=lambda _symbol: None,
     )
     assert prices["HYPE"] == pytest.approx(30.0)
+
+    holdings, unrecognized = build_holdings({"HYPE": 2.0, "USD": 0.0}, prices)
+    hype = next(row for row in holdings if row["symbol"] == "HYPE")
+    assert hype["price_usd"] == pytest.approx(30.0)
+    assert hype["value_usd"] == pytest.approx(60.0)
+    assert unrecognized == []
 
 
 def test_build_allocation_analysis_is_separate_block() -> None:

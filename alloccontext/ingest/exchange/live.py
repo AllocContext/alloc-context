@@ -10,6 +10,7 @@ from alloccontext.ingest.kraken_portfolio import (
     PortfolioSnapshot,
     fetch_portfolio_snapshot as fetch_kraken_snapshot,
 )
+from alloccontext.ingest.quote_resolver import quote_resolver_config_from_app
 from alloccontext.mcp.validation import validate_band, validate_target_pct
 from alloccontext.rollup.allocation_analysis import build_allocation_analysis
 from alloccontext.rollup.portfolio_payload import portfolio_dict_from_snapshot
@@ -41,6 +42,7 @@ def fetch_live_portfolio_snapshot(
     config,
 ) -> PortfolioSnapshot:
     spot = _spot_config(config, exchange_id)
+    resolver_config = quote_resolver_config_from_app(config)
     key = api_key.strip()
     secret = api_secret.strip()
     if not key or not secret:
@@ -54,14 +56,14 @@ def fetch_live_portfolio_snapshot(
                 retry_backoff=spot.retry_backoff_seconds,
                 max_retries=spot.max_retries,
             )
-            return fetch_kraken_snapshot(client, spot)
+            return fetch_kraken_snapshot(client, spot, resolver_config=resolver_config)
         client = CoinbaseClient(
             api_key=key,
             api_secret=secret,
             retry_backoff=spot.retry_backoff_seconds,
             max_retries=spot.max_retries,
         )
-        return fetch_coinbase_snapshot(client, spot)
+        return fetch_coinbase_snapshot(client, spot, resolver_config=resolver_config)
     except (KrakenError, CoinbaseError) as exc:
         raise LivePortfolioError(str(exc)) from exc
 
