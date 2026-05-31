@@ -11,25 +11,20 @@ MCP Registry, PyPI, and curated agent directories.
 
 Use this for directory forms, community posts, and registry descriptions.
 
-> **On license / product refresh (ADR-007 D8 + ADR-008):** Update this blurb with
-> portfolio-first positioning, privacy pillars (D7), **Elastic License 2.0 /
-> source-available / self-host friendly**, link to `docs/USE.md`, and **official
-> hosted URL only** at `https://mcp.alloc-context.com/mcp`. Do not call the
-> project OSI open source after ELv2. Validate `llms.txt` license markers in
-> `x402_production_check.py`.
-
 ```text
-AllocContext — deterministic BTC/ETH allocation context for AI agents over MCP.
-Drift and band checks, USD rebalance plans, fused market backdrop (Fear & Greed,
-Kalshi, macro, ETF flows), optional live Kraken/Coinbase reads. Hosted on Base
-with x402 pay-per-call ($0.02 cached / $0.05 live). https://mcp.alloc-context.com/mcp
+AllocContext — portfolio-aware crypto context for AI agents over MCP. Discover
+holdings, market, sentiment, macro, and regime; optional BTC/ETH allocation
+analysis. Privacy: nothing stored; one-time read-only; pass-through only.
+Source-available (Elastic License 2.0); self-host friendly. Official hosted MCP:
+https://mcp.alloc-context.com/mcp — see docs/USE.md. x402 on Base ($0.02 cached
+/ $0.05 live).
 ```
 
 ## GitHub repository metadata
 
 | Field | Value |
 |-------|-------|
-| **Description** | BTC/ETH allocation MCP for agents — drift, rebalance, market context. Hosted: https://mcp.alloc-context.com/mcp (x402 on Base). |
+| **Description** | Portfolio crypto context MCP for agents — holdings, market, optional drift. Hosted: https://mcp.alloc-context.com/mcp (x402). ELv2. |
 | **Topics** | `mcp`, `x402`, `bitcoin`, `ethereum`, `model-context-protocol`, `agents`, `portfolio` |
 | **Website** | `https://mcp.alloc-context.com/llms.txt` |
 
@@ -45,7 +40,7 @@ Or, from a machine with a PAT that has **Administration** on the repo:
 
 ```bash
 gh repo edit negillett/alloc-context \
-  --description "BTC/ETH allocation MCP for agents — drift, rebalance, market context. Hosted: https://mcp.alloc-context.com/mcp (x402 on Base)." \
+  --description "Portfolio crypto context MCP for agents — holdings, market, optional drift. Hosted: https://mcp.alloc-context.com/mcp (x402). ELv2." \
   --add-topic mcp --add-topic x402 --add-topic bitcoin --add-topic ethereum \
   --add-topic model-context-protocol --add-topic agents --add-topic portfolio \
   --homepage "https://mcp.alloc-context.com/llms.txt"

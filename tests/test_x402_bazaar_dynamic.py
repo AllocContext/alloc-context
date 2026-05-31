@@ -31,6 +31,16 @@ def test_listing_description_includes_search_phrases() -> None:
         assert phrase in lowered
 
 
+def test_listing_description_includes_privacy_and_license() -> None:
+    lowered = LISTING_DESCRIPTION.lower()
+    assert "nothing stored" in lowered
+    assert "one-time read-only" in lowered
+    assert "pass-through only" in lowered
+    assert "elastic license" in lowered
+    assert "mcp.alloc-context.com/mcp" in lowered
+    assert "docs/use.md" in lowered
+
+
 def test_mcp_tool_name_from_body() -> None:
     body = {
         "method": "tools/call",

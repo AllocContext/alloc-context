@@ -8,6 +8,7 @@ import pytest
 from alloccontext.x402_production_check import (
     X402CheckConfig,
     X402ProductionCheckError,
+    check_discovery_metadata,
     check_discovery_paths,
     check_manifest_pay_to,
     check_mcp_payment_gate,
@@ -88,6 +89,42 @@ def test_check_mcp_payment_gate_requires_402(monkeypatch) -> None:
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     with pytest.raises(X402ProductionCheckError, match="402 without payment"):
         check_mcp_payment_gate(config)
+
+
+def test_check_discovery_metadata_validates_privacy_and_license(monkeypatch) -> None:
+    from alloccontext.mcp.bazaar import build_llms_txt, build_well_known_x402
+    from alloccontext.x402_production_check import check_discovery_metadata
+
+    config = X402CheckConfig(
+        public_url="https://mcp.example.com",
+        local_url="http://127.0.0.1:8000",
+        pay_to="0xabc",
+        network="eip155:8453",
+        facilitator="https://x402.org/facilitator",
+        cdp_api_key_id=None,
+        cdp_api_key_secret=None,
+    )
+    manifest = build_well_known_x402(
+        public_url="https://mcp.example.com",
+        mcp_path="/mcp",
+        pay_to="0xabc",
+    )
+    llms = build_llms_txt(public_url="https://mcp.example.com", mcp_path="/mcp")
+
+    def fake_fetch(url: str, *, timeout: float = 20) -> tuple[int, bytes]:
+        if url.endswith("/.well-known/x402.json"):
+            return 200, json.dumps(manifest).encode()
+        if url.endswith("/llms.txt"):
+            return 200, llms.encode()
+        raise AssertionError(url)
+
+    monkeypatch.setattr(
+        "alloccontext.x402_production_check._fetch_ok",
+        fake_fetch,
+    )
+    messages = check_discovery_metadata(config)
+    assert any("privacy pillars ok" in message for message in messages)
+    assert any("license markers ok" in message for message in messages)
 
 
 def test_run_production_checks_skips_cdp_when_not_cdp_facilitator(monkeypatch) -> None:
