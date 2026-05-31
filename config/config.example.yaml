@@ -8,8 +8,8 @@ horizon:
   days: 90
 
 portfolio:
-  # Self-host legacy defaults: used only when allocation_analysis is requested
-  # via get_context_bundle (band without target_pct) or operator-style paths.
+  # Self-host defaults for optional allocation_analysis when target_pct is
+  # omitted on get_context_bundle (band-only or config-driven analysis).
   target_allocations:
     BTC: 0.70
     ETH: 0.30

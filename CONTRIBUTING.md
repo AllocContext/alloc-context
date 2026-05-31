@@ -21,8 +21,12 @@ change, open an issue first so we can align on scope.
 
 ```bash
 pip install -e ".[dev]"
-pytest
+pytest -q --cov=alloccontext --cov-report=term-missing:skip-covered
+bandit -r alloccontext -c .bandit.yaml -ll
+pip-audit
 ```
+
+See [docs/security-ci.md](docs/security-ci.md) for CI parity details.
 
 Do not commit secrets, `config/config.yaml`, or local `state/` databases.
 

@@ -14,6 +14,15 @@ notes.
 | `alloc-context-mcp-http` | On boot (public HTTP MCP, optional x402) |
 | `alloc-context-mcp-internal` | On boot (optional loopback MCP, no x402) |
 
+Install the optional internal unit from the repo when operator or smoke tests
+need loopback MCP on port **8001**:
+
+```bash
+sudo cp deploy/systemd/alloc-context-mcp-internal.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now alloc-context-mcp-internal.service
+```
+
 ```bash
 systemctl list-timers 'alloc-context-*' --no-pager
 journalctl -u alloc-context-ingest.service -n 30 --no-pager
