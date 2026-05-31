@@ -10,7 +10,7 @@ def test_build_glama_well_known_loads_maintainer_email() -> None:
 
     payload = build_glama_well_known()
     assert payload["$schema"] == "https://glama.ai/mcp/schemas/connector.json"
-    assert payload["maintainers"] == [{"email": "nathan@intentproof.io"}]
+    assert payload["maintainers"] == [{"email": "nathangillett@icloud.com"}]
 
 
 def test_build_glama_well_known_email_override(
@@ -38,7 +38,7 @@ def test_glama_well_known_route(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body["maintainers"][0]["email"] == "nathan@intentproof.io"
+    assert body["maintainers"][0]["email"] == "nathangillett@icloud.com"
 
 
 def test_glama_json_is_valid_connector_schema() -> None:
