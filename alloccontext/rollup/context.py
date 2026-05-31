@@ -8,6 +8,7 @@ from typing import Any, Literal
 from alloccontext.store.jsonutil import canonical_json
 
 from alloccontext.rollup.cluster_config import RollupConfig, load_rollup_config
+from alloccontext.ingest.alt_quote_registry import market_alt_symbols
 from alloccontext.rollup.delta import build_delta_context
 from alloccontext.rollup.macro import build_macro_context
 from alloccontext.rollup.portfolio import build_market_context, build_portfolio_context
@@ -83,7 +84,11 @@ def build_context_bundle(
     prior_context = _load_prior_context(conn, scope=scope, prior_as_of=prior_as_of)
 
     portfolio = build_portfolio_context(conn, config)
-    market = build_market_context(conn, config, alt_symbols=alt_symbols)
+    market = build_market_context(
+        conn,
+        config,
+        alt_symbols=market_alt_symbols(conn, extra=alt_symbols),
+    )
     sentiment = build_sentiment_context(conn, config, rollup, now=now)
     macro = build_macro_context(conn, config, now=now, scope=scope)
     delta = build_delta_context(

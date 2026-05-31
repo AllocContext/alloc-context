@@ -15,6 +15,7 @@ from alloccontext.ingest.asset_registry import (
 from alloccontext.ingest.parse_helpers import parse_float
 from alloccontext.ingest.quote_resolver import (
     QuoteResolverConfig,
+    parse_cmc_quote_rows,
     quote_resolver_config_from_app,
 )
 from alloccontext.timeutil import utc_now_iso
@@ -23,26 +24,10 @@ from alloccontext.timeutil import utc_now_iso
 def parse_cmc_alt_quotes(quotes: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Extract symbol → {price_usd, change_pct_24h, source} from CMC quotes payload."""
     parsed: dict[str, dict[str, Any]] = {}
-    for payload in quotes.values():
-        if not isinstance(payload, dict):
-            continue
-        raw_symbol = payload.get("symbol")
-        if not raw_symbol:
-            continue
-        quote_block = payload.get("quote")
-        if not isinstance(quote_block, dict):
-            continue
-        quote = quote_block.get("USD") or {}
-        if not isinstance(quote, dict):
-            continue
-        price = parse_float(quote.get("price"))
-        if price is None or price <= 0:
-            continue
-        change = parse_float(quote.get("percent_change_24h"))
-        symbol = normalize_canonical_symbol(str(raw_symbol))
+    for symbol, row in parse_cmc_quote_rows(quotes).items():
         parsed[symbol] = {
-            "price_usd": float(price),
-            "change_pct_24h": float(change) if change is not None else None,
+            "price_usd": row["price_usd"],
+            "change_pct_24h": row.get("change_pct_24h"),
             "source": "coinmarketcap",
         }
     return parsed
@@ -148,7 +133,7 @@ def refresh_alt_quotes(
     resolver_config = quote_resolver_config_from_app(config)
     if not resolver_config.coinmarketcap_api_key and not resolver_config.coingecko_api_key:
         return {
-            "ok": True,
+            "ok": False,
             "rows": 0,
             "skipped": True,
             "reason": "no_quote_api_keys",
@@ -200,4 +185,9 @@ def ensure_alt_quotes(
     missing = list(dict.fromkeys(missing))
     if not missing:
         return {"ok": True, "rows": 0, "skipped": True, "reason": "already_cached"}
-    return refresh_alt_quotes(conn, config, missing)
+    result = refresh_alt_quotes(conn, config, missing)
+    if result.get("reason") == "no_quote_api_keys":
+        return {**result, "ok": True}
+    if not result.get("ok") and int(result.get("rows") or 0) == 0:
+        return {**result, "ok": True}
+    return result

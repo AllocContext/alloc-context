@@ -119,6 +119,7 @@ def register_quote_scope(conn: sqlite3.Connection, symbols: list[str]) -> None:
             """,
             (symbol, ts),
         )
+    conn.commit()
 
 
 def recent_scope_symbols(conn: sqlite3.Connection, *, limit: int) -> list[str]:

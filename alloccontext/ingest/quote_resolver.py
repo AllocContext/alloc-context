@@ -45,9 +45,9 @@ def quote_resolver_config_from_app(config) -> QuoteResolverConfig:
     )
 
 
-def parse_cmc_symbol_prices(quotes: dict[str, Any]) -> dict[str, float]:
-    """Extract symbol → USD price from CMC quotes/latest `data` payload."""
-    prices: dict[str, float] = {}
+def parse_cmc_quote_rows(quotes: dict[str, Any]) -> dict[str, dict[str, float | None]]:
+    """Extract symbol → {price_usd, change_pct_24h} from CMC quotes/latest `data`."""
+    rows: dict[str, dict[str, float | None]] = {}
     for payload in quotes.values():
         if not isinstance(payload, dict):
             continue
@@ -61,9 +61,24 @@ def parse_cmc_symbol_prices(quotes: dict[str, Any]) -> dict[str, float]:
         if not isinstance(quote, dict):
             continue
         price = parse_float(quote.get("price"))
-        if price is not None and price > 0:
-            prices[normalize_canonical_symbol(str(raw_symbol))] = float(price)
-    return prices
+        if price is None or price <= 0:
+            continue
+        change = parse_float(quote.get("percent_change_24h"))
+        symbol = normalize_canonical_symbol(str(raw_symbol))
+        rows[symbol] = {
+            "price_usd": float(price),
+            "change_pct_24h": float(change) if change is not None else None,
+        }
+    return rows
+
+
+def parse_cmc_symbol_prices(quotes: dict[str, Any]) -> dict[str, float]:
+    """Extract symbol → USD price from CMC quotes/latest `data` payload."""
+    return {
+        symbol: float(row["price_usd"])
+        for symbol, row in parse_cmc_quote_rows(quotes).items()
+        if row.get("price_usd") is not None
+    }
 
 
 def resolve_balance_prices(

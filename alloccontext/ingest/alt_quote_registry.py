@@ -82,3 +82,17 @@ def scheduled_alt_symbols(
             symbols.append(symbol)
             seen.add(symbol)
     return symbols[:max_symbols]
+
+
+def market_alt_symbols(
+    conn: sqlite3.Connection,
+    extra: tuple[str, ...] | None = None,
+) -> tuple[str, ...]:
+    """Portfolio alts plus any explicitly requested symbols (deduped)."""
+    merged: list[str] = []
+    seen: set[str] = set()
+    for symbol in (*symbols_from_portfolio(conn), *(extra or ())):
+        if symbol not in seen:
+            merged.append(symbol)
+            seen.add(symbol)
+    return tuple(merged)

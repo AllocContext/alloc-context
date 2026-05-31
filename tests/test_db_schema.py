@@ -58,3 +58,41 @@ def test_schema_v7_is_idempotent_on_conflict() -> None:
     conn = connect(db_path)
     count = conn.execute("SELECT COUNT(*) FROM context_snapshots").fetchone()[0]
     assert count == 2
+
+
+def _v8_db(path: Path) -> None:
+    conn = sqlite3.connect(path)
+    conn.executescript(
+        """
+        CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        INSERT INTO schema_meta VALUES ('version', '8');
+        CREATE TABLE context_snapshots (
+          scope TEXT NOT NULL,
+          as_of TEXT NOT NULL,
+          context_json TEXT NOT NULL,
+          PRIMARY KEY (scope, as_of)
+        );
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_schema_v8_adds_alt_quote_tables() -> None:
+    db_path = Path(tempfile.mkdtemp()) / "v8.db"
+    _v8_db(db_path)
+
+    conn = connect(db_path)
+    version = conn.execute(
+        "SELECT value FROM schema_meta WHERE key = 'version'"
+    ).fetchone()[0]
+    alt_snapshots = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'alt_quote_snapshots'"
+    ).fetchone()
+    alt_scope = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'alt_quote_scope'"
+    ).fetchone()
+
+    assert int(version) == SCHEMA_VERSION
+    assert alt_snapshots is not None
+    assert alt_scope is not None
