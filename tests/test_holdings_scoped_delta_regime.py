@@ -332,7 +332,9 @@ def test_get_context_at_rebuilds_regime_for_filtered_hype(conn, config) -> None:
     )
 
 
-def test_get_context_bundle_live_alt_refresh_wired(config, conn, monkeypatch) -> None:
+def test_get_context_bundle_live_alt_refresh_wired(
+    config, conn, monkeypatch, mock_live_ingest_ok
+) -> None:
     _seed_market_bars(conn)
 
     def fake_refresh(_conn, _cfg, symbols):

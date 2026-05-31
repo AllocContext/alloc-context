@@ -215,7 +215,9 @@ def test_build_context_bundle_saved_includes_portfolio_alt_market(conn, config) 
     assert saved["market"]["assets"]["hype"]["price_usd"] == pytest.approx(25.1)
 
 
-def test_get_market_context_live_fails_without_quote_keys(conn, config, monkeypatch) -> None:
+def test_get_market_context_live_fails_without_quote_keys(
+    conn, config, monkeypatch, mock_live_ingest_ok
+) -> None:
     _seed_market_bars(conn)
     monkeypatch.delenv("COINMARKETCAP_API_KEY", raising=False)
     monkeypatch.delenv("COINGECKO_API_KEY", raising=False)

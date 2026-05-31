@@ -63,7 +63,7 @@ def test_get_market_context_contract(conn, config) -> None:
     validate_tool_response("get_market_context", payload)
 
 
-def test_live_alt_refresh_failure_contracts(config, conn, monkeypatch) -> None:
+def test_live_alt_refresh_failure_contracts(config, conn, monkeypatch, mock_live_ingest_ok) -> None:
     refresh_result = {
         "ok": False,
         "rows": 0,
@@ -114,6 +114,21 @@ def test_check_allocation_bands_contract() -> None:
         ],
     )
     validate_tool_response("check_allocation_bands", payload)
+
+
+def test_check_allocation_bands_rejects_too_many_scenarios() -> None:
+    from alloccontext.mcp.validation import MAX_ALLOCATION_BAND_SCENARIOS, McpValidationError
+
+    scenarios = [
+        {
+            "name": f"s{i}",
+            "target_pct": {"BTC": 0.70, "ETH": 0.30, "CASH": 0.00},
+            "band": 0.15,
+        }
+        for i in range(MAX_ALLOCATION_BAND_SCENARIOS + 1)
+    ]
+    with pytest.raises(McpValidationError, match="scenarios exceeds maximum"):
+        check_allocation_bands({"BTC": 0.65, "ETH": 0.30, "CASH": 0.05}, scenarios)
 
 
 def test_get_context_at_contract(conn, config) -> None:

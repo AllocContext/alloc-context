@@ -25,7 +25,13 @@ from alloccontext.mcp.assets import (
     resolve_view_assets,
 )
 from alloccontext.mcp.staleness import with_data_staleness, with_staleness
-from alloccontext.mcp.validation import validate_band, validate_nav_usd, validate_target_pct
+from alloccontext.mcp.validation import (
+    MAX_ALLOCATION_BAND_SCENARIOS,
+    McpValidationError,
+    validate_band,
+    validate_nav_usd,
+    validate_target_pct,
+)
 from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.regime import build_regime_context
 from alloccontext.rollup.snapshots import (
@@ -56,6 +62,19 @@ def _ingest_summary(result: dict[str, Any]) -> dict[str, Any]:
         "errors": dict(result.get("errors") or {}),
         "counts": dict(result.get("counts") or {}),
     }
+
+
+def _run_live_ingest(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    freshness: Freshness,
+) -> dict[str, Any] | None:
+    if freshness != "live":
+        return None
+    from alloccontext.ingest.runner import run_ingest
+
+    return run_ingest(conn, config)
 
 
 def _live_ingest_failure_payload(
@@ -328,6 +347,12 @@ def check_allocation_bands(
     *,
     as_of: datetime | None = None,
 ) -> dict[str, Any]:
+    if not isinstance(scenarios, list):
+        raise McpValidationError("scenarios must be a list")
+    if len(scenarios) > MAX_ALLOCATION_BAND_SCENARIOS:
+        raise McpValidationError(
+            f"scenarios exceeds maximum of {MAX_ALLOCATION_BAND_SCENARIOS}"
+        )
     now = (as_of or utc_now()).replace(microsecond=0)
     normalized_allocation = _normalize_pct(allocation_pct)
     results: list[dict[str, Any]] = []
@@ -364,22 +389,27 @@ def get_context_bundle(
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
 ) -> dict[str, Any]:
+    now = (as_of or utc_now()).replace(microsecond=0)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
+    ingest_result = _run_live_ingest(conn, config, freshness=freshness)
+    if ingest_result is not None:
+        failure = _live_ingest_failure_payload(ingest_result, as_of=now)
+        if failure is not None:
+            return failure
+
     view_assets, assets_omitted, refresh_result = _prepare_market_assets(
         conn,
         config,
         assets,
         freshness=freshness,
     )
-    now = (as_of or utc_now()).replace(microsecond=0)
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
 
     if refresh_result is not None and freshness == "live":
         failure = _live_alt_quote_failure_payload(refresh_result, as_of=now)
         if failure is not None:
             return failure
-
-    ingest_result: dict[str, Any] | None = None
 
     from alloccontext.rollup.context import build_context_bundle
 
@@ -426,22 +456,27 @@ def get_market_context(
     freshness: Freshness = "cached",
     assets: list[str] | None = None,
 ) -> dict[str, Any]:
+    now = (as_of or utc_now()).replace(microsecond=0)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
+    ingest_result = _run_live_ingest(conn, config, freshness=freshness)
+    if ingest_result is not None:
+        failure = _live_ingest_failure_payload(ingest_result, as_of=now)
+        if failure is not None:
+            return failure
+
     view_assets, assets_omitted, refresh_result = _prepare_market_assets(
         conn,
         config,
         assets,
         freshness=freshness,
     )
-    now = (as_of or utc_now()).replace(microsecond=0)
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
 
     if refresh_result is not None and freshness == "live":
         failure = _live_alt_quote_failure_payload(refresh_result, as_of=now)
         if failure is not None:
             return failure
-
-    ingest_result: dict[str, Any] | None = None
 
     sentiment = build_sentiment_context(conn, config, config.rollup, now=now)
     macro = build_macro_context(conn, config, now=now, scope=scope)

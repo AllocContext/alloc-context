@@ -27,7 +27,7 @@ def test_load_check_config_requires_pay_to() -> None:
         load_check_config({"X402_PUBLIC_URL": "https://mcp.example.com"})
 
 
-def test_check_discovery_paths_prefers_local(monkeypatch) -> None:
+def test_check_discovery_paths_requires_public(monkeypatch) -> None:
     config = X402CheckConfig(
         public_url="https://mcp.example.com",
         local_url="http://127.0.0.1:8000",
@@ -39,16 +39,22 @@ def test_check_discovery_paths_prefers_local(monkeypatch) -> None:
     )
 
     def fake_fetch(url: str, *, timeout: float = 20) -> tuple[int, bytes]:
-        assert url.startswith("http://127.0.0.1:8000")
-        return 200, b"ok"
+        if url.startswith("https://mcp.example.com"):
+            return 200, b"ok"
+        if url.startswith("http://127.0.0.1:8000"):
+            return 200, b"ok"
+        raise AssertionError(url)
 
     monkeypatch.setattr(
         "alloccontext.x402_production_check._fetch_ok",
         fake_fetch,
     )
     messages = check_discovery_paths(config)
-    assert len(messages) == 3
-    assert all("127.0.0.1:8000" in message for message in messages)
+    assert len(messages) == 6
+    public_messages = [message for message in messages if "mcp.example.com" in message]
+    local_messages = [message for message in messages if "127.0.0.1:8000" in message]
+    assert len(public_messages) == 3
+    assert len(local_messages) == 3
 
 
 def test_check_manifest_pay_to_mismatch(monkeypatch) -> None:
@@ -93,7 +99,6 @@ def test_check_mcp_payment_gate_requires_402(monkeypatch) -> None:
 
 def test_check_discovery_metadata_validates_privacy_and_license(monkeypatch) -> None:
     from alloccontext.mcp.bazaar import build_llms_txt, build_well_known_x402
-    from alloccontext.x402_production_check import check_discovery_metadata
 
     config = X402CheckConfig(
         public_url="https://mcp.example.com",

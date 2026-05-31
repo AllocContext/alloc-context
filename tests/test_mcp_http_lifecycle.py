@@ -37,20 +37,21 @@ def test_mcp_initialize_over_http(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_health_verbose_includes_source_health(monkeypatch: pytest.MonkeyPatch) -> None:
-    pytest.importorskip("mcp")
-    from starlette.testclient import TestClient
+    from unittest.mock import MagicMock
 
-    from alloccontext.mcp.http import build_http_app
+    from alloccontext.mcp.http import _make_health_handler
 
     monkeypatch.setenv("ALLOC_CONTEXT_CONFIG", "config/config.example.yaml")
     monkeypatch.setenv("ALLOC_CONTEXT_HEALTH_VERBOSE", "1")
-    app = build_http_app(x402=False, config_path="config/config.example.yaml")
+    handler = _make_health_handler("config/config.example.yaml")
+    request = MagicMock()
+    request.client.host = "127.0.0.1"
+    response = handler(request)
 
-    with TestClient(app) as client:
-        resp = client.get("/health")
+    assert response.status_code == 200
+    import json
 
-    assert resp.status_code == 200
-    body = resp.json()
+    body = json.loads(response.body.decode())
     assert body["ok"] is True
     assert "source_health" in body or "status_detail" in body
 

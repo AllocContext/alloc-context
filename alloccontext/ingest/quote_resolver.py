@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -11,6 +12,8 @@ from alloccontext.ingest.asset_registry import (
 )
 from alloccontext.ingest.env_keys import optional_env_key
 from alloccontext.ingest.parse_helpers import parse_float
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -134,7 +137,11 @@ def _apply_cmc_prices(
             api_key=api_key,
             timeout=config.timeout_seconds,
         )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(
+            "coinmarketcap quote resolver fetch failed (%s)",
+            type(exc).__name__,
+        )
         return symbols
     for symbol, price in parse_cmc_symbol_prices(quotes).items():
         if symbol not in prices:
@@ -158,7 +165,11 @@ def _apply_coingecko_prices(
             api_key=config.coingecko_api_key,
             timeout=config.timeout_seconds,
         )
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(
+            "coingecko quote resolver fetch failed (%s)",
+            type(exc).__name__,
+        )
         return
     for coin_id, price in id_prices.items():
         symbol = id_to_symbol.get(coin_id)
