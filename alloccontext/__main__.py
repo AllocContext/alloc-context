@@ -73,9 +73,9 @@ def cmd_mcp(args: argparse.Namespace) -> int:
             x402=args.x402,
         )
     else:
-        from alloccontext.mcp.server import run_stdio
+        from alloccontext.mcp.bridge import run_mcp_stdio
 
-        run_stdio(config_path=args.config)
+        run_mcp_stdio(config_path=args.config, user_config_path=args.user_config)
     return 0
 
 
@@ -126,6 +126,11 @@ def main(argv: list[str] | None = None) -> int:
     status_p.set_defaults(func=cmd_status)
 
     mcp_p = sub.add_parser("mcp", help="Run MCP server (stdio or HTTP)")
+    mcp_p.add_argument(
+        "--user-config",
+        default=None,
+        help="Path to user.yaml (bridge/self-host); env ALLOC_CONTEXT_USER_CONFIG",
+    )
     mcp_p.add_argument(
         "--transport",
         choices=["stdio", "http"],
