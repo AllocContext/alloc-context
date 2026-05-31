@@ -1,0 +1,34 @@
+# Copy to ~/.config/alloc-context/user.yaml (gitignored).
+# Privacy: nothing stored; one-time read-only; pass-through only.
+
+# Optional; default is hosted upstream
+# upstream: https://mcp.alloc-context.com/mcp
+
+# Opt-in full self-host (see docs/self-hosting.md)
+# self_host: true
+# config: /path/to/config/config.yaml
+
+exchanges:
+  primary: coinbase   # or kraken
+  coinbase:
+    api_key: organizations/.../apiKeys/...
+    api_secret: |
+      -----BEGIN EC PRIVATE KEY-----
+      ...
+      -----END EC PRIVATE KEY-----
+  # kraken:
+  #   api_key: ...
+  #   api_secret: ...
+
+# Optional — enables allocation analysis when injected by bridge
+# target_allocation:
+#   BTC: 0.70
+#   ETH: 0.30
+#   CASH: 0.00
+# band: 0.15
+
+# x402 payer — required for bridge → hosted upstream (Path A)
+x402:
+  payer_private_key_env: EVM_PRIVATE_KEY
+  # payer_private_key_file: ~/.config/alloc-context/x402-payer.key
+  # payer_private_key: "0x..."

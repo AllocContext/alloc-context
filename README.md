@@ -104,6 +104,7 @@ See [docs/mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 | [docs/self-hosting.md](docs/self-hosting.md) | Optional Linux/systemd ingest + MCP |
 | [docs/local-dev.md](docs/local-dev.md) | Local internal MCP + dev ingest |
 | [docs/USE.md](docs/USE.md) | Self-host vs hosted MCP (plain language) |
+| [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` reference |
 
 ## Contributing
 
