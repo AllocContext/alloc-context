@@ -24,7 +24,14 @@ chown -R trading:trading "${REMOTE}/.venv" "${REMOTE}/config" "${REMOTE}/state"
 "${PIP}" install -e "${REMOTE}[hosted]" -q
 chown -R trading:trading "${REMOTE}"
 
-ENV_FILE="${ALLOC_CONTEXT_ENV_FILE:-${REMOTE}/.env}"
+TRADING_ROOT="$(dirname "${REMOTE}")"
+if [[ -n "${ALLOC_CONTEXT_ENV_FILE:-}" ]]; then
+  ENV_FILE="${ALLOC_CONTEXT_ENV_FILE}"
+elif [[ -f "${TRADING_ROOT}/shared/.env" ]]; then
+  ENV_FILE="${TRADING_ROOT}/shared/.env"
+else
+  ENV_FILE="${REMOTE}/.env"
+fi
 
 install_systemd_unit() {
   local unit="$1"
@@ -33,8 +40,8 @@ install_systemd_unit() {
   if [[ "${unit}" == *.service ]]; then
     sed \
       -e "s|/opt/alloc-context|${REMOTE}|g" \
-      -e "s|EnvironmentFile=-.*|EnvironmentFile=${ENV_FILE}|g" \
-      -e "s|EnvironmentFile=/.*|EnvironmentFile=${ENV_FILE}|g" \
+      -e "s|EnvironmentFile=-.*|EnvironmentFile=-${ENV_FILE}|g" \
+      -e "s|EnvironmentFile=/.*|EnvironmentFile=-${ENV_FILE}|g" \
       "${src}" > "${dest}"
   else
     cp "${src}" "${dest}"

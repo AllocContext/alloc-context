@@ -33,19 +33,6 @@ def _unwrap_tool_result(body: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _init_payload() -> dict[str, Any]:
-    return {
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "params": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "alloc-context-bridge", "version": "1"},
-        },
-        "id": 1,
-    }
-
-
 def _tools_call_payload(*, tool: str, arguments: dict[str, Any], request_id: int) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
@@ -58,7 +45,6 @@ def _tools_call_payload(*, tool: str, arguments: dict[str, Any], request_id: int
 class UpstreamMcpClient:
     def __init__(self, user: UserConfig) -> None:
         self._url = user.upstream.rstrip("/")
-        self._initialized = False
         self._request_id = 1
         self._session = None
         self._http_client = None
@@ -113,17 +99,6 @@ class UpstreamMcpClient:
         self._http_client = x402HTTPClientSync(client)
         self._session = x402_requests(self._http_client)
         self._session.__enter__()
-        init_response = self._session.post(
-            self._url,
-            json=_init_payload(),
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-            timeout=60,
-        )
-        if not init_response.ok:
-            raise UpstreamMcpError(
-                f"upstream MCP initialize failed: HTTP {init_response.status_code}"
-            )
-        self._initialized = True
 
     def close(self) -> None:
         if self._session is not None:

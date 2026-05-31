@@ -25,7 +25,7 @@ Shared optional args on context tools:
 
 | Arg | Tools | Default | Purpose |
 |-----|-------|---------|---------|
-| `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields |
+| `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields; unknown symbols (e.g. HYPE) are omitted and listed in `assets_omitted` |
 | `target_pct` | `get_context_bundle` | omitted | Opt-in: attach `allocation_analysis` drift math |
 | `band` | `get_context_bundle`, `get_rebalance_plan` | omitted / none | Drift band width when used with `target_pct` |
 
