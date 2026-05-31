@@ -134,7 +134,11 @@ Paid HTTP integration (x402 client, Bazaar search flow):
 
 ## Listing title
 
-> AllocContext — BTC/ETH allocation drift, rebalance moves & market context
+> AllocContext — portfolio-aware crypto context for agents (MCP + x402)
+
+Privacy and license copy also appear in `GET /llms.txt` (`## Privacy`,
+`## License`) and in the Bazaar listing description. Production checks validate
+those markers via `x402_production_check.py`.
 
 Tags: `btc`, `eth`, `rebalance`, `allocation`, `portfolio` (plus additional
 tags in `/.well-known/x402.json`)

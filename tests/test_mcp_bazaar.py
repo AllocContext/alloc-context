@@ -84,6 +84,8 @@ def test_x402_route_includes_bazaar_and_listing_copy(
 
 
 def test_llms_txt_and_well_known() -> None:
+    from alloccontext.mcp.bazaar import LICENSE_MARKERS, PRIVACY_PILLAR_MARKERS
+
     llms = build_llms_txt(
         public_url="https://mcp.example.com",
         mcp_path="/mcp",
@@ -92,6 +94,13 @@ def test_llms_txt_and_well_known() -> None:
     assert "get_context_bundle" in llms
     assert "x402" in llms
     assert "examples.md" in llms
+    assert "## Privacy" in llms
+    assert "## License" in llms
+    llms_lower = llms.lower()
+    for marker in PRIVACY_PILLAR_MARKERS:
+        assert marker in llms_lower
+    for marker in LICENSE_MARKERS:
+        assert marker in llms_lower
 
     manifest = build_well_known_x402(
         public_url="https://mcp.example.com",

@@ -11,11 +11,37 @@ from x402.extensions.bazaar import (
 )
 
 SERVICE_NAME = "AllocContext"
+OFFICIAL_HOSTED_MCP_URL = "https://mcp.alloc-context.com/mcp"
+USE_DOCS_PATH = "docs/USE.md"
+
+PRIVACY_COMPACT_COPY = (
+    "Privacy: nothing stored. One-time read-only fetch. Pass-through only — "
+    "your keys and portfolio never persist on our servers."
+)
+
+PRIVACY_PILLAR_MARKERS = (
+    "nothing stored",
+    "one-time read-only",
+    "pass-through only",
+)
+
+LICENSE_DISCOVERY_LINE = (
+    "Source-available (Elastic License 2.0). Self-host friendly. Official hosted "
+    f"MCP only at {OFFICIAL_HOSTED_MCP_URL} — see {USE_DOCS_PATH}."
+)
+
+LICENSE_MARKERS = (
+    "elastic license",
+    "self-host",
+    USE_DOCS_PATH.lower(),
+    OFFICIAL_HOSTED_MCP_URL.lower(),
+)
+
 SERVICE_TITLE = (
-    "AllocContext — BTC/ETH allocation drift, rebalance moves & market context"
+    "AllocContext — portfolio-aware crypto context for agents (MCP + x402)"
 )
 # CDP Bazaar indexes service_name (≤32 chars) and up to five tags from payments.
-BAZAAR_SERVICE_NAME = "AllocContext BTC/ETH MCP"
+BAZAAR_SERVICE_NAME = "AllocContext portfolio MCP"
 SERVICE_TAGS = (
     "btc",
     "eth",
@@ -38,14 +64,17 @@ DISCOVERY_KEYWORD_MARKERS = (
     "rebalance plan",
     "fear and greed",
     "etf flows",
+    "holdings",
 )
 
 LISTING_DESCRIPTION = (
-    "Deterministic BTC/ETH portfolio allocation context for AI agents: "
-    "allocation drift and band checks, USD rebalance plans, fused market "
-    "context (Fear & Greed, Kalshi sentiment, macro calendar, FRED "
-    "indicators, ETF flows), live Kraken/Coinbase portfolio reads, and "
-    "saved ContextBundle snapshots. Structured JSON only — no LLM."
+    "Portfolio-aware crypto context for AI agents: discover holdings, allocation "
+    "drift and band checks, USD rebalance plans, fused market backdrop (Fear & "
+    "Greed, Kalshi, ETF flows), optional live Kraken/Coinbase reads. Structured "
+    "JSON only — no LLM. "
+    f"{PRIVACY_COMPACT_COPY} "
+    "Source-available (Elastic License 2.0); self-host friendly; official hosted "
+    f"MCP at {OFFICIAL_HOSTED_MCP_URL} — see {USE_DOCS_PATH}."
 )
 
 _ASSET_FILTER_SCHEMA = {
@@ -113,10 +142,10 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_context_bundle",
         "description": (
-            "Full ContextBundle JSON: portfolio allocation drift vs target, "
+            "Full ContextBundle JSON: portfolio holdings and band weights, "
             "market, sentiment, macro, regime hints, and delta vs the prior "
-            "saved snapshot. Optional assets, target_pct, and band override "
-            "server config for drift math."
+            "saved snapshot. Optional target_pct and band enable "
+            "allocation_analysis (opt-in drift math)."
         ),
         "input_schema": {
             "type": "object",
@@ -217,9 +246,10 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_portfolio_state",
         "description": (
-            "Live portfolio read: NAV, BTC/ETH/CASH allocation, drift vs "
-            "target, and band hint. Pass read-only kraken or coinbase credentials "
-            "in the request; never stored server-side."
+            "Live portfolio read: NAV, holdings[], band weights, and optional "
+            "allocation_analysis when target_pct is supplied. Pass read-only "
+            "Kraken or Coinbase credentials in the request; never stored "
+            "server-side."
         ),
         "input_schema": {
             "type": "object",
@@ -556,6 +586,15 @@ def build_llms_txt(
 
 {LISTING_DESCRIPTION}
 
+## Privacy
+
+Nothing stored. One-time read-only fetch. Pass-through only — your keys and
+portfolio never persist on our servers.
+
+## License
+
+{LICENSE_DISCOVERY_LINE}
+
 ## Paid MCP (x402, Base stablecoins)
 
 - Endpoint: `{endpoint}`
@@ -573,7 +612,8 @@ def build_llms_txt(
 
 bitcoin, ethereum, btc, eth, portfolio allocation, allocation drift,
 rebalance plan, rebalance btc eth, drift band, band check, market context,
-fear and greed, sentiment, macro calendar, etf flows, agent tools, mcp, x402
+holdings, portfolio context, fear and greed, sentiment, macro calendar,
+etf flows, agent tools, mcp, x402
 
 ## Examples
 

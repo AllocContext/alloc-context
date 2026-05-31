@@ -1,8 +1,8 @@
 # MCP product
 
-AllocContext is an **agent-native allocation context API**: deterministic
-BTC/ETH facts, rebalance math, and optional live portfolio reads — exposed as
-MCP tools, with a paid HTTP endpoint via x402 on Base.
+AllocContext is an **agent-native portfolio context API**: discover holdings,
+market, sentiment, macro, and regime; optional BTC/ETH allocation analysis —
+exposed as MCP tools, with a paid HTTP endpoint via x402 on Base.
 
 This repo is **facts only** — agents narrate JSON with their own model. Email,
 LLM synthesis, and alert delivery are out of scope here.
@@ -25,7 +25,7 @@ Shared optional args on context tools:
 | Arg | Tools | Default | Purpose |
 |-----|-------|---------|---------|
 | `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields |
-| `target_pct` | `get_context_bundle` | server config | Override target weights for drift math |
+| `target_pct` | `get_context_bundle` | omitted | Opt-in: attach `allocation_analysis` drift math |
 | `band` | `get_context_bundle`, `get_rebalance_plan` | server config / none | Drift band width (e.g. `0.15`) |
 
 Math tools require explicit `target_pct` and `band` (or use `get_context_bundle`
@@ -64,7 +64,7 @@ keep ingest `ok` and still return a bundle.
 
 | Tool | Input | Output |
 |------|-------|--------|
-| `get_portfolio_state` | `exchange`, read-only credentials, optional `target_pct`, optional `band` | NAV, allocation, drift |
+| `get_portfolio_state` | `exchange`, read-only credentials, optional `target_pct`, optional `band` | NAV, `holdings[]`, optional `allocation_analysis` |
 
 Credentials are **pass-through only** — never stored server-side. Supported
 exchanges: **Kraken** and **Coinbase** Advanced Trade (read-only). Disable
@@ -106,7 +106,7 @@ Tool JSON contracts are validated in `tests/test_mcp_contracts.py` via
 
 Bazaar listing title:
 
-> AllocContext — BTC/ETH allocation drift, rebalance moves & market context
+> AllocContext — portfolio-aware crypto context for agents (MCP + x402)
 
 ## Packages
 

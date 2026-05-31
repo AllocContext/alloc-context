@@ -2,12 +2,14 @@
 
 mcp-name: io.github.negillett/alloc-context
 
-**Allocation context for BTC/ETH** — drift, band checks, USD rebalance moves,
-and a fused market backdrop (Fear & Greed, Kalshi, ETF flows, macro) as
-deterministic JSON over MCP.
+**Portfolio-aware crypto context for agents** — discover holdings, market,
+sentiment, macro, and regime; optional BTC/ETH allocation analysis. Deterministic
+JSON over MCP with x402 pay-per-call on Base.
 
-The product is an **agent-native MCP API** with x402 pay-per-call on Base —
-see [docs/mcp.md](docs/mcp.md).
+> **Privacy:** nothing stored · one-time read-only · pass-through only — your
+> keys and portfolio never persist on our servers. See [USE.md](docs/USE.md).
+
+The product is an **agent-native MCP API** — see [docs/mcp.md](docs/mcp.md).
 
 ## Hosted MCP (production)
 
@@ -76,14 +78,14 @@ CLI entry point: `alloc-context` (same as `python -m alloccontext`).
 
 | Tool | Purpose |
 |------|---------|
-| `get_context_bundle` | Full ContextBundle — portfolio, market, sentiment, macro, delta, regime |
+| `get_context_bundle` | Full ContextBundle — holdings, market, sentiment, macro, delta, regime; optional `allocation_analysis` |
 | `get_market_context` | Sentiment, macro, ETF, breadth, and market fields (no portfolio) |
 | `get_context_at` | Saved snapshot from ingest history at a given `as_of` |
 | `get_context_delta` | Notable shifts between two saved snapshots |
 | `get_rebalance_plan` | USD rebalance moves from allocation, target, and NAV |
 | `check_allocation_band` | Drift vs target and whether allocation is outside the band |
 | `check_allocation_bands` | Batch band checks for multiple target scenarios |
-| `get_portfolio_state` | Live NAV and allocation from Kraken or Coinbase (credentials in request) |
+| `get_portfolio_state` | Live NAV and holdings from Kraken or Coinbase (credentials in request) |
 
 See [docs/mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 

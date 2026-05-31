@@ -120,11 +120,13 @@ def check_manifest_pay_to(config: X402CheckConfig) -> None:
 
 
 def check_discovery_metadata(config: X402CheckConfig) -> list[str]:
-    """Assert static discovery copy includes Bazaar title, tags, and keywords."""
+    """Assert static discovery copy includes Bazaar title, tags, keywords, privacy, license."""
     from alloccontext.mcp.bazaar import (
         BAZAAR_INDEX_TAGS,
         BAZAAR_SERVICE_NAME,
         DISCOVERY_KEYWORD_MARKERS,
+        LICENSE_MARKERS,
+        PRIVACY_PILLAR_MARKERS,
         SERVICE_NAME,
         SERVICE_TITLE,
     )
@@ -145,12 +147,25 @@ def check_discovery_metadata(config: X402CheckConfig) -> list[str]:
 
     _status, llms_body = _fetch_ok(f"{manifest_base}/llms.txt")
     llms = llms_body.decode("utf-8")
+    llms_lower = llms.lower()
     if BAZAAR_SERVICE_NAME not in llms and SERVICE_TITLE not in llms:
         raise X402ProductionCheckError("llms.txt missing service title")
     for marker in DISCOVERY_KEYWORD_MARKERS:
-        if marker not in llms.lower():
+        if marker not in llms_lower:
             raise X402ProductionCheckError(f"llms.txt missing keyword marker {marker!r}")
     messages.append("llms.txt discovery keywords ok")
+    if "## privacy" not in llms_lower:
+        raise X402ProductionCheckError("llms.txt missing ## Privacy section")
+    for marker in PRIVACY_PILLAR_MARKERS:
+        if marker not in llms_lower:
+            raise X402ProductionCheckError(f"llms.txt missing privacy marker {marker!r}")
+    messages.append("llms.txt privacy pillars ok")
+    if "## license" not in llms_lower:
+        raise X402ProductionCheckError("llms.txt missing ## License section")
+    for marker in LICENSE_MARKERS:
+        if marker not in llms_lower:
+            raise X402ProductionCheckError(f"llms.txt missing license marker {marker!r}")
+    messages.append("llms.txt license markers ok")
     return messages
 
 
