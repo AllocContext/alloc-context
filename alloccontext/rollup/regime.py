@@ -5,6 +5,7 @@ from typing import Any
 from alloccontext.ingest.asset_registry import BAND_ASSETS, is_stable, normalize_canonical_symbol
 
 _ALT_REGIME_WEIGHT_THRESHOLD = 0.10
+# Regime alt hints require a larger move than delta notable_shifts (2% since prior).
 _ALT_REGIME_MOVE_THRESHOLD_PCT = 5.0
 
 
@@ -130,7 +131,11 @@ def build_regime_context(
     }
     if delta.get("available"):
         comparison["notable_shifts"] = list(delta.get("notable_shifts") or [])
+        covered_alts = _holding_move_symbols(hints)
         for line in comparison["notable_shifts"]:
+            symbol = _notable_shift_symbol(str(line))
+            if symbol and symbol in covered_alts:
+                continue
             hints.append({"kind": "delta", "code": "notable_shift", "text": str(line)})
 
     available = (
@@ -207,6 +212,27 @@ def _alt_holding_move_hints(
             }
         )
     return hints
+
+
+def _holding_move_symbols(hints: list[dict[str, str]]) -> set[str]:
+    symbols: set[str] = set()
+    for hint in hints:
+        if hint.get("kind") != "holding_move":
+            continue
+        code = str(hint.get("code") or "")
+        if code.endswith("_large_move"):
+            symbols.add(code[: -len("_large_move")])
+    return symbols
+
+
+def _notable_shift_symbol(line: str) -> str | None:
+    token = str(line).strip().split(None, 1)[0] if line else ""
+    if not token or token.startswith("$"):
+        return None
+    symbol = normalize_canonical_symbol(token)
+    if not symbol or symbol in BAND_ASSETS:
+        return None
+    return symbol.lower()
 
 
 def _allocation_hint_text(code: str) -> str:

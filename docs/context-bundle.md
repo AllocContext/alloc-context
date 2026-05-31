@@ -141,7 +141,7 @@ Computed vs the prior saved snapshot when `prior_as_of` is set:
 - `fear_greed_change`
 - `market.btc_change_pct_since_prior`
 - `market.eth_change_pct_since_prior`
-- `market.{symbol}_change_pct_since_prior` — alt keys when prior snapshot had marks
+- `market.{symbol}_change_pct_since_prior` — held alt keys when both snapshots had marks
 - `notable_shifts[]` — deterministic rule hits (≥2% since prior for market moves)
 
 ## Migration from v1 portfolio fields
