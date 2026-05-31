@@ -4,6 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Literal
 
+from alloccontext.rollup.allocation_analysis import build_allocation_analysis
 from alloccontext.rollup.band import check_allocation_band
 from alloccontext.ingest.exchange.live import (
     LivePortfolioError,
@@ -85,49 +86,62 @@ def _live_ingest_failure_payload(
     )
 
 
-def _apply_allocation_targets(
-    portfolio: dict[str, Any],
+def _band_allocation_pct(portfolio: dict[str, Any]) -> dict[str, float]:
+    allocation = portfolio.get("allocation_pct")
+    if isinstance(allocation, dict) and allocation:
+        return _normalize_pct(allocation)
+    from alloccontext.ingest.portfolio_holdings import band_allocation_pct
+
+    return band_allocation_pct(portfolio.get("holdings") or [])
+
+
+def _attach_allocation_analysis(
+    bundle: dict[str, Any],
     config,
     *,
     target_pct: dict[str, float] | None,
     band: float | None,
 ) -> dict[str, Any]:
-    if not portfolio.get("available"):
-        return portfolio
     if target_pct is None and band is None:
-        return portfolio
+        return bundle
+    portfolio = bundle.get("portfolio") or {}
+    if not portfolio.get("available"):
+        return bundle
 
     target = (
         validate_target_pct(target_pct)
         if target_pct is not None
-        else validate_target_pct(
-            portfolio.get("target_allocation_pct")
-            or dict(config.portfolio.target_allocations)
-        )
+        else validate_target_pct(dict(config.portfolio.target_allocations))
     )
     band_width = (
         validate_band(band)
         if band is not None
-        else validate_band(portfolio.get("band", config.portfolio.rebalance_band))
+        else validate_band(config.portfolio.rebalance_band)
     )
-    band_result = check_allocation_band(
-        portfolio.get("allocation_pct") or {},
+    result = dict(bundle)
+    result["allocation_analysis"] = build_allocation_analysis(
+        _band_allocation_pct(portfolio),
         target,
         band_width,
     )
-    updated = dict(portfolio)
-    updated["target_allocation_pct"] = target
-    updated["drift"] = band_result["drift"]
-    updated["rebalance_hint"] = band_result["hint"]
-    updated["outside_band"] = band_result["outside_band"]
-    updated["max_drift"] = band_result["max_drift"]
-    updated["band"] = band_width
-    return updated
+    return result
 
 
 def _attach_regime(bundle: dict[str, Any], config) -> dict[str, Any]:
+    portfolio = bundle.get("portfolio") or {}
+    analysis = bundle.get("allocation_analysis")
+    regime_portfolio = portfolio
+    if isinstance(analysis, dict) and analysis.get("available"):
+        regime_portfolio = {
+            **portfolio,
+            "rebalance_hint": analysis.get("rebalance_hint"),
+            "outside_band": analysis.get("outside_band"),
+            "max_drift": analysis.get("max_drift"),
+            "band": analysis.get("band"),
+            "target_allocation_pct": analysis.get("target_allocation_pct"),
+        }
     bundle["regime"] = build_regime_context(
-        portfolio=bundle.get("portfolio") or {},
+        portfolio=regime_portfolio,
         sentiment=bundle.get("sentiment") or {},
         delta=bundle.get("delta") or {},
         prior_as_of=bundle.get("prior_as_of"),
@@ -165,8 +179,8 @@ def get_context_at(
             "match": match,
         }
     if target_pct is not None or band is not None:
-        bundle["portfolio"] = _apply_allocation_targets(
-            bundle.get("portfolio") or {},
+        bundle = _attach_allocation_analysis(
+            bundle,
             config,
             target_pct=target_pct,
             band=band,
@@ -305,8 +319,8 @@ def get_context_bundle(
         save_snapshot=False,
     )
     if target_pct is not None or band is not None:
-        bundle["portfolio"] = _apply_allocation_targets(
-            bundle.get("portfolio") or {},
+        bundle = _attach_allocation_analysis(
+            bundle,
             config,
             target_pct=target_pct,
             band=band,
@@ -439,10 +453,6 @@ def get_portfolio_state(
     as_of: datetime | None = None,
 ) -> dict[str, Any]:
     exchange_id = validate_exchange_id(exchange)
-    target = validate_target_pct(target_pct or dict(config.portfolio.target_allocations))
-    band_width = validate_band(
-        band if band is not None else config.portfolio.rebalance_band
-    )
     try:
         snap = fetch_live_portfolio_snapshot(
             exchange_id,
@@ -464,8 +474,8 @@ def get_portfolio_state(
     payload = portfolio_state_from_snapshot(
         snap,
         exchange_id=exchange_id,
-        target_pct=target,
-        band=band_width,
+        target_pct=target_pct,
+        band=band,
     )
     snapshot_ts = payload.pop("snapshot_ts", None)
     as_of_dt = as_of

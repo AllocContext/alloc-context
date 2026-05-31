@@ -4,14 +4,11 @@ import json
 import sqlite3
 from typing import Any
 
-from alloccontext.rollup.band import check_allocation_band
+from alloccontext.ingest.portfolio_holdings import (
+    band_allocation_pct,
+    legacy_holdings_from_allocation,
+)
 from alloccontext.rollup.breadth import build_market_breadth_context
-
-
-def _allocation_pct(allocation: dict[str, Any], key: str) -> float:
-    if key in allocation:
-        return float(allocation[key])
-    return 0.0
 
 
 def build_portfolio_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
@@ -25,21 +22,14 @@ def build_portfolio_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
         return {"available": False, "reason": "no_portfolio_snapshot"}
 
     allocation = json.loads(row["allocation_json"] or "{}")
-    target = dict(config.portfolio.target_allocations)
-    band_result = check_allocation_band(
-        {
-            "BTC": _allocation_pct(allocation, "BTC"),
-            "ETH": _allocation_pct(allocation, "ETH"),
-            "CASH": _allocation_pct(allocation, "CASH"),
-        },
-        target,
-        float(config.portfolio.rebalance_band),
+    nav_usd = round(float(row["nav_usd"] or 0), 2)
+    cash_usd = round(float(row["cash_usd"] or 0), 2)
+    holdings = legacy_holdings_from_allocation(
+        allocation,
+        nav_usd=nav_usd,
+        cash_usd=cash_usd,
     )
-    btc_pct = band_result["allocation_pct"]["BTC"]
-    eth_pct = band_result["allocation_pct"]["ETH"]
-    cash_pct = band_result["allocation_pct"]["CASH"]
-    drift = band_result["drift"]
-    rebalance_hint = band_result["hint"]
+    allocation_pct = band_allocation_pct(holdings)
 
     prior = conn.execute(
         """
@@ -54,26 +44,21 @@ def build_portfolio_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
     if prior and prior["nav_usd"] is not None and row["nav_usd"] is not None:
         pnl_24h = round(float(row["nav_usd"]) - float(prior["nav_usd"]), 2)
 
-    return {
+    payload: dict[str, Any] = {
         "available": True,
         "as_of": row["ts"],
-        "nav_usd": round(float(row["nav_usd"] or 0), 2),
-        "cash_usd": round(float(row["cash_usd"] or 0), 2),
-        "allocation_pct": {
-            "BTC": round(btc_pct, 4),
-            "ETH": round(eth_pct, 4),
-            "CASH": round(cash_pct, 4),
-        },
-        "target_allocation_pct": target,
-        "drift": drift,
-        "rebalance_hint": rebalance_hint,
-        "outside_band": band_result["outside_band"],
-        "max_drift": band_result["max_drift"],
-        "band": band_result["band"],
+        "nav_usd": nav_usd,
+        "cash_usd": cash_usd,
+        "holdings": holdings,
+        "allocation_pct": {key: round(value, 4) for key, value in allocation_pct.items()},
         "pnl_usd": {"since_prior_snapshot": pnl_24h},
         "prices": allocation.get("prices") or {},
         "cash_breakdown": allocation.get("cash_breakdown") or {},
     }
+    unrecognized = allocation.get("unrecognized")
+    if unrecognized:
+        payload["unrecognized"] = list(unrecognized)
+    return payload
 
 
 def build_market_context(conn: sqlite3.Connection, config) -> dict[str, Any]:

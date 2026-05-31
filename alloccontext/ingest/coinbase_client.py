@@ -7,15 +7,12 @@ from typing import Any
 import jwt
 import requests
 
+from alloccontext.ingest.asset_registry import is_stable
 from alloccontext.ingest.exchange_http import should_retry_exchange_attempt
 from cryptography.hazmat.primitives import serialization
 
 COINBASE_API = "https://api.coinbase.com"
 BROKERAGE_PREFIX = "/api/v3/brokerage"
-
-STABLE_CURRENCIES = frozenset(
-    {"USD", "USDC", "USDT", "DAI", "PYUSD", "USDE", "GUSD"}
-)
 
 PRODUCT_TO_SYMBOL = {
     "BTC-USD": "BTC",
@@ -61,7 +58,7 @@ def normalize_pem_secret(raw: str) -> str:
 def normalize_coinbase_balances(
     accounts: list[dict[str, Any]],
 ) -> tuple[dict[str, float], dict[str, float]]:
-    balances: dict[str, float] = {"BTC": 0.0, "ETH": 0.0, "USD": 0.0}
+    balances: dict[str, float] = {}
     cash_breakdown: dict[str, float] = {}
     for account in accounts:
         currency = str(account.get("currency") or "").upper()
@@ -72,13 +69,11 @@ def normalize_coinbase_balances(
         total = available + hold
         if total <= 0:
             continue
-        if currency == "BTC":
-            balances["BTC"] += total
-        elif currency == "ETH":
-            balances["ETH"] += total
-        elif currency in STABLE_CURRENCIES:
-            balances["USD"] += total
+        if is_stable(currency):
+            balances["USD"] = balances.get("USD", 0.0) + total
             cash_breakdown[currency] = cash_breakdown.get(currency, 0.0) + total
+        else:
+            balances[currency] = balances.get(currency, 0.0) + total
     return balances, cash_breakdown
 
 
