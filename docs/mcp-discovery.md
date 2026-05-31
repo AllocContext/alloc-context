@@ -26,8 +26,16 @@ may show localhost.
 | `GET /health` | Liveness |
 | `GET /llms.txt` | Agent-readable service summary |
 | `GET /.well-known/x402.json` | Machine-readable tool manifest |
+| `GET /.well-known/mcp/server-card.json` | Smithery static server card (tools without paying) |
 
 Paid MCP remains `POST /mcp` behind x402 when `--x402` is enabled.
+
+## Smithery directory
+
+Smithery scans `POST /mcp` by default; x402 servers return **402** on unpaid
+probes. Publish using the static server card at
+`/.well-known/mcp/server-card.json` (same tool list as Bazaar). Retry at
+[smithery.ai/new](https://smithery.ai/new) after deploy.
 
 ## Bazaar metadata
 

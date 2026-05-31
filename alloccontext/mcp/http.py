@@ -12,6 +12,7 @@ from starlette.routing import Mount, Route
 
 from alloccontext.mcp.bazaar import (
     build_llms_txt,
+    build_mcp_server_card,
     build_well_known_x402,
     resolve_public_base_url,
 )
@@ -119,6 +120,15 @@ def _well_known_x402(settings: X402Settings) -> JSONResponse:
     return JSONResponse(payload)
 
 
+def _well_known_mcp_server_card() -> JSONResponse:
+    public_base = resolve_public_base_url()
+    if not public_base:
+        return JSONResponse({"error": "discovery metadata unavailable"}, status_code=404)
+    from alloccontext import __version__
+
+    return JSONResponse(build_mcp_server_card(version=__version__))
+
+
 def _is_loopback_host(host: str) -> bool:
     normalized = host.strip().lower()
     return normalized in {"127.0.0.1", "localhost", "::1"}
@@ -154,6 +164,7 @@ def build_http_app(
         Route("/health", _make_health_handler(config_path)),
         Route("/llms.txt", lambda req: _llms_txt(settings)),
         Route("/.well-known/x402.json", lambda req: _well_known_x402(settings)),
+        Route("/.well-known/mcp/server-card.json", lambda req: _well_known_mcp_server_card()),
     ]
 
     if not settings.enabled:

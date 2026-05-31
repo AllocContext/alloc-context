@@ -83,7 +83,7 @@ def _fetch_ok(url: str, *, timeout: float = 20) -> tuple[int, bytes]:
 
 def check_discovery_paths(config: X402CheckConfig) -> list[str]:
     messages: list[str] = []
-    paths = ("/health", "/llms.txt", "/.well-known/x402.json")
+    paths = ("/health", "/llms.txt", "/.well-known/x402.json", "/.well-known/mcp/server-card.json")
     for path in paths:
         public_url = f"{config.public_url}{path}"
         try:
