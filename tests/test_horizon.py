@@ -37,3 +37,28 @@ def test_prune_to_horizon(conn, config) -> None:
     assert deleted["portfolio_snapshots"] >= 1
     remaining = conn.execute("SELECT COUNT(*) AS n FROM portfolio_snapshots").fetchone()
     assert remaining["n"] == 1
+
+
+def test_prune_to_horizon_drops_old_alt_quote_snapshots(conn, config) -> None:
+    old_ts = "2020-01-01T00:00:00+00:00"
+    conn.execute(
+        """
+        INSERT INTO alt_quote_snapshots(
+          symbol, snapshot_ts, price_usd, change_pct_24h, source, fetched_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        ("HYPE", old_ts, 10.0, 1.0, "coinmarketcap", old_ts),
+    )
+    conn.execute(
+        """
+        INSERT INTO alt_quote_snapshots(
+          symbol, snapshot_ts, price_usd, change_pct_24h, source, fetched_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        ("HYPE", "2026-05-21T12:00:00+00:00", 25.0, 2.0, "coinmarketcap", "2026-05-21T12:00:00+00:00"),
+    )
+    conn.commit()
+    deleted = prune_to_horizon(conn, config)
+    assert deleted["alt_quote_snapshots"] >= 1
+    remaining = conn.execute("SELECT COUNT(*) AS n FROM alt_quote_snapshots").fetchone()
+    assert remaining["n"] == 1

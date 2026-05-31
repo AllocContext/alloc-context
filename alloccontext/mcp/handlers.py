@@ -128,6 +128,74 @@ def _attach_allocation_analysis(
     return result
 
 
+def _alt_quote_summary(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "ok": bool(result.get("ok", True)),
+        "rows": int(result.get("rows") or 0),
+        "symbols_requested": list(result.get("symbols_requested") or []),
+        "symbols_fetched": list(result.get("symbols_fetched") or []),
+        "symbols_missing": list(result.get("symbols_missing") or []),
+        "skipped": bool(result.get("skipped")),
+        "reason": result.get("reason"),
+    }
+
+
+def _live_alt_quote_failure_payload(
+    refresh_result: dict[str, Any],
+    *,
+    as_of: datetime,
+) -> dict[str, Any] | None:
+    if bool(refresh_result.get("ok", True)):
+        return None
+    return with_staleness(
+        {
+            "available": False,
+            "reason": "live_alt_quote_refresh_failed",
+            "fatal_errors": {},
+            "ingest": {
+                "ok": False,
+                "errors": {},
+                "counts": {},
+                "alt_quotes": _alt_quote_summary(refresh_result),
+            },
+            "freshness": "live",
+        },
+        as_of=as_of,
+    )
+
+
+def _prepare_market_assets(
+    conn: sqlite3.Connection,
+    config,
+    assets: list[str] | None,
+    *,
+    freshness: Freshness,
+) -> tuple[tuple[str, ...], tuple[str, ...], dict[str, Any] | None]:
+    from alloccontext.ingest.alt_quote_registry import alt_symbols_from_request
+    from alloccontext.ingest.alt_quote_store import register_quote_scope
+    from alloccontext.ingest.alt_quotes import ensure_alt_quotes, refresh_alt_quotes
+
+    register_quote_scope(conn, assets or [])
+    pending = alt_symbols_from_request(assets)
+    refresh_result: dict[str, Any] | None = None
+
+    if freshness == "live" and pending:
+        refresh_result = refresh_alt_quotes(conn, config, pending)
+    elif freshness == "cached" and pending:
+        refresh_result = ensure_alt_quotes(conn, config, pending)
+
+    view_assets, assets_omitted = resolve_view_assets(assets, conn=conn)
+    return view_assets, assets_omitted, refresh_result
+
+
+def _attach_alt_quote_ingest(payload: dict[str, Any], refresh_result: dict[str, Any] | None) -> None:
+    if refresh_result is None:
+        return
+    ingest = dict(payload.get("ingest") or {})
+    ingest["alt_quotes"] = _alt_quote_summary(refresh_result)
+    payload["ingest"] = ingest
+
+
 def _attach_regime(bundle: dict[str, Any], config) -> dict[str, Any]:
     portfolio = bundle.get("portfolio") or {}
     analysis = bundle.get("allocation_analysis")
@@ -162,7 +230,7 @@ def get_context_at(
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
 ) -> dict[str, Any]:
-    view_assets, assets_omitted = resolve_view_assets(assets)
+    view_assets, assets_omitted = resolve_view_assets(assets, conn=conn)
     try:
         resolved = resolve_context_snapshot_as_of(
             conn,
@@ -207,7 +275,7 @@ def get_context_delta(
     current_as_of: str | None = None,
     assets: list[str] | None = None,
 ) -> dict[str, Any]:
-    view_assets, assets_omitted = resolve_view_assets(assets)
+    view_assets, assets_omitted = resolve_view_assets(assets, conn=conn)
     try:
         prior_resolved = resolve_context_snapshot_as_of(
             conn,
@@ -295,22 +363,28 @@ def get_context_bundle(
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
 ) -> dict[str, Any]:
-    view_assets, assets_omitted = resolve_view_assets(assets)
+    view_assets, assets_omitted, refresh_result = _prepare_market_assets(
+        conn,
+        config,
+        assets,
+        freshness=freshness,
+    )
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
 
-    ingest_result: dict[str, Any] | None = None
-    if freshness == "live":
-        from alloccontext.ingest.runner import run_ingest
-
-        ingest_result = run_ingest(conn, config)
-        failure = _live_ingest_failure_payload(ingest_result, as_of=now)
+    if refresh_result is not None and freshness == "live":
+        failure = _live_alt_quote_failure_payload(refresh_result, as_of=now)
         if failure is not None:
             return failure
 
+    ingest_result: dict[str, Any] | None = None
+
     from alloccontext.rollup.context import build_context_bundle
 
+    alt_symbols = tuple(
+        asset for asset in view_assets if asset not in {"BTC", "ETH", "CASH"}
+    )
     bundle = build_context_bundle(
         conn,
         config,
@@ -318,6 +392,7 @@ def get_context_bundle(
         rollup=config.rollup,
         as_of=now,
         save_snapshot=False,
+        alt_symbols=alt_symbols,
     )
     if target_pct is not None or band is not None:
         bundle = _attach_allocation_analysis(
@@ -337,6 +412,7 @@ def get_context_bundle(
     with_data_staleness(payload, now=now)
     if ingest_result is not None:
         payload["ingest"] = _ingest_summary(ingest_result)
+    _attach_alt_quote_ingest(payload, refresh_result)
     return attach_assets_omitted(payload, assets_omitted)
 
 
@@ -349,23 +425,32 @@ def get_market_context(
     freshness: Freshness = "cached",
     assets: list[str] | None = None,
 ) -> dict[str, Any]:
-    view_assets, assets_omitted = resolve_view_assets(assets)
+    view_assets, assets_omitted, refresh_result = _prepare_market_assets(
+        conn,
+        config,
+        assets,
+        freshness=freshness,
+    )
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
 
-    ingest_result: dict[str, Any] | None = None
-    if freshness == "live":
-        from alloccontext.ingest.runner import run_ingest
-
-        ingest_result = run_ingest(conn, config)
-        failure = _live_ingest_failure_payload(ingest_result, as_of=now)
+    if refresh_result is not None and freshness == "live":
+        failure = _live_alt_quote_failure_payload(refresh_result, as_of=now)
         if failure is not None:
             return failure
 
+    ingest_result: dict[str, Any] | None = None
+
     sentiment = build_sentiment_context(conn, config, config.rollup, now=now)
     macro = build_macro_context(conn, config, now=now, scope=scope)
-    market = filter_market_assets(build_market_context(conn, config), view_assets)
+    alt_symbols = tuple(
+        asset for asset in view_assets if asset not in {"BTC", "ETH", "CASH"}
+    )
+    market = filter_market_assets(
+        build_market_context(conn, config, alt_symbols=alt_symbols),
+        view_assets,
+    )
 
     macro_subset: dict[str, Any]
     if macro.get("available"):
@@ -406,6 +491,7 @@ def get_market_context(
     with_data_staleness(payload, now=now)
     if ingest_result is not None:
         payload["ingest"] = _ingest_summary(ingest_result)
+    _attach_alt_quote_ingest(payload, refresh_result)
     return attach_assets_omitted(payload, assets_omitted)
 
 

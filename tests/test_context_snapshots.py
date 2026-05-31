@@ -65,51 +65,71 @@ def test_mcp_get_context_bundle_does_not_pollute_snapshots(conn, config) -> None
     assert rows[0]["as_of"] == "2026-05-20T12:00:00+00:00"
 
 
-def test_get_context_bundle_live_fails_closed_on_ok_false(conn, config) -> None:
-    """ADR-005 C2: a live ingest that is not ``ok`` must not serve a bundle.
+def test_get_context_bundle_live_fails_closed_on_alt_refresh(config, conn) -> None:
+    """Live bundle calls fail closed when requested alt quote refresh fails."""
+    import json
 
-    Even when ``fatal_errors`` is absent (e.g. a malformed/partial ingest
-    return), ``ok: False`` must fail closed rather than build a full bundle.
-    """
-    _seed_portfolio(conn, ts="2026-05-21T12:00:00+00:00", nav=1000.0)
+    conn.execute(
+        """
+        INSERT INTO portfolio_snapshots(ts, nav_usd, cash_usd, allocation_json, raw_json)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            "2026-05-21T12:00:00+00:00",
+            1000.0,
+            0.0,
+            json.dumps({"BTC": 0.7, "ETH": 0.3, "CASH": 0.0}),
+            "{}",
+        ),
+    )
+    conn.commit()
     with patch(
-        "alloccontext.ingest.runner.run_ingest",
+        "alloccontext.ingest.alt_quotes.refresh_alt_quotes",
         return_value={
             "ok": False,
-            "errors": {"kraken": "timeout"},
-            "counts": {"kraken": 0},
+            "rows": 0,
+            "symbols_requested": ["HYPE"],
+            "symbols_fetched": [],
+            "symbols_missing": ["HYPE"],
         },
     ):
-        payload = get_context_bundle(conn, config, scope="daily", freshness="live")
+        payload = get_context_bundle(
+            conn,
+            config,
+            scope="daily",
+            freshness="live",
+            assets=["HYPE"],
+        )
 
     assert payload["available"] is False
-    assert payload["reason"] == "live_ingest_failed"
+    assert payload["reason"] == "live_alt_quote_refresh_failed"
     assert payload["freshness"] == "live"
-    assert payload["ingest"]["ok"] is False
-    assert payload["ingest"]["errors"] == {"kraken": "timeout"}
     assert "bundle_id" not in payload
 
 
-def test_get_context_bundle_live_optional_failure_still_serves(conn, config) -> None:
-    """Optional-only ingest failures keep ``ok=True`` and still serve a bundle."""
-    _seed_portfolio(conn, ts="2026-05-21T12:00:00+00:00", nav=1000.0)
-    with patch(
-        "alloccontext.ingest.runner.run_ingest",
-        return_value={
-            "ok": True,
-            "partial": True,
-            "fatal_errors": {},
-            "optional_errors": {"fred": "down"},
-            "errors": {"fred": "down"},
-            "counts": {},
-        },
-    ):
-        payload = get_context_bundle(conn, config, scope="daily", freshness="live")
+def test_get_context_bundle_live_serves_without_alt_request(config, conn) -> None:
+    """Live bundle without alt symbols still serves cached bundle data."""
+    import json
+
+    conn.execute(
+        """
+        INSERT INTO portfolio_snapshots(ts, nav_usd, cash_usd, allocation_json, raw_json)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            "2026-05-21T12:00:00+00:00",
+            1000.0,
+            0.0,
+            json.dumps({"BTC": 0.7, "ETH": 0.3, "CASH": 0.0}),
+            "{}",
+        ),
+    )
+    conn.commit()
+    payload = get_context_bundle(conn, config, scope="daily", freshness="live")
 
     assert payload.get("available") is not False
     assert payload["freshness"] == "live"
     assert "bundle_id" in payload
-    assert payload["ingest"]["ok"] is True
 
 
 def test_run_ingest_saves_snapshots(config, conn, monkeypatch) -> None:

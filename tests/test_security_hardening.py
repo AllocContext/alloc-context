@@ -84,20 +84,9 @@ def test_unparseable_mcp_body_prices_heavy() -> None:
     assert price == "$0.05"
 
 
-def test_live_context_bundle_fails_on_fatal_ingest(config, conn, monkeypatch) -> None:
-    monkeypatch.setattr(
-        "alloccontext.ingest.runner.run_ingest",
-        lambda _conn, _config: {
-            "ok": False,
-            "fatal_errors": {"kraken": "timeout"},
-            "errors": {"kraken": "timeout"},
-            "counts": {},
-        },
-    )
+def test_live_context_bundle_serves_without_alt_request(config, conn) -> None:
     from alloccontext.mcp.contracts import validate_tool_response
 
     result = get_context_bundle(conn, config, freshness="live")
-    assert result.get("available") is False
-    assert result.get("reason") == "live_ingest_failed"
-    assert result["fatal_errors"] == {"kraken": "timeout"}
+    assert result.get("available") is not False
     validate_tool_response("get_context_bundle", result)

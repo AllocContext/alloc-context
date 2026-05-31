@@ -7,7 +7,8 @@ STABLE_CURRENCIES = frozenset(
 # Band assets: full OHLC ingest + ETF flows (see constants.MARKET_VIEW_ASSETS).
 BAND_ASSETS = frozenset({"BTC", "ETH"})
 
-# CoinGecko coin IDs for portfolio quote fallback (symbol → id).
+# CoinGecko coin IDs for portfolio/market quote fallback (symbol → id).
+# Symbols not listed here can still resolve via CoinMarketCap by ticker.
 COINGECKO_ID_BY_SYMBOL: dict[str, str] = {
     "BTC": "bitcoin",
     "ETH": "ethereum",

@@ -71,7 +71,17 @@ free Demo key). Two calls per ingest cycle fits the hourly timer.
 
 CoinMarketCap skips gracefully when the key is unset. With both feeds, rollup
 exposes `market.breadth.feeds.coingecko` and `market.breadth.feeds.coinmarketcap`
-plus dominance/rank deltas vs the prior snapshot.
+plus dominance/rank deltas vs the prior snapshot. The same optional sources also
+back **alt holding quotes** (e.g. HYPE) via `ingest/alt_quotes.py` — scheduled on
+the hourly ingest timer for a bounded symbol set (portfolio + recent requests),
+plus on-demand refresh for `freshness=live` or cache-miss lazy fetch when keys
+are present.
+
+**Live vs cached alt quotes:** `freshness=live` with alt assets in the request
+**fails closed** when no quote API keys are configured or when the refresh
+returns no rows (see `live_alt_quote_refresh_failed`). `freshness=cached` uses
+lazy fetch when keys exist but omits uncached alts from the response instead of
+failing the whole tool call.
 
 Stored table: `crypto_market_snapshots`.
 
