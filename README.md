@@ -98,7 +98,7 @@ See [docs/mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 | [docs/mcp-discovery.md](docs/mcp-discovery.md) | Bazaar and agent discovery |
 | [docs/distribution.md](docs/distribution.md) | GitHub, PyPI, MCP Registry, directories |
 | [docs/agent-integration.md](docs/agent-integration.md) | Paid HTTP MCP + Bazaar for agents |
-| [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP |
+| [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP (bridge default) |
 | [docs/examples.md](docs/examples.md) | Sample tool JSON (redacted) |
 | [docs/context-bundle.md](docs/context-bundle.md) | ContextBundle schema |
 | [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |

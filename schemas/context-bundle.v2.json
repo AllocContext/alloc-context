@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/negillett/alloc-context/context-bundle.v2.json",
+  "title": "ContextBundle",
+  "description": "Portfolio-first context bundle. Default portfolio has holdings[] and band weights only; allocation drift is opt-in via allocation_analysis.",
+  "type": "object",
+  "required": [
+    "bundle_id",
+    "scope",
+    "as_of",
+    "portfolio",
+    "market",
+    "sentiment",
+    "macro",
+    "delta",
+    "regime"
+  ],
+  "properties": {
+    "bundle_id": { "type": "string" },
+    "scope": { "enum": ["daily", "weekly"] },
+    "as_of": { "type": "string", "format": "date-time" },
+    "prior_as_of": { "type": ["string", "null"], "format": "date-time" },
+    "horizon_days": { "type": "integer", "minimum": 1 },
+    "portfolio": { "$ref": "#/$defs/portfolioBlock" },
+    "market": { "type": "object" },
+    "sentiment": { "type": "object" },
+    "macro": { "type": "object" },
+    "delta": { "type": "object" },
+    "regime": { "type": "object" },
+    "allocation_analysis": { "$ref": "#/$defs/allocationAnalysis" },
+    "freshness": { "enum": ["cached", "live"] },
+    "age_seconds": { "type": "number", "minimum": 0 },
+    "target_pct": { "$ref": "#/$defs/bandWeights" },
+    "band": { "type": "number", "minimum": 0, "maximum": 1 },
+    "assets": {
+      "type": "array",
+      "items": { "enum": ["BTC", "ETH", "CASH"] }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "bandWeights": {
+      "type": "object",
+      "properties": {
+        "BTC": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ETH": { "type": "number", "minimum": 0, "maximum": 1 },
+        "CASH": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "holding": {
+      "type": "object",
+      "required": ["symbol", "kind"],
+      "properties": {
+        "symbol": { "type": "string" },
+        "qty": { "type": "number" },
+        "price_usd": { "type": ["number", "null"] },
+        "value_usd": { "type": ["number", "null"] },
+        "weight_pct": { "type": ["number", "null"] },
+        "kind": { "enum": ["band", "holding", "cash"] },
+        "cash_breakdown": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "portfolioBlock": {
+      "type": "object",
+      "required": ["available"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "nav_usd": { "type": "number" },
+        "cash_usd": { "type": "number" },
+        "holdings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/holding" }
+        },
+        "allocation_pct": { "$ref": "#/$defs/bandWeights" },
+        "unrecognized": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "prices": { "type": "object" },
+        "cash_breakdown": { "type": "object" },
+        "pnl_usd": { "type": "object" },
+        "as_of": { "type": "string", "format": "date-time" },
+        "source": { "type": "string" },
+        "exchange": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "allocationAnalysis": {
+      "type": "object",
+      "required": ["available"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "allocation_pct": { "$ref": "#/$defs/bandWeights" },
+        "target_allocation_pct": { "$ref": "#/$defs/bandWeights" },
+        "drift": { "$ref": "#/$defs/bandWeights" },
+        "rebalance_hint": {
+          "enum": [
+            "within_band",
+            "consider_deploy_cash",
+            "consider_trim_to_cash",
+            "consider_rebalance"
+          ]
+        },
+        "outside_band": { "type": "boolean" },
+        "max_drift": { "type": "number" },
+        "band": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

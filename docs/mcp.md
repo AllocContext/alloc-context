@@ -74,7 +74,8 @@ Coinbase in `ingest.sources` and `exchanges.coinbase.enabled` when unused.
 
 | URI | Content |
 |-----|---------|
-| `context-bundle://schema/v1` | ContextBundle JSON Schema |
+| `context-bundle://schema/v2` | ContextBundle JSON Schema (portfolio-first) |
+| `context-bundle://schema/v1` | Legacy schema (pre-holdings) |
 | `alloc-context://tools/rebalance-hints` | Meaning of `rebalance_hint` codes |
 
 ## Ingest reliability

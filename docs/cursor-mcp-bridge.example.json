@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "alloc-context": {
+      "command": "alloc-context",
+      "args": [
+        "mcp",
+        "--user-config",
+        "/Users/you/.config/alloc-context/user.yaml"
+      ]
+    }
+  }
+}

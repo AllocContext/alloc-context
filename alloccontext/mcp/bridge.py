@@ -18,12 +18,10 @@ from alloccontext.user_config import (
 )
 
 
-BRIDGE_INSTRUCTIONS = (
-    "AllocContext bridge: portfolio-first context with optional allocation analysis. "
-    "Privacy: nothing stored; one-time read-only; pass-through only on your device. "
-    "Portfolio requires exchange credentials in user config. Allocation drift and "
-    "rebalance are opt-in via target_allocation. setup objects explain missing config."
-)
+from alloccontext.mcp.instructions import PRODUCT_INSTRUCTIONS
+
+
+BRIDGE_INSTRUCTIONS = PRODUCT_INSTRUCTIONS
 
 
 def _effective_target_pct(
