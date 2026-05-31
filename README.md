@@ -9,11 +9,56 @@ JSON over MCP with x402 pay-per-call on Base.
 > **Privacy:** nothing stored · one-time read-only · pass-through only — your
 > keys and portfolio never persist on our servers. See [USE.md](docs/USE.md).
 
-The product is an **agent-native MCP API** — see [docs/mcp.md](docs/mcp.md).
+## Quick start (Cursor)
 
-## Hosted MCP (production)
+**1. Install**
 
-Try the public endpoint without self-hosting:
+```bash
+pip install "alloc-context[mcp,hosted]"
+# From source: pip install -e ".[mcp,hosted]"
+```
+
+**2. User config**
+
+Copy [config/user.example.yaml](config/user.example.yaml) to
+`~/.config/alloc-context/user.yaml`. Add read-only exchange keys for portfolio
+discovery (optional) and an x402 payer for hosted market context. See
+[user-config.md](docs/user-config.md).
+
+**3. MCP config**
+
+Add to your Cursor `mcp.json` (or project `.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "alloc-context": {
+      "command": "alloc-context",
+      "args": [
+        "mcp",
+        "--user-config",
+        "/Users/you/.config/alloc-context/user.yaml"
+      ]
+    }
+  }
+}
+```
+
+Use an absolute path for `--user-config`. Example:
+[cursor-mcp-bridge.example.json](docs/cursor-mcp-bridge.example.json).
+
+**4. Ask your agent**
+
+Call `get_context_bundle` for a full snapshot (holdings when keys are set,
+market/sentiment/macro via hosted upstream). Pure math tools
+(`check_allocation_band`, `get_rebalance_plan`) work without exchange keys.
+
+Full setup guide: [cursor-mcp.md](docs/cursor-mcp.md). Sample responses:
+[examples.md](docs/examples.md).
+
+Not financial advice.
+
+## Hosted MCP
 
 | | |
 |--|--|
@@ -22,62 +67,9 @@ Try the public endpoint without self-hosting:
 | **Pricing** | **$0.02** cached context/math · **$0.05** live ingest or portfolio |
 | **Payment** | x402 on Base — USDC or EURC |
 
-Agents find the service via [CDP Bazaar](docs/mcp-discovery.md). Integration
-guide: [docs/agent-integration.md](docs/agent-integration.md). Example JSON:
-[docs/examples.md](docs/examples.md).
-
-**Try free locally** (no payment): `./scripts/dev-up.sh` — see
-[docs/local-dev.md](docs/local-dev.md).
-
-Optional live portfolio reads use read-only exchange credentials in user config
-(bridge) or per request (hosted). Not financial advice.
-
-```text
-Path A (bridge): user.yaml → local portfolio + hosted context (x402)
-Path C (self-host): ingest → store → rollup → MCP tools (+ optional x402 HTTP)
-```
-
-This package is **facts and MCP only** — ingest, rollups, and agent tools.
-Email, LLM synthesis, and alert delivery are out of scope for this repository.
-
-## Try it locally
-
-```bash
-git clone git@github.com:negillett/alloc-context.git
-cd alloc-context
-python3.11 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env          # fill locally; never commit
-cp config/config.example.yaml config/config.yaml
-
-python -m alloccontext ingest --dry-run
-python -m alloccontext rollup --scope daily --stdout
-pytest
-```
-
-**MCP (stdio, default bridge):** `pip install -e ".[mcp,hosted]"` then
-`alloc-context mcp --user-config ~/.config/alloc-context/user.yaml`.
-See [docs/cursor-mcp.md](docs/cursor-mcp.md) and [docs/user-config.md](docs/user-config.md).
-
-**MCP (self-host ingest):** `pip install -e ".[mcp]"` then `alloc-context mcp`
-with local `config/config.yaml` — see [docs/self-hosting.md](docs/self-hosting.md).
-
-**Hosted MCP + x402:** `pip install -e ".[hosted]"` then
-`alloc-context mcp --transport http --x402`. See [docs/mcp-http.md](docs/mcp-http.md).
-
-**Local dev stack (internal MCP on :8001):** `./scripts/dev-up.sh`.
-See [docs/local-dev.md](docs/local-dev.md).
-
-CLI entry point: `alloc-context` (same as `python -m alloccontext`).
-
-## Commands
-
-| Command | Purpose |
-|---------|---------|
-| `python -m alloccontext ingest` | Pull configured sources → SQLite |
-| `python -m alloccontext rollup --scope daily --stdout` | ContextBundle JSON (facts) |
-| `python -m alloccontext status` | Per-source ingest ages, snapshots, MCP `/health` |
-| `alloc-context mcp` | MCP server (stdio or HTTP) |
+Agents and wallets connect directly to the hosted endpoint — see
+[agent-integration.md](docs/agent-integration.md). The Cursor bridge above
+combines local portfolio reads with this upstream for market context.
 
 ## MCP tools
 
@@ -90,28 +82,57 @@ CLI entry point: `alloc-context` (same as `python -m alloccontext`).
 | `get_rebalance_plan` | USD rebalance moves from allocation, target, and NAV |
 | `check_allocation_band` | Drift vs target and whether allocation is outside the band |
 | `check_allocation_bands` | Batch band checks for multiple target scenarios |
-| `get_portfolio_state` | Live NAV and holdings from Kraken or Coinbase (credentials in request) |
+| `get_portfolio_state` | Live NAV and holdings from Kraken or Coinbase |
 
-See [docs/mcp.md](docs/mcp.md) for arguments, pricing, and resources.
+See [mcp.md](docs/mcp.md) for arguments, pricing, and resources.
+
+## Self-host and development
+
+Run ingest and MCP entirely on your machine — no x402 upstream required.
+See [self-hosting.md](docs/self-hosting.md) (`self_host: true` in user config)
+or [local-dev.md](docs/local-dev.md) for the dev stack.
+
+```bash
+git clone git@github.com:negillett/alloc-context.git
+cd alloc-context
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env
+cp config/config.example.yaml config/config.yaml
+
+python -m alloccontext ingest --dry-run
+python -m alloccontext rollup --scope daily --stdout
+pytest
+```
+
+| Command | Purpose |
+|---------|---------|
+| `python -m alloccontext ingest` | Pull configured sources → SQLite |
+| `python -m alloccontext rollup --scope daily --stdout` | ContextBundle JSON (facts) |
+| `python -m alloccontext status` | Per-source ingest ages, snapshots, MCP `/health` |
+| `alloc-context mcp` | MCP server (stdio or HTTP) |
+
+HTTP MCP + x402: [mcp-http.md](docs/mcp-http.md). CLI entry point:
+`alloc-context` (same as `python -m alloccontext`).
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [docs/mcp.md](docs/mcp.md) | MCP tools and x402 |
-| [docs/mcp-http.md](docs/mcp-http.md) | HTTP MCP + x402 setup |
-| [docs/mcp-discovery.md](docs/mcp-discovery.md) | Bazaar and agent discovery |
-| [docs/distribution.md](docs/distribution.md) | GitHub, PyPI, MCP Registry, directories |
-| [docs/agent-integration.md](docs/agent-integration.md) | Paid HTTP MCP + Bazaar for agents |
 | [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP (bridge default) |
+| [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` reference |
+| [docs/mcp.md](docs/mcp.md) | MCP tools and x402 |
+| [docs/agent-integration.md](docs/agent-integration.md) | Paid HTTP MCP + Bazaar for agents |
 | [docs/examples.md](docs/examples.md) | Sample tool JSON (redacted) |
 | [docs/context-bundle.md](docs/context-bundle.md) | ContextBundle schema |
-| [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |
-| [docs/data-sources.md](docs/data-sources.md) | Ingest sources |
+| [docs/USE.md](docs/USE.md) | Self-host vs hosted MCP (plain language) |
+| [docs/mcp-http.md](docs/mcp-http.md) | HTTP MCP + x402 setup |
+| [docs/mcp-discovery.md](docs/mcp-discovery.md) | Bazaar and agent discovery |
 | [docs/self-hosting.md](docs/self-hosting.md) | Optional Linux/systemd ingest + MCP |
 | [docs/local-dev.md](docs/local-dev.md) | Local internal MCP + dev ingest |
-| [docs/USE.md](docs/USE.md) | Self-host vs hosted MCP (plain language) |
-| [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` reference |
+| [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |
+| [docs/data-sources.md](docs/data-sources.md) | Ingest sources |
+| [docs/distribution.md](docs/distribution.md) | GitHub, PyPI, MCP Registry, directories |
 
 ## Contributing
 
