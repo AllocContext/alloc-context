@@ -1,30 +1,58 @@
 # Cursor MCP setup
 
-Use AllocContext cached context tools in Cursor over stdio.
+Use AllocContext in Cursor over stdio. The **default path** is the local
+**bridge** (portfolio local + hosted market context). Self-host ingest remains
+available for power users.
 
-For the **hosted paid endpoint** (x402 on `mcp.alloc-context.com`) and CDP
-Bazaar discovery, see [agent-integration.md](agent-integration.md).
+> **Privacy:** nothing stored · one-time read-only · pass-through only. See
+> [USE.md](USE.md) and [user-config.md](user-config.md).
+
+For the **hosted paid endpoint** (x402 on `mcp.alloc-context.com`) without a
+local bridge, see [agent-integration.md](agent-integration.md).
 
 ## Install
 
 ```bash
 pip install -e ".[mcp]"
+# Bridge → hosted upstream (Path A):
+pip install -e ".[hosted]"
 ```
 
-Ensure ingest has populated a local SQLite DB (`python -m alloccontext ingest`).
+## Default: bridge + user config (Path A)
 
-## Configure Cursor
+Copy [config/user.example.yaml](../config/user.example.yaml) to
+`~/.config/alloc-context/user.yaml` and add exchange keys (optional) and x402
+payer config. See [user-config.md](user-config.md).
 
-This repo includes [`.cursor/mcp.json`](../.cursor/mcp.json) with
-`${workspaceFolder}` paths. Open the **alloc-context** project root in Cursor
-and reload the window.
+```json
+{
+  "mcpServers": {
+    "alloc-context": {
+      "command": "alloc-context",
+      "args": [
+        "mcp",
+        "--user-config",
+        "/Users/you/.config/alloc-context/user.yaml"
+      ]
+    }
+  }
+}
+```
 
-Requires `pip install -e ".[mcp]"` so `.venv/bin/alloc-context` exists.
+Portfolio requires exchange credentials in user config. Market context calls
+the hosted upstream (x402 payer required).
 
-Copy [cursor-mcp.example.json](cursor-mcp.example.json) for manual setup and
-set absolute paths for `ALLOC_CONTEXT_CONFIG` and `ALLOC_CONTEXT_DB`.
+Examples: [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json).
 
-Or merge this block into `.cursor/mcp.json`:
+## Self-host ingest (Path C)
+
+Requires a local SQLite DB populated by ingest:
+
+```bash
+python -m alloccontext ingest
+```
+
+Copy [cursor-mcp.example.json](cursor-mcp.example.json) or merge:
 
 ```json
 {
@@ -40,14 +68,21 @@ Or merge this block into `.cursor/mcp.json`:
 }
 ```
 
+Or set `self_host: true` and `config:` in `user.yaml` instead of `--user-config`
+bridge mode. See [self-hosting.md](self-hosting.md).
+
 Alternative entry point: `alloc-context-mcp` (same stdio server).
 
 ## Tools
 
 | Tool | Keys required |
 |------|----------------|
-| `get_market_context` | Local ingest DB only |
+| `get_context_bundle` | Bridge: x402 payer; portfolio: exchange keys in user.yaml. Self-host: local DB. |
+| `get_market_context` | Bridge: x402 payer. Self-host: local DB. |
+| `get_portfolio_state` | Bridge: exchange keys in user.yaml (or tool args). |
 | `get_rebalance_plan` | None (pure math) |
 | `check_allocation_band` | None (pure math) |
 
-All responses include `as_of` and `age_seconds`.
+Missing config returns `available: false` with a `setup` block.
+
+All successful responses include `as_of` and `age_seconds`.

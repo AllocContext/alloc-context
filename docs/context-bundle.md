@@ -3,6 +3,9 @@
 Deterministic facts document passed to the LLM. All narrative must trace to
 fields here.
 
+> **Privacy:** nothing stored · one-time read-only · pass-through only on hosted
+> and bridge paths. See [USE.md](USE.md).
+
 ## Top-level shape
 
 ```json
@@ -21,41 +24,84 @@ fields here.
 }
 ```
 
+When allocation analysis is requested (`target_pct` / `band` on the tool, or
+`target_allocation` in bridge user config), the bundle may also include:
+
+```json
+{
+  "allocation_analysis": {
+    "available": true,
+    "allocation_pct": {"BTC": 0.68, "ETH": 0.27, "CASH": 0.05},
+    "target_allocation_pct": {"BTC": 0.70, "ETH": 0.30, "CASH": 0.0},
+    "drift": {"BTC": -0.02, "ETH": -0.03, "CASH": 0.05},
+    "rebalance_hint": "within_band",
+    "outside_band": false,
+    "max_drift": 0.05,
+    "band": 0.15
+  }
+}
+```
+
+## portfolio (default)
+
+Portfolio-first: holdings and band weights. **No** embedded `target_allocation_pct`,
+`drift`, or `rebalance_hint` unless you opt into `allocation_analysis`.
+
+| Field | Meaning |
+|-------|---------|
+| `nav_usd` | Total NAV in USD |
+| `cash_usd` | Stable / USD cash total |
+| `holdings[]` | Recognized balances: `symbol`, `qty`, `price_usd`, `value_usd`, `weight_pct`, `kind` (`band` / `holding` / `cash`) |
+| `allocation_pct` | Band weights only: `BTC`, `ETH`, `CASH` derived from holdings |
+| `unrecognized[]` | Symbols seen in balances but without a USD mark |
+| `prices` | USD marks used for valuation |
+| `cash_breakdown` | Per-stable breakdown when available |
+| `pnl_usd.since_prior_snapshot` | NAV change vs prior ingest snapshot |
+
+Example holding:
+
+```json
+{
+  "symbol": "HYPE",
+  "qty": 10.0,
+  "price_usd": 25.0,
+  "value_usd": 250.0,
+  "weight_pct": 0.002,
+  "kind": "holding"
+}
+```
+
+## allocation_analysis (opt-in)
+
+Separate block when drift math is requested. Same semantics as legacy portfolio
+drift fields. `regime.allocation` is populated only when this block (or legacy
+compat fields) is present.
+
 ## regime
 
-Deterministic agent-facing hints synthesized from portfolio drift, sentiment,
-and delta. No LLM.
+Deterministic agent-facing hints synthesized from optional allocation analysis,
+sentiment, and delta. No LLM.
 
 | Field | Meaning |
 |-------|---------|
 | `summary` | Short combined hint line |
 | `hints[]` | Structured `{kind, code, text}` entries |
-| `allocation` | Drift band result (`hint`, `outside_band`, `max_drift`, `band`) |
+| `allocation` | Present when analysis ran (`hint`, `outside_band`, `max_drift`, `band`) |
 | `volatility` | Kalshi short-horizon volatility regime when available |
 | `sentiment` | Fear & Greed and Kalshi tape fields |
 | `comparison` | `prior_as_of`, `notable_shifts` when a prior snapshot exists |
-
-## portfolio
-
-| Field | Source | Example |
-|-------|--------|---------|
-| `nav_usd` | Kraken API | `125432.10` |
-| `cash_usd` | Kraken balances | `8200.00` |
-| `allocation_pct` | Rollup | `{"BTC": 0.68, "ETH": 0.29, "CASH": 0.03}` |
-| `target_allocation_pct` | Config | `{"BTC": 0.70, "ETH": 0.30}` |
-| `drift` | Rollup | `{"BTC": -0.02, "ETH": -0.01}` |
-| `pnl_usd.since_prior_snapshot` | Snapshots delta | `-420.00` |
-| `rebalance_hint` | Rules | `"within_band"` / `"consider_deploy_cash"` |
 
 ## market
 
 | Field | Source | Example |
 |-------|--------|---------|
-| `assets.btc.price_usd` | Kraken OHLC | `98500` |
+| `assets.btc.price_usd` | Exchange OHLC | `98500` |
 | `assets.btc.change_pct.1_bar` | OHLC | `-1.2` |
 | `assets.eth.change_pct.1_bar` | OHLC | `-0.8` |
 | `breadth.feeds.coingecko` | CoinGecko ingest | dominance, rank, 24h change |
 | `breadth.feeds.coinmarketcap` | CMC ingest | same fields (cross-check) |
+
+Use the `assets` tool argument to filter market/ETF fields (default `BTC`, `ETH`).
 
 ## sentiment
 
@@ -79,8 +125,7 @@ and delta. No LLM.
 
 ## delta
 
-Computed vs the prior saved snapshot when `prior_as_of` is set (otherwise
-falls back to recent snapshots where noted):
+Computed vs the prior saved snapshot when `prior_as_of` is set:
 
 - `portfolio_nav_change_usd`
 - `fear_greed_change`
@@ -88,19 +133,34 @@ falls back to recent snapshots where noted):
 - `market.eth_change_pct_since_prior`
 - `notable_shifts[]` — deterministic rule hits for LLM emphasis
 
+## Migration from v1 portfolio fields
+
+| v1 (deprecated default) | v2 |
+|-------------------------|-----|
+| `portfolio.target_allocation_pct` | `allocation_analysis.target_allocation_pct` |
+| `portfolio.drift` | `allocation_analysis.drift` |
+| `portfolio.rebalance_hint` | `allocation_analysis.rebalance_hint` |
+| (none) | `portfolio.holdings[]` |
+
+Legacy hosted snapshots may still expose drift on `portfolio` until dependents
+migrate; new bridge and self-host responses follow v2.
+
 ## JSON Schema
 
-Formal schema: [schemas/context-bundle.v1.json](../schemas/context-bundle.v1.json)
+- Current: [schemas/context-bundle.v2.json](../schemas/context-bundle.v2.json)
+- Legacy: [schemas/context-bundle.v1.json](../schemas/context-bundle.v1.json)
+
+MCP resource: `context-bundle://schema/v2`
 
 ## Agent narrative (optional)
 
 Downstream agents may turn ContextBundle JSON into markdown. A typical outline:
 
-1. Portfolio snapshot
+1. Portfolio snapshot (`holdings[]`, NAV)
 2. What changed since the prior snapshot
 3. Market + sentiment read
 4. Calendar / catalysts
-5. Forward watches (conditional bullets)
+5. Optional allocation analysis (when present)
 6. Observations (not instructions)
 7. Not financial advice
 

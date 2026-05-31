@@ -3,9 +3,11 @@
 Redacted samples from hosted tools (`freshness=cached`). Values are
 illustrative — your `as_of`, prices, and NAV will differ. Not financial advice.
 
+> **Privacy:** nothing stored · one-time read-only · pass-through only.
+
 Full schema: [context-bundle.md](context-bundle.md). Tool args: [mcp.md](mcp.md).
 
-## `get_context_bundle` (excerpt)
+## `get_context_bundle` (default — no allocation analysis)
 
 ```json
 {
@@ -17,9 +19,34 @@ Full schema: [context-bundle.md](context-bundle.md). Tool args: [mcp.md](mcp.md)
   "portfolio": {
     "available": true,
     "nav_usd": 125000.0,
-    "allocation_pct": {"BTC": 0.68, "ETH": 0.27, "CASH": 0.05},
-    "target_allocation_pct": {"BTC": 0.70, "ETH": 0.30, "CASH": 0.0},
-    "rebalance_hint": "within_band"
+    "cash_usd": 6200.0,
+    "holdings": [
+      {
+        "symbol": "BTC",
+        "qty": 0.85,
+        "price_usd": 98500.0,
+        "value_usd": 83725.0,
+        "weight_pct": 0.67,
+        "kind": "band"
+      },
+      {
+        "symbol": "ETH",
+        "qty": 11.2,
+        "price_usd": 3200.0,
+        "value_usd": 35840.0,
+        "weight_pct": 0.287,
+        "kind": "band"
+      },
+      {
+        "symbol": "USD",
+        "qty": 6200.0,
+        "price_usd": 1.0,
+        "value_usd": 6200.0,
+        "weight_pct": 0.05,
+        "kind": "cash"
+      }
+    ],
+    "allocation_pct": {"BTC": 0.67, "ETH": 0.287, "CASH": 0.05}
   },
   "sentiment": {
     "available": true,
@@ -31,11 +58,40 @@ Full schema: [context-bundle.md](context-bundle.md). Tool args: [mcp.md](mcp.md)
   },
   "regime": {
     "available": true,
-    "summary": "Portfolio allocation is within the configured drift band."
+    "allocation": {"available": false},
+    "summary": "Fear & Greed index: 52 (Neutral)."
   },
   "delta": {
     "available": true,
     "notable_shifts": ["F&G 55 → 52 (-3)"]
+  }
+}
+```
+
+## `get_context_bundle` (with `target_pct` — allocation analysis)
+
+```json
+{
+  "allocation_analysis": {
+    "available": true,
+    "allocation_pct": {"BTC": 0.67, "ETH": 0.287, "CASH": 0.05},
+    "target_allocation_pct": {"BTC": 0.70, "ETH": 0.30, "CASH": 0.0},
+    "drift": {"BTC": -0.03, "ETH": -0.013, "CASH": 0.05},
+    "rebalance_hint": "within_band",
+    "outside_band": false,
+    "max_drift": 0.05,
+    "band": 0.15
+  },
+  "regime": {
+    "available": true,
+    "allocation": {
+      "available": true,
+      "hint": "within_band",
+      "outside_band": false,
+      "max_drift": 0.05,
+      "band": 0.15
+    },
+    "summary": "Portfolio allocation is within the configured drift band."
   }
 }
 ```

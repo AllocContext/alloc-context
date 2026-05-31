@@ -5,6 +5,7 @@ from typing import Any
 
 from alloccontext.config import load_config
 from alloccontext.mcp import handlers
+from alloccontext.mcp.instructions import PRODUCT_INSTRUCTIONS, REBALANCE_HINT_GUIDE
 from alloccontext.store.db import connect
 
 
@@ -71,20 +72,17 @@ def create_server(
         port=port,
         stateless_http=stateless_http,
         transport_security=_transport_security_settings(host=host),
-        instructions=(
-            "BTC/ETH allocation context: fused market backdrop from cached ingest, "
-            "USD rebalance moves, and allocation band checks. Facts only — no LLM."
-        ),
+        instructions=PRODUCT_INSTRUCTIONS,
     )
 
     @mcp.tool(
         name="get_context_bundle",
         description=(
-            "Full ContextBundle JSON: portfolio, market, sentiment, macro, regime "
-            "hints, and delta vs the prior saved snapshot. Optional assets filter "
-            "(default BTC, ETH), target_pct, and band override server config for "
-            "drift math. freshness=cached uses the local ingest DB; freshness=live "
-            "runs ingest first."
+            "Full ContextBundle JSON: portfolio holdings, market, sentiment, "
+            "macro, regime hints, and delta vs the prior saved snapshot. Optional "
+            "assets filter (default BTC, ETH). Optional target_pct and band attach "
+            "allocation_analysis (opt-in drift math). freshness=cached uses the "
+            "local ingest DB; freshness=live runs ingest first."
         ),
     )
     def get_context_bundle(
@@ -282,26 +280,27 @@ def create_server(
     ) -> dict[str, Any]:
         return handlers.check_allocation_bands(allocation_pct, scenarios)
 
-    schema_path = (
+    schema_v1_path = (
         __import__("pathlib").Path(__file__).resolve().parent.parent.parent
         / "schemas"
         / "context-bundle.v1.json"
     )
+    schema_v2_path = schema_v1_path.with_name("context-bundle.v2.json")
 
     @mcp.resource("context-bundle://schema/v1")
-    def context_bundle_schema() -> str:
-        """ContextBundle JSON Schema for agent validation."""
-        return schema_path.read_text(encoding="utf-8")
+    def context_bundle_schema_v1() -> str:
+        """Legacy ContextBundle JSON Schema (pre-holdings)."""
+        return schema_v1_path.read_text(encoding="utf-8")
+
+    @mcp.resource("context-bundle://schema/v2")
+    def context_bundle_schema_v2() -> str:
+        """ContextBundle JSON Schema (portfolio-first, optional allocation_analysis)."""
+        return schema_v2_path.read_text(encoding="utf-8")
 
     @mcp.resource("alloc-context://tools/rebalance-hints")
     def rebalance_hint_guide() -> str:
-        """Meaning of portfolio rebalance_hint codes."""
-        return (
-            "rebalance_hint codes: within_band — drift inside band; "
-            "consider_deploy_cash — cash above target; "
-            "consider_trim_to_cash — cash below target; "
-            "consider_rebalance — drift exceeds band."
-        )
+        """Meaning of rebalance_hint codes in allocation_analysis."""
+        return REBALANCE_HINT_GUIDE
 
     return mcp
 
