@@ -10,6 +10,8 @@ if [[ ! -x "${PUBLISHER}" ]]; then
   bash "${ROOT}/scripts/install-mcp-publisher.sh" "${PUBLISHER}"
 fi
 
+bash "${ROOT}/scripts/wait-for-pypi.sh"
+
 "${PUBLISHER}" login github-oidc
 
 set +e

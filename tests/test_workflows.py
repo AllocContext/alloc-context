@@ -148,3 +148,9 @@ def test_publish_mcp_registry_workflow_dispatch():
     runs = [step.get("run", "") for step in _job_steps(workflow, "publish")]
     assert any("install-mcp-publisher" in run for run in runs)
     assert any("publish-mcp-registry.sh" in run for run in runs)
+
+
+def test_publish_mcp_registry_waits_for_pypi():
+    script = (REPO_ROOT / "scripts/publish-mcp-registry.sh").read_text()
+    assert "wait-for-pypi.sh" in script
+    assert (REPO_ROOT / "scripts/wait-for-pypi.sh").exists()
