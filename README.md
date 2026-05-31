@@ -103,6 +103,7 @@ See [docs/mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 | [docs/data-sources.md](docs/data-sources.md) | Ingest sources |
 | [docs/self-hosting.md](docs/self-hosting.md) | Optional Linux/systemd ingest + MCP |
 | [docs/local-dev.md](docs/local-dev.md) | Local internal MCP + dev ingest |
+| [docs/USE.md](docs/USE.md) | Self-host vs hosted MCP (plain language) |
 
 ## Contributing
 
@@ -111,4 +112,7 @@ Unsolicited pull requests are not expected — see [CONTRIBUTING.md](CONTRIBUTIN
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[Elastic License 2.0](LICENSE) — source-available, self-host friendly. See
+[docs/USE.md](docs/USE.md) for plain-language allowed uses.
+
+**Official hosted MCP:** `https://mcp.alloc-context.com/mcp`
