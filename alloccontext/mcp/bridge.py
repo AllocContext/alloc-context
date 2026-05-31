@@ -4,6 +4,9 @@ from typing import Any
 
 from alloccontext.mcp import handlers
 from alloccontext.mcp.bridge_portfolio import (
+    attach_assets_scope,
+    bridge_upstream_ready,
+    build_upstream_context_args,
     default_bridge_app_config,
     fetch_user_portfolio,
     merge_assets_omitted,
@@ -60,10 +63,13 @@ def create_bridge_server(user: UserConfig):
         validated_scope = handlers.validate_scope(scope)
         validated_freshness = handlers.validate_freshness(freshness)
         portfolio: dict[str, Any] | None = None
-        if assets is None or len(assets) == 0:
-            if user.primary_exchange_credentials() is not None:
-                portfolio = fetch_user_portfolio(user, bridge_config)
-        effective_assets = resolve_bridge_assets(
+        if (
+            (assets is None or len(assets) == 0)
+            and user.primary_exchange_credentials() is not None
+            and bridge_upstream_ready(user)
+        ):
+            portfolio = fetch_user_portfolio(user, bridge_config)
+        effective_assets, assets_scope = resolve_bridge_assets(
             user,
             bridge_config,
             assets,
@@ -72,15 +78,17 @@ def create_bridge_server(user: UserConfig):
         payload = call_upstream_tool(
             user,
             "get_market_context",
-            {
-                "scope": validated_scope,
-                "freshness": validated_freshness,
-                "assets": effective_assets,
-            },
+            build_upstream_context_args(
+                scope=validated_scope,
+                freshness=validated_freshness,
+                assets=effective_assets,
+            ),
         )
+        if payload.get("reason") == "upstream_payment_required":
+            return payload
         if portfolio is not None:
-            return merge_assets_omitted(payload, portfolio)
-        return payload
+            payload = merge_assets_omitted(payload, portfolio)
+        return attach_assets_scope(payload, assets_scope)
 
     @mcp.tool(name="get_context_bundle")
     def get_context_bundle(
@@ -92,29 +100,49 @@ def create_bridge_server(user: UserConfig):
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
         validated_freshness = handlers.validate_freshness(freshness)
+        if not bridge_upstream_ready(user):
+            effective_assets, _assets_scope = resolve_bridge_assets(
+                user,
+                bridge_config,
+                assets,
+                portfolio=None,
+            )
+            return call_upstream_tool(
+                user,
+                "get_context_bundle",
+                build_upstream_context_args(
+                    scope=validated_scope,
+                    freshness=validated_freshness,
+                    assets=effective_assets,
+                ),
+            )
         portfolio = fetch_user_portfolio(
             user,
             bridge_config,
             target_pct=_effective_target_pct(user, target_pct),
             band=_effective_band(user, band),
         )
-        effective_assets = resolve_bridge_assets(
+        effective_assets, assets_scope = resolve_bridge_assets(
             user,
             bridge_config,
             assets,
             portfolio=portfolio,
         )
-        args: dict[str, Any] = {
-            "scope": validated_scope,
-            "freshness": validated_freshness,
-            "assets": effective_assets,
-        }
-        bundle = call_upstream_tool(user, "get_context_bundle", args)
-        if bundle.get("available") is False and bundle.get("reason") == "upstream_payment_required":
+        bundle = call_upstream_tool(
+            user,
+            "get_context_bundle",
+            build_upstream_context_args(
+                scope=validated_scope,
+                freshness=validated_freshness,
+                assets=effective_assets,
+            ),
+        )
+        if bundle.get("available") is False:
             return bundle
         merged = merge_portfolio_into_bundle(bundle, portfolio)
         merged = strip_upstream_allocation_regime(merged)
-        return merge_assets_omitted(merged, portfolio)
+        merged = merge_assets_omitted(merged, portfolio)
+        return attach_assets_scope(merged, assets_scope)
 
     @mcp.tool(name="get_portfolio_state")
     def get_portfolio_state(

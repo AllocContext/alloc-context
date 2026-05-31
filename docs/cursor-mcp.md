@@ -40,7 +40,9 @@ payer config. See [user-config.md](user-config.md).
 ```
 
 Portfolio requires exchange credentials in user config. Market context calls
-the hosted upstream (x402 payer required).
+the hosted upstream (x402 payer required). When both are configured, omitting
+`assets` on `get_market_context` / `get_context_bundle` auto-scopes market
+data to your holdings (symbols only upstream). See [user-config.md](user-config.md).
 
 Examples: [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json).
 The repo [`.cursor/mcp.json`](../.cursor/mcp.json) uses the same bridge pattern.
