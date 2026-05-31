@@ -25,6 +25,9 @@ run that the merge triggered — there is no reliance on tag-push events (which 
 Pipeline order: **check** (untagged version?) → **test** → **publish-pypi** →
 **publish-mcp-registry** + **deploy** (parallel) → **finalize** (tag + release).
 
+Registry publish polls PyPI until the new version is indexed (avoids a race
+right after upload).
+
 ## Prerequisites
 
 One-time setup:
