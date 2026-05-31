@@ -9,7 +9,14 @@ MCP Registry, PyPI, and curated agent directories.
 
 ## Short blurb (copy-paste)
 
-Use this for directory forms, community posts, and registry descriptions:
+Use this for directory forms, community posts, and registry descriptions.
+
+> **On license / product refresh (ADR-007 D8 + ADR-008):** Update this blurb with
+> portfolio-first positioning, privacy pillars (D7), **Elastic License 2.0 /
+> source-available / self-host friendly**, link to `docs/USE.md`, and **official
+> hosted URL only** at `https://mcp.alloc-context.com/mcp`. Do not call the
+> project OSI open source after ELv2. Validate `llms.txt` license markers in
+> `x402_production_check.py`.
 
 ```text
 AllocContext — deterministic BTC/ETH allocation context for AI agents over MCP.
