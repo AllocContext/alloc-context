@@ -7,6 +7,7 @@ from alloccontext.mcp.bridge_portfolio import (
     default_bridge_app_config,
     fetch_user_portfolio,
     merge_portfolio_into_bundle,
+    strip_upstream_allocation_regime,
 )
 from alloccontext.mcp.setup import allocation_not_configured
 from alloccontext.mcp.upstream import call_upstream_tool
@@ -81,22 +82,22 @@ def create_bridge_server(user: UserConfig):
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
         validated_freshness = handlers.validate_freshness(freshness)
-        effective_target = _effective_target_pct(user, target_pct)
-        effective_band = _effective_band(user, band)
         args: dict[str, Any] = {
             "scope": validated_scope,
             "freshness": validated_freshness,
             "assets": assets,
         }
-        if effective_target is not None:
-            args["target_pct"] = effective_target
-        if effective_band is not None:
-            args["band"] = effective_band
         bundle = call_upstream_tool(user, "get_context_bundle", args)
         if bundle.get("available") is False and bundle.get("reason") == "upstream_payment_required":
             return bundle
-        portfolio = fetch_user_portfolio(user, bridge_config)
-        return merge_portfolio_into_bundle(bundle, portfolio)
+        portfolio = fetch_user_portfolio(
+            user,
+            bridge_config,
+            target_pct=_effective_target_pct(user, target_pct),
+            band=_effective_band(user, band),
+        )
+        merged = merge_portfolio_into_bundle(bundle, portfolio)
+        return strip_upstream_allocation_regime(merged)
 
     @mcp.tool(name="get_portfolio_state")
     def get_portfolio_state(

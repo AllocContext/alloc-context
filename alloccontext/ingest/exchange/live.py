@@ -10,6 +10,9 @@ from alloccontext.ingest.kraken_portfolio import (
     PortfolioSnapshot,
     fetch_portfolio_snapshot as fetch_kraken_snapshot,
 )
+from alloccontext.mcp.validation import validate_band, validate_target_pct
+from alloccontext.rollup.allocation_analysis import build_allocation_analysis
+from alloccontext.rollup.portfolio_payload import portfolio_dict_from_snapshot
 
 SUPPORTED_EXCHANGES = frozenset({"kraken", "coinbase"})
 
@@ -66,30 +69,20 @@ def fetch_live_portfolio_snapshot(
 def portfolio_state_from_snapshot(
     snap: PortfolioSnapshot,
     *,
-    exchange_id: ExchangeId,
-    target_pct: dict[str, float],
-    band: float,
+    exchange_id: str,
+    target_pct: dict[str, float] | None = None,
+    band: float | None = None,
 ) -> dict[str, Any]:
-    from alloccontext.rollup.band import check_allocation_band
-
-    allocation_pct = {
-        "BTC": snap.btc_pct,
-        "ETH": snap.eth_pct,
-        "CASH": snap.cash_pct,
-    }
-    band_result = check_allocation_band(allocation_pct, target_pct, float(band))
-    return {
-        "available": True,
-        "exchange": exchange_id,
-        "source": "live",
-        "nav_usd": round(float(snap.nav_usd), 2),
-        "cash_usd": round(float(snap.cash_usd), 2),
-        "allocation_pct": band_result["allocation_pct"],
-        "target_allocation_pct": target_pct,
-        "drift": band_result["drift"],
-        "rebalance_hint": band_result["hint"],
-        "outside_band": band_result["outside_band"],
-        "prices": dict(snap.prices),
-        "cash_breakdown": dict(snap.cash_breakdown),
-        "snapshot_ts": snap.ts,
-    }
+    payload = portfolio_dict_from_snapshot(
+        snap,
+        exchange_id=exchange_id,
+        source="live",
+    )
+    payload["snapshot_ts"] = snap.ts
+    if target_pct is not None:
+        payload["allocation_analysis"] = build_allocation_analysis(
+            payload.get("allocation_pct") or {},
+            validate_target_pct(target_pct),
+            validate_band(band if band is not None else 0.15),
+        )
+    return payload

@@ -12,6 +12,12 @@ PORTFOLIO_AVAILABLE_KEYS = (
     "available",
     "nav_usd",
     "cash_usd",
+    "holdings",
+    "allocation_pct",
+)
+
+ALLOCATION_ANALYSIS_KEYS = (
+    "available",
     "allocation_pct",
     "target_allocation_pct",
     "drift",
@@ -103,6 +109,13 @@ def validate_context_bundle(payload: dict[str, Any]) -> None:
         label="portfolio",
         when_available=PORTFOLIO_AVAILABLE_KEYS,
     )
+    analysis = payload.get("allocation_analysis")
+    if isinstance(analysis, dict) and analysis.get("available"):
+        assert_available_block(
+            analysis,
+            label="allocation_analysis",
+            when_available=ALLOCATION_ANALYSIS_KEYS,
+        )
     assert_available_block(
         payload["regime"],
         label="regime",
@@ -255,14 +268,19 @@ def validate_portfolio_state(payload: dict[str, Any]) -> None:
             "exchange",
             "source",
             "nav_usd",
+            "holdings",
             "allocation_pct",
-            "target_allocation_pct",
-            "drift",
-            "rebalance_hint",
             *STALENESS_KEYS,
         ),
         label="get_portfolio_state",
     )
+    analysis = payload.get("allocation_analysis")
+    if isinstance(analysis, dict) and analysis.get("available"):
+        assert_available_block(
+            analysis,
+            label="get_portfolio_state allocation_analysis",
+            when_available=ALLOCATION_ANALYSIS_KEYS,
+        )
 
 
 _VALIDATORS = {

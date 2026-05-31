@@ -9,26 +9,17 @@ from typing import Any
 
 import requests
 
+from alloccontext.ingest.asset_registry import (
+    KRAKEN_ASSET_TO_SYMBOL,
+    is_stable,
+    kraken_asset_base,
+    kraken_asset_to_symbol,
+)
 from alloccontext.ingest.exchange_http import should_retry_exchange_attempt
 
 KRAKEN_API = "https://api.kraken.com"
 
-ASSET_TO_SYMBOL = {
-    "XXBT": "BTC",
-    "XBT": "BTC",
-    "XETH": "ETH",
-    "ETH": "ETH",
-    "ZUSD": "USD",
-    "USD": "USD",
-    "USDT": "USD",
-    "USDC": "USD",
-    "DAI": "USD",
-    "PYUSD": "USD",
-    "USDE": "USD",
-    "TUSD": "USD",
-    "USDD": "USD",
-    "GUSD": "USD",
-}
+ASSET_TO_SYMBOL = KRAKEN_ASSET_TO_SYMBOL
 
 PAIR_TO_SYMBOL = {
     "XBTUSD": "BTC",
@@ -42,29 +33,35 @@ def pair_to_symbol(pair: str) -> str:
     return PAIR_TO_SYMBOL.get(pair.upper(), pair.replace("USD", "").replace("XBT", "BTC"))
 
 
-def _kraken_asset_base(asset: str) -> str:
-    return asset.split(".", 1)[0]
-
-
 def normalize_kraken_balances(raw: dict[str, Any]) -> dict[str, float]:
-    balances: dict[str, float] = {"BTC": 0.0, "ETH": 0.0, "USD": 0.0}
+    balances: dict[str, float] = {}
     for asset, amount in raw.items():
-        symbol = ASSET_TO_SYMBOL.get(_kraken_asset_base(asset))
+        qty = float(amount)
+        if qty <= 0:
+            continue
+        base = kraken_asset_base(asset)
+        symbol = kraken_asset_to_symbol(asset)
         if symbol:
-            balances[symbol] = balances.get(symbol, 0.0) + float(amount)
+            balances[symbol] = balances.get(symbol, 0.0) + qty
+        elif is_stable(base):
+            balances["USD"] = balances.get("USD", 0.0) + qty
+        else:
+            balances[base.upper()] = balances.get(base.upper(), 0.0) + qty
     return balances
 
 
 def cash_breakdown_from_raw(raw: dict[str, Any]) -> dict[str, float]:
     breakdown: dict[str, float] = {}
     for asset, amount in raw.items():
-        base = _kraken_asset_base(asset)
-        if ASSET_TO_SYMBOL.get(base) != "USD":
+        base = kraken_asset_base(asset)
+        mapped = kraken_asset_to_symbol(asset)
+        if mapped != "USD" and not is_stable(base):
             continue
         value = float(amount)
         if value <= 0:
             continue
-        breakdown[base] = breakdown.get(base, 0.0) + value
+        label = base if mapped == "USD" else mapped or base
+        breakdown[label] = breakdown.get(label, 0.0) + value
     return breakdown
 
 

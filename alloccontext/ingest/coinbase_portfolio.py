@@ -6,6 +6,7 @@ from typing import Any
 
 from alloccontext.ingest.coinbase_client import (
     CoinbaseClient,
+    CoinbaseError,
     normalize_pem_secret,
     product_to_symbol,
 )
@@ -16,6 +17,7 @@ from alloccontext.ingest.kraken_portfolio import (
     upsert_market_bars,
     upsert_portfolio_snapshot,
 )
+from alloccontext.ingest.portfolio_holdings import resolve_prices_for_balances
 
 
 def load_coinbase_credentials() -> tuple[str, str] | None:
@@ -36,12 +38,24 @@ def build_coinbase_client(spot) -> CoinbaseClient:
     )
 
 
+def _coinbase_price_for_symbol(client: CoinbaseClient, symbol: str) -> float | None:
+    try:
+        return client.get_ticker(f"{symbol}-USD")["last"]
+    except CoinbaseError:
+        return None
+
+
 def fetch_portfolio_snapshot(client: CoinbaseClient, spot) -> PortfolioSnapshot:
-    prices: dict[str, float] = {}
+    spot_prices: dict[str, float] = {}
     for product_id in spot.pairs:
         symbol = product_to_symbol(product_id)
-        prices[symbol] = client.get_ticker(product_id)["last"]
+        spot_prices[symbol] = client.get_ticker(product_id)["last"]
     balances, cash_breakdown = client.get_balances_with_breakdown()
+    prices = resolve_prices_for_balances(
+        balances,
+        spot_prices,
+        fetch_price=lambda symbol: _coinbase_price_for_symbol(client, symbol),
+    )
     snap = portfolio_from_balances(balances, prices, cash_breakdown=cash_breakdown)
     snap.ts = utc_now_iso()
     return snap

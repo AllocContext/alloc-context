@@ -27,15 +27,29 @@ def build_regime_context(
     sentiment_block: dict[str, Any] = {"available": False}
 
     if portfolio.get("available"):
-        allocation = {
-            "available": True,
-            "hint": portfolio.get("rebalance_hint"),
-            "outside_band": portfolio.get("outside_band"),
-            "max_drift": portfolio.get("max_drift"),
-            "band": portfolio.get("band"),
-            "target_allocation_pct": portfolio.get("target_allocation_pct"),
-        }
-        hint = portfolio.get("rebalance_hint")
+        analysis = portfolio.get("allocation_analysis")
+        if isinstance(analysis, dict) and analysis.get("available"):
+            allocation = {
+                "available": True,
+                "hint": analysis.get("rebalance_hint"),
+                "outside_band": analysis.get("outside_band"),
+                "max_drift": analysis.get("max_drift"),
+                "band": analysis.get("band"),
+                "target_allocation_pct": analysis.get("target_allocation_pct"),
+            }
+            hint = analysis.get("rebalance_hint")
+        elif portfolio.get("rebalance_hint"):
+            allocation = {
+                "available": True,
+                "hint": portfolio.get("rebalance_hint"),
+                "outside_band": portfolio.get("outside_band"),
+                "max_drift": portfolio.get("max_drift"),
+                "band": portfolio.get("band"),
+                "target_allocation_pct": portfolio.get("target_allocation_pct"),
+            }
+            hint = portfolio.get("rebalance_hint")
+        else:
+            hint = None
         if hint:
             hints.append(
                 {

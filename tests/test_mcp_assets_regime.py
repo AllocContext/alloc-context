@@ -40,11 +40,14 @@ def test_build_regime_context_includes_allocation_hint() -> None:
     regime = build_regime_context(
         portfolio={
             "available": True,
-            "rebalance_hint": "within_band",
-            "outside_band": False,
-            "max_drift": 0.02,
-            "band": 0.15,
-            "target_allocation_pct": {"BTC": 0.7, "ETH": 0.3, "CASH": 0.0},
+            "allocation_analysis": {
+                "available": True,
+                "rebalance_hint": "within_band",
+                "outside_band": False,
+                "max_drift": 0.02,
+                "band": 0.15,
+                "target_allocation_pct": {"BTC": 0.7, "ETH": 0.3, "CASH": 0.0},
+            },
         },
         sentiment={"available": False},
         delta={"available": False},

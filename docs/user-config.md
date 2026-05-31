@@ -28,6 +28,17 @@ as a starting point.
 | **Self-host** | `self_host: true` + `config:` | Full local ingest + MCP (no upstream paywall) |
 | **Legacy** | omit `--user-config`; no default file | Local server `config.yaml` only |
 
+## Portfolio response
+
+When exchange keys are configured, portfolio tools return `holdings[]` with
+every recognized balance (qty, USD mark, weight). Assets like HYPE are included
+when a USD price is available; unpriced symbols appear in `holdings[]` with
+null marks and in `unrecognized[]`.
+
+Allocation drift and rebalance hints are **opt-in** via `target_allocation` in
+user config or `target_pct` on the tool call. When enabled, results appear in
+`allocation_analysis`, not mixed into default portfolio fields.
+
 ## Missing configuration
 
 Tools return `available: false` with a `setup` block explaining how to enable

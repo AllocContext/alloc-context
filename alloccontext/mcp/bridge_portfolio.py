@@ -9,6 +9,10 @@ from alloccontext.ingest.exchange.live import (
     fetch_live_portfolio_snapshot,
 )
 from alloccontext.mcp.setup import portfolio_not_configured
+from alloccontext.rollup.portfolio_payload import (
+    attach_allocation_analysis_to_payload,
+    portfolio_dict_from_snapshot,
+)
 from alloccontext.user_config import UserConfig
 
 
@@ -19,7 +23,13 @@ def default_bridge_app_config() -> AppConfig:
     return load_config(example)
 
 
-def fetch_user_portfolio(user: UserConfig, config: AppConfig) -> dict[str, Any]:
+def fetch_user_portfolio(
+    user: UserConfig,
+    config: AppConfig,
+    *,
+    target_pct: dict[str, float] | None = None,
+    band: float | None = None,
+) -> dict[str, Any]:
     creds = user.primary_exchange_credentials()
     if creds is None:
         return portfolio_not_configured()
@@ -38,22 +48,20 @@ def fetch_user_portfolio(user: UserConfig, config: AppConfig) -> dict[str, Any]:
             "message": str(exc),
         }
 
-    total = float(snap.nav_usd or 0)
-    return {
-        "available": True,
-        "source": "live",
-        "exchange": creds.exchange_id,
-        "as_of": snap.ts,
-        "nav_usd": round(total, 2),
-        "cash_usd": round(float(snap.cash_usd or 0), 2),
-        "allocation_pct": {
-            "BTC": round(float(snap.btc_pct), 4),
-            "ETH": round(float(snap.eth_pct), 4),
-            "CASH": round(float(snap.cash_pct), 4),
-        },
-        "prices": dict(snap.prices),
-        "cash_breakdown": dict(snap.cash_breakdown or {}),
-    }
+    payload = portfolio_dict_from_snapshot(
+        snap,
+        exchange_id=creds.exchange_id,
+        source="live",
+    )
+    effective_target = target_pct if target_pct is not None else user.target_allocation
+    effective_band = band if band is not None else user.band
+    if effective_target is not None:
+        payload = attach_allocation_analysis_to_payload(
+            payload,
+            target_pct=effective_target,
+            band=effective_band or 0.15,
+        )
+    return payload
 
 
 def merge_portfolio_into_bundle(
@@ -61,5 +69,31 @@ def merge_portfolio_into_bundle(
     portfolio: dict[str, Any],
 ) -> dict[str, Any]:
     result = dict(bundle)
-    result["portfolio"] = portfolio
+    portfolio_body = dict(portfolio)
+    analysis = portfolio_body.pop("allocation_analysis", None)
+    result["portfolio"] = portfolio_body
+    if analysis:
+        result["allocation_analysis"] = analysis
+    return result
+
+
+def strip_upstream_allocation_regime(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Remove allocation hints from upstream regime when analysis is not local."""
+    if bundle.get("allocation_analysis"):
+        return bundle
+    regime = bundle.get("regime")
+    if not isinstance(regime, dict):
+        return bundle
+    updated = dict(regime)
+    updated["allocation"] = {"available": False}
+    hints = [
+        hint
+        for hint in updated.get("hints") or []
+        if hint.get("kind") != "allocation"
+    ]
+    updated["hints"] = hints
+    summary_parts = [hint["text"] for hint in hints[:3]]
+    updated["summary"] = " ".join(summary_parts) if summary_parts else regime.get("summary")
+    result = dict(bundle)
+    result["regime"] = updated
     return result
