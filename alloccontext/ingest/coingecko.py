@@ -38,6 +38,35 @@ def fetch_coingecko_global(*, api_key: str | None, timeout: float) -> dict[str, 
     return data
 
 
+def fetch_coingecko_simple_prices(
+    *,
+    coin_ids: list[str],
+    api_key: str | None,
+    timeout: float,
+) -> dict[str, float]:
+    if not coin_ids:
+        return {}
+    query = urllib.parse.urlencode(
+        {
+            "ids": ",".join(coin_ids),
+            "vs_currencies": "usd",
+        }
+    )
+    url = f"{COINGECKO_BASE}/simple/price?{query}"
+    payload = _fetch_json(url, headers=_headers(api_key), timeout=timeout)
+    if not isinstance(payload, dict):
+        raise ValueError("invalid coingecko simple price payload")
+    prices: dict[str, float] = {}
+    for coin_id in coin_ids:
+        row = payload.get(coin_id)
+        if not isinstance(row, dict):
+            continue
+        price = parse_float(row.get("usd"))
+        if price is not None and price > 0:
+            prices[coin_id] = float(price)
+    return prices
+
+
 def fetch_coingecko_markets(
     *,
     coin_ids: list[str],

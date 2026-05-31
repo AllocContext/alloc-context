@@ -17,7 +17,7 @@ from alloccontext.ingest.kraken_portfolio import (
     upsert_market_bars,
     upsert_portfolio_snapshot,
 )
-from alloccontext.ingest.portfolio_holdings import resolve_prices_for_balances
+from alloccontext.ingest.quote_resolver import quote_resolver_config_from_env, resolve_balance_prices
 
 
 def load_coinbase_credentials() -> tuple[str, str] | None:
@@ -51,10 +51,11 @@ def fetch_portfolio_snapshot(client: CoinbaseClient, spot) -> PortfolioSnapshot:
         symbol = product_to_symbol(product_id)
         spot_prices[symbol] = client.get_ticker(product_id)["last"]
     balances, cash_breakdown = client.get_balances_with_breakdown()
-    prices = resolve_prices_for_balances(
+    prices = resolve_balance_prices(
         balances,
         spot_prices,
-        fetch_price=lambda symbol: _coinbase_price_for_symbol(client, symbol),
+        exchange_price=lambda symbol: _coinbase_price_for_symbol(client, symbol),
+        resolver_config=quote_resolver_config_from_env(),
     )
     snap = portfolio_from_balances(balances, prices, cash_breakdown=cash_breakdown)
     snap.ts = utc_now_iso()

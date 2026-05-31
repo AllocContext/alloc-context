@@ -59,6 +59,26 @@ def test_portfolio_from_balances_includes_hype_when_priced() -> None:
     assert snap.unrecognized == []
 
 
+def test_resolve_prices_for_balances_hype_via_cmc(monkeypatch) -> None:
+    from alloccontext.ingest.portfolio_holdings import resolve_prices_for_balances
+
+    def fake_cmc(*, symbols, api_key, timeout):  # noqa: ARG001
+        return {"HYPE": {"quote": {"USD": {"price": "30.0"}}}}
+
+    monkeypatch.setattr(
+        "alloccontext.ingest.coinmarketcap.fetch_cmc_quotes",
+        fake_cmc,
+    )
+    monkeypatch.setenv("COINMARKETCAP_API_KEY", "test-key")
+
+    prices = resolve_prices_for_balances(
+        {"HYPE": 2.0, "USD": 0.0},
+        {},
+        fetch_price=lambda _symbol: None,
+    )
+    assert prices["HYPE"] == pytest.approx(30.0)
+
+
 def test_build_allocation_analysis_is_separate_block() -> None:
     analysis = build_allocation_analysis(
         {"BTC": 0.7, "ETH": 0.2, "CASH": 0.1},
