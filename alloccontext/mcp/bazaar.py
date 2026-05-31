@@ -673,3 +673,32 @@ def build_well_known_x402(
             },
         },
     }
+
+
+def build_mcp_server_card(*, version: str) -> dict[str, Any]:
+    """Smithery static server card (SEP-1649) — free metadata when POST /mcp is x402."""
+    return {
+        "serverInfo": {
+            "name": SERVICE_TITLE,
+            "version": version,
+            "description": LISTING_DESCRIPTION,
+        },
+        "authentication": {
+            "required": True,
+            "schemes": ["x402"],
+            "description": (
+                "x402 exact payment on Base mainnet (USDC or EURC) per tool call; "
+                "see /.well-known/x402.json for pricing."
+            ),
+        },
+        "tools": [
+            {
+                "name": spec["tool_name"],
+                "description": spec["description"],
+                "inputSchema": spec["input_schema"],
+            }
+            for spec in _MCP_TOOLS
+        ],
+        "resources": [],
+        "prompts": [],
+    }

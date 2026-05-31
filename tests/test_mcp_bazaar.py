@@ -6,6 +6,7 @@ from alloccontext.mcp.bazaar import (
     LISTING_DESCRIPTION,
     build_http_route_extensions,
     build_llms_txt,
+    build_mcp_server_card,
     build_mcp_tool_extensions,
     build_well_known_x402,
     mcp_tool_specs,
@@ -122,6 +123,33 @@ def test_build_well_known_x402_honors_network() -> None:
         network="eip155:8453",
     )
     assert manifest["payment"]["pricing"]["network"] == "eip155:8453"
+
+
+def test_build_mcp_server_card_lists_tools() -> None:
+    card = build_mcp_server_card(version="0.2.0")
+    assert card["serverInfo"]["version"] == "0.2.0"
+    assert card["authentication"]["required"] is True
+    names = {tool["name"] for tool in card["tools"]}
+    assert names == _EXPECTED_TOOLS
+
+
+def test_mcp_server_card_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("mcp")
+    from starlette.testclient import TestClient
+
+    from alloccontext.mcp.http import build_http_app
+
+    monkeypatch.setenv("ALLOC_CONTEXT_CONFIG", "config/config.example.yaml")
+    monkeypatch.setenv("X402_PUBLIC_URL", "https://mcp.example.com")
+    app = build_http_app(x402=False, config_path="config/config.example.yaml")
+
+    with TestClient(app) as client:
+        resp = client.get("/.well-known/mcp/server-card.json")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["tools"]) == len(_EXPECTED_TOOLS)
+    assert body["authentication"]["required"] is True
 
 
 def test_build_x402_resource_server_registers_bazaar(monkeypatch: pytest.MonkeyPatch) -> None:
