@@ -2,12 +2,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from alloccontext.constants import ALLOCATION_ASSETS, DEFAULT_VIEW_ASSETS
+from alloccontext.constants import (
+    ALLOCATION_ASSETS,
+    DEFAULT_VIEW_ASSETS,
+    MARKET_VIEW_ASSETS,
+)
 
 __all__ = [
     "ALLOCATION_ASSETS",
     "DEFAULT_VIEW_ASSETS",
+    "MARKET_VIEW_ASSETS",
     "validate_view_assets",
+    "resolve_view_assets",
+    "attach_assets_omitted",
     "filter_market_assets",
     "filter_etf_block",
     "filter_delta_market",
@@ -17,27 +24,51 @@ __all__ = [
 ]
 
 _SYMBOL_BY_ASSET = {"BTC": "btc", "ETH": "eth", "CASH": "cash"}
+_MARKET_VIEW_SET = frozenset(MARKET_VIEW_ASSETS)
+
+
+def resolve_view_assets(
+    assets: list[str] | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return market filter assets and holdings omitted from market context."""
+    if assets is None or len(assets) == 0:
+        return DEFAULT_VIEW_ASSETS, ()
+
+    requested: list[str] = []
+    seen_requested: set[str] = set()
+    supported: list[str] = []
+    seen_supported: set[str] = set()
+    omitted: list[str] = []
+
+    for raw in assets:
+        key = str(raw).strip().upper()
+        if not key or key in seen_requested:
+            continue
+        seen_requested.add(key)
+        requested.append(key)
+        if key in _MARKET_VIEW_SET:
+            if key not in seen_supported:
+                supported.append(key)
+                seen_supported.add(key)
+        elif key not in ALLOCATION_ASSETS:
+            omitted.append(key)
+
+    if supported:
+        return tuple(supported), tuple(omitted)
+    if omitted:
+        return DEFAULT_VIEW_ASSETS, tuple(omitted)
+    return DEFAULT_VIEW_ASSETS, ()
 
 
 def validate_view_assets(assets: list[str] | None) -> tuple[str, ...]:
-    if assets is None or len(assets) == 0:
-        return DEFAULT_VIEW_ASSETS
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for raw in assets:
-        key = str(raw).strip().upper()
-        if not key:
-            continue
-        if key not in ALLOCATION_ASSETS:
-            raise ValueError(
-                f"unsupported asset {raw!r}; allowed: {', '.join(ALLOCATION_ASSETS)}"
-            )
-        if key not in seen:
-            normalized.append(key)
-            seen.add(key)
-    if not normalized:
-        return DEFAULT_VIEW_ASSETS
-    return tuple(normalized)
+    filter_assets, _ = resolve_view_assets(assets)
+    return filter_assets
+
+
+def attach_assets_omitted(payload: dict[str, Any], omitted: tuple[str, ...]) -> dict[str, Any]:
+    if omitted:
+        payload["assets_omitted"] = list(omitted)
+    return payload
 
 
 def _asset_symbols(assets: tuple[str, ...]) -> set[str]:
@@ -70,7 +101,7 @@ def filter_etf_block(etf: dict[str, Any], assets: tuple[str, ...]) -> dict[str, 
     block = etf.get("assets")
     if not isinstance(block, dict):
         return etf
-    wanted = {asset for asset in assets if asset in ("BTC", "ETH")}
+    wanted = {asset for asset in assets if asset in _MARKET_VIEW_SET}
     if not wanted:
         return etf
     filtered = {key: value for key, value in block.items() if key.upper() in wanted}
@@ -116,7 +147,7 @@ def filter_macro_etf(macro: dict[str, Any], assets: tuple[str, ...]) -> dict[str
     etf = macro.get("etf")
     if not isinstance(etf, dict):
         return macro
-    wanted = {asset for asset in assets if asset in ("BTC", "ETH")}
+    wanted = {asset for asset in assets if asset in _MARKET_VIEW_SET}
     if not wanted:
         return macro
     filtered = {key: value for key, value in etf.items() if key.upper() in wanted}

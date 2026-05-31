@@ -6,6 +6,7 @@ from alloccontext.mcp.assets import (
     apply_assets_filter_to_bundle,
     filter_delta_market,
     filter_market_assets,
+    resolve_view_assets,
     validate_view_assets,
 )
 from alloccontext.mcp.handlers import get_context_bundle, get_rebalance_plan
@@ -18,9 +19,29 @@ def test_validate_view_assets_defaults_to_btc_eth() -> None:
     assert validate_view_assets([]) == ("BTC", "ETH")
 
 
-def test_validate_view_assets_rejects_unknown_asset() -> None:
-    with pytest.raises(ValueError, match="unsupported asset"):
-        validate_view_assets(["DOGE"])
+def test_validate_view_assets_ignores_unknown_asset() -> None:
+    assert validate_view_assets(["BTC", "HYPE"]) == ("BTC",)
+    assert resolve_view_assets(["BTC", "HYPE"]) == (("BTC",), ("HYPE",))
+
+
+def test_resolve_view_assets_hype_only_falls_back_to_default() -> None:
+    assert resolve_view_assets(["HYPE"]) == (("BTC", "ETH"), ("HYPE",))
+
+
+def test_get_market_context_ignores_unsupported_portfolio_asset(conn, config) -> None:
+    from alloccontext.mcp.handlers import get_market_context
+
+    payload = get_market_context(
+        conn,
+        config,
+        scope="daily",
+        freshness="cached",
+        assets=["BTC", "ETH", "HYPE"],
+    )
+    assert payload["assets"] == ["BTC", "ETH"]
+    assert payload["assets_omitted"] == ["HYPE"]
+    assert "market" in payload
+    assert "sentiment" in payload
 
 
 def test_filter_market_assets_subset() -> None:

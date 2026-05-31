@@ -55,4 +55,4 @@ def test_mcp_http_systemd_unit() -> None:
 def test_remote_install_substitutes_environment_file() -> None:
     text = (REPO_ROOT / "deploy/remote-install.sh").read_text()
     assert "EnvironmentFile=/.*" in text
-    assert "EnvironmentFile=${ENV_FILE}" in text
+    assert "EnvironmentFile=-${ENV_FILE}" in text

@@ -10,14 +10,16 @@
 #
 # Optional:
 #   VPS_USER=root
-#   ALLOC_CONTEXT_REMOTE=/opt/alloc-context
+#   ALLOC_CONTEXT_REMOTE=/opt/trading/alloc-context
+#   ALLOC_CONTEXT_ENV_FILE=/opt/trading/shared/.env
 #   DEPLOY_FORCE=1   # skip origin/main confirmation prompt
 set -euo pipefail
 
 VPS_HOST="${VPS_HOST:-${VPS_IP:-}}"
 SSH_KEY="${SSH_KEY:-}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REMOTE="${ALLOC_CONTEXT_REMOTE:-/opt/alloc-context}"
+REMOTE="${ALLOC_CONTEXT_REMOTE:-/opt/trading/alloc-context}"
+ENV_FILE="${ALLOC_CONTEXT_ENV_FILE:-}"
 
 if [[ -z "${VPS_HOST}" ]]; then
   echo "error: set VPS_HOST (or VPS_IP) to the deploy target" >&2
@@ -58,8 +60,12 @@ rsync -avz --delete \
   "${REPO_ROOT}/" "${USER}@${VPS_HOST}:${REMOTE}/"
 
 echo "==> pip install -e, enable systemd, restart MCP"
+remote_env="DEPLOYED_SHA=${LOCAL_SHA} ALLOC_CONTEXT_REMOTE=${REMOTE}"
+if [[ -n "${ENV_FILE}" ]]; then
+  remote_env="${remote_env} ALLOC_CONTEXT_ENV_FILE=${ENV_FILE}"
+fi
 ssh -i "${SSH_KEY}" -o IdentitiesOnly=yes "${USER}@${VPS_HOST}" \
-  "DEPLOYED_SHA=${LOCAL_SHA} ALLOC_CONTEXT_REMOTE=${REMOTE} bash -s" \
+  "${remote_env} bash -s" \
   < "${REPO_ROOT}/deploy/remote-install.sh"
 
 echo "==> done (state/, config/config.yaml, and .env on host unchanged; deployed ${LOCAL_SHA:0:7})"

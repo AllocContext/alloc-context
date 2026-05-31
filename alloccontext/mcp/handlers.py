@@ -20,8 +20,9 @@ from alloccontext.rollup.sentiment import build_sentiment_context
 from alloccontext.mcp.assets import (
     apply_assets_filter_to_bundle,
     apply_assets_filter_to_market_payload,
+    attach_assets_omitted,
     filter_market_assets,
-    validate_view_assets,
+    resolve_view_assets,
 )
 from alloccontext.mcp.staleness import with_data_staleness, with_staleness
 from alloccontext.mcp.validation import validate_band, validate_nav_usd, validate_target_pct
@@ -161,7 +162,7 @@ def get_context_at(
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
 ) -> dict[str, Any]:
-    view_assets = validate_view_assets(assets)
+    view_assets, assets_omitted = resolve_view_assets(assets)
     try:
         resolved = resolve_context_snapshot_as_of(
             conn,
@@ -194,7 +195,7 @@ def get_context_at(
     bundle["snapshot_as_of"] = resolved
     bundle["requested_as_of"] = as_of
     bundle["match"] = match
-    return bundle
+    return attach_assets_omitted(bundle, assets_omitted)
 
 
 def get_context_delta(
@@ -206,7 +207,7 @@ def get_context_delta(
     current_as_of: str | None = None,
     assets: list[str] | None = None,
 ) -> dict[str, Any]:
-    view_assets = validate_view_assets(assets)
+    view_assets, assets_omitted = resolve_view_assets(assets)
     try:
         prior_resolved = resolve_context_snapshot_as_of(
             conn,
@@ -249,7 +250,7 @@ def get_context_delta(
     diff["scope"] = scope
     diff["prior_snapshot_as_of"] = prior_resolved
     diff["current_snapshot_as_of"] = current_resolved
-    return diff
+    return attach_assets_omitted(diff, assets_omitted)
 
 
 def check_allocation_bands(
@@ -294,7 +295,7 @@ def get_context_bundle(
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
 ) -> dict[str, Any]:
-    view_assets = validate_view_assets(assets)
+    view_assets, assets_omitted = resolve_view_assets(assets)
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -336,7 +337,7 @@ def get_context_bundle(
     with_data_staleness(payload, now=now)
     if ingest_result is not None:
         payload["ingest"] = _ingest_summary(ingest_result)
-    return payload
+    return attach_assets_omitted(payload, assets_omitted)
 
 
 def get_market_context(
@@ -348,7 +349,7 @@ def get_market_context(
     freshness: Freshness = "cached",
     assets: list[str] | None = None,
 ) -> dict[str, Any]:
-    view_assets = validate_view_assets(assets)
+    view_assets, assets_omitted = resolve_view_assets(assets)
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -405,7 +406,7 @@ def get_market_context(
     with_data_staleness(payload, now=now)
     if ingest_result is not None:
         payload["ingest"] = _ingest_summary(ingest_result)
-    return payload
+    return attach_assets_omitted(payload, assets_omitted)
 
 
 def get_rebalance_plan(
