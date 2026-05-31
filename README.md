@@ -1,5 +1,8 @@
 # AllocContext
 
+[![smithery badge](https://smithery.ai/badge/@negillett/alloc-context)](https://smithery.ai/server/@negillett/alloc-context)
+[![Glama MCP server](https://glama.ai/mcp/servers/negillett/alloc-context/badges/score.svg)](https://glama.ai/mcp/servers/negillett/alloc-context)
+
 mcp-name: io.github.negillett/alloc-context
 
 **Portfolio-aware crypto context for agents** — discover holdings, market,
