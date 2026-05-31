@@ -1,19 +1,52 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from alloccontext.config import AppConfig, load_config
+from alloccontext.ingest.asset_registry import is_stable, normalize_canonical_symbol
 from alloccontext.ingest.exchange.live import (
     LivePortfolioError,
     fetch_live_portfolio_snapshot,
 )
+from alloccontext.mcp.payer import PayerKeyError, resolve_payer_private_key
 from alloccontext.mcp.setup import portfolio_not_configured
 from alloccontext.rollup.portfolio_payload import (
     attach_allocation_analysis_to_payload,
     portfolio_dict_from_snapshot,
 )
 from alloccontext.user_config import UserConfig
+
+AssetsScope = Literal["explicit", "portfolio", "default", "portfolio_unavailable"]
+
+UPSTREAM_CONTEXT_ARG_KEYS = frozenset({"scope", "freshness", "assets"})
+
+
+def bridge_upstream_ready(user: UserConfig) -> bool:
+    """True when a payer key is configured for hosted upstream calls."""
+    try:
+        return resolve_payer_private_key(user) is not None
+    except PayerKeyError:
+        return False
+
+
+def build_upstream_context_args(
+    *,
+    scope: str,
+    freshness: str,
+    assets: list[str] | None,
+) -> dict[str, Any]:
+    """Privacy-safe args for bridge → hosted market/bundle tools (symbols only)."""
+    args = {"scope": scope, "freshness": freshness, "assets": assets}
+    if set(args) - UPSTREAM_CONTEXT_ARG_KEYS:
+        raise ValueError("upstream context args must be scope, freshness, assets only")
+    return args
+
+
+def attach_assets_scope(payload: dict[str, Any], scope: AssetsScope) -> dict[str, Any]:
+    result = dict(payload)
+    result["assets_scope"] = scope
+    return result
 
 
 def default_bridge_app_config() -> AppConfig:
@@ -62,6 +95,94 @@ def fetch_user_portfolio(
             band=effective_band or 0.15,
         )
     return payload
+
+
+def market_symbols_from_portfolio(portfolio: dict[str, Any]) -> list[str]:
+    """Canonical market scope symbols from a portfolio payload (no stables/cash)."""
+    if not portfolio.get("available"):
+        return []
+
+    symbols: list[str] = []
+    seen: set[str] = set()
+
+    for row in portfolio.get("holdings") or []:
+        if not isinstance(row, dict):
+            continue
+        symbol = normalize_canonical_symbol(str(row.get("symbol") or ""))
+        if not symbol or symbol in {"USD", "CASH"} or is_stable(symbol):
+            continue
+        if symbol not in seen:
+            symbols.append(symbol)
+            seen.add(symbol)
+
+    for raw in portfolio.get("unrecognized") or []:
+        symbol = normalize_canonical_symbol(str(raw))
+        if not symbol or symbol in seen or symbol in {"USD", "CASH"} or is_stable(symbol):
+            continue
+        symbols.append(symbol)
+        seen.add(symbol)
+
+    return symbols
+
+
+def portfolio_market_symbols(
+    user: UserConfig,
+    config: AppConfig,
+    *,
+    portfolio: dict[str, Any] | None = None,
+) -> list[str]:
+    """Holdings → upstream market `assets` list; empty when portfolio unavailable."""
+    payload = portfolio if portfolio is not None else fetch_user_portfolio(user, config)
+    return market_symbols_from_portfolio(payload)
+
+
+def resolve_bridge_assets(
+    user: UserConfig,
+    config: AppConfig,
+    assets: list[str] | None,
+    *,
+    portfolio: dict[str, Any] | None = None,
+) -> tuple[list[str] | None, AssetsScope]:
+    """Effective upstream assets and how they were chosen."""
+    if assets is not None and len(assets) > 0:
+        return assets, "explicit"
+    if user.primary_exchange_credentials() is None:
+        return assets, "default"
+    if portfolio is None:
+        return None, "default"
+    if not portfolio.get("available"):
+        return None, "portfolio_unavailable"
+    derived = market_symbols_from_portfolio(portfolio)
+    if derived:
+        return derived, "portfolio"
+    return None, "default"
+
+
+def merge_assets_omitted(
+    payload: dict[str, Any],
+    portfolio: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Combine upstream `assets_omitted` with local portfolio `unrecognized[]`."""
+    omitted: list[str] = [
+        normalize_canonical_symbol(str(symbol))
+        for symbol in payload.get("assets_omitted") or []
+        if str(symbol).strip()
+    ]
+    seen = set(omitted)
+
+    if portfolio and portfolio.get("available"):
+        for raw in portfolio.get("unrecognized") or []:
+            symbol = normalize_canonical_symbol(str(raw))
+            if symbol and symbol not in seen:
+                omitted.append(symbol)
+                seen.add(symbol)
+
+    result = dict(payload)
+    if omitted:
+        result["assets_omitted"] = omitted
+    else:
+        result.pop("assets_omitted", None)
+    return result
 
 
 def merge_portfolio_into_bundle(

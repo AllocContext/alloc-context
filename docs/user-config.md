@@ -39,6 +39,29 @@ Allocation drift and rebalance hints are **opt-in** via `target_allocation` in
 user config or `target_pct` on the tool call. When enabled, results appear in
 `allocation_analysis`, not mixed into default portfolio fields.
 
+## Bridge market auto-scoping (Path A)
+
+When exchange keys and an x402 payer are configured, omitting `assets` on
+`get_market_context` or `get_context_bundle` derives upstream symbol scope from
+local holdings (excluding stables/cash). Only **symbol strings** are sent to the
+hosted server — never quantities, NAV, or credentials.
+
+Responses include `assets_scope`:
+
+| Value | Meaning |
+|-------|---------|
+| `portfolio` | Symbols derived from live holdings |
+| `explicit` | You passed `assets` on the tool call |
+| `default` | Hosted default (`BTC`/`ETH`) — no keys or empty holdings |
+| `portfolio_unavailable` | Exchange fetch failed; fell back to hosted default |
+
+If portfolio fetch fails, market context may not include your alts even though
+holdings appear in `get_portfolio_state`. Configure x402 before exchange fetch
+runs on bundle calls (no exchange hit when payer is missing).
+
+`get_context_at` and `get_context_delta` do **not** auto-scope — pass `assets`
+when you need alt filters on historical reads.
+
 ## Missing configuration
 
 Tools return `available: false` with a `setup` block explaining how to enable
