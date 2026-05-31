@@ -20,11 +20,13 @@ bandit -r alloccontext -c .bandit.yaml -ll
 pip-audit
 ```
 
-Or from the workspace root:
+Or from the AllocContext workspace monorepo (when using the parent checkout):
 
 ```bash
 scripts/run-quality-gates.sh alloc-context
 ```
+
+When working from a standalone clone of this repo, use the commands above only.
 
 ## Bandit skips
 

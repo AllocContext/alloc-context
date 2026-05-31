@@ -16,6 +16,7 @@ from _script_runtime import repo_root, require_hosted_python, script_env
 TOOLS = (
     "get_market_context",
     "get_context_bundle",
+    "get_portfolio_state",
     "get_rebalance_plan",
     "check_allocation_band",
     "get_context_at",

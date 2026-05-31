@@ -133,6 +133,8 @@ HTTP MCP + x402: [mcp-http.md](docs/mcp-http.md). CLI entry point:
 | [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |
 | [docs/data-sources.md](docs/data-sources.md) | Ingest sources |
 | [docs/distribution.md](docs/distribution.md) | GitHub, PyPI, MCP Registry, directories |
+| [docs/publishing.md](docs/publishing.md) | Release workflow and version bumps |
+| [docs/security-ci.md](docs/security-ci.md) | CI coverage, Bandit, and pip-audit gates |
 
 ## Contributing
 

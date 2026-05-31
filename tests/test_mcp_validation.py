@@ -2,8 +2,21 @@ from __future__ import annotations
 
 import pytest
 
-from alloccontext.mcp.handlers import check_band, get_rebalance_plan
+from alloccontext.mcp.handlers import check_band, get_rebalance_plan, validate_freshness
 from alloccontext.mcp.validation import McpValidationError, validate_band, validate_target_pct
+
+
+def test_validate_freshness_cached() -> None:
+    assert validate_freshness("cached") == "cached"
+
+
+def test_validate_freshness_live() -> None:
+    assert validate_freshness("live") == "live"
+
+
+def test_validate_freshness_rejects_unknown() -> None:
+    with pytest.raises(ValueError, match="freshness must be"):
+        validate_freshness("stale")
 
 
 def test_validate_target_pct_requires_sum_to_one() -> None:
