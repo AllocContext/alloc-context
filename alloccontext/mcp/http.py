@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 from collections.abc import AsyncIterator
 from typing import Any
@@ -16,6 +17,7 @@ from alloccontext.mcp.bazaar import (
     build_well_known_x402,
     resolve_public_base_url,
 )
+from alloccontext.mcp.glama import build_glama_well_known
 from alloccontext.mcp.server import create_server
 from alloccontext.mcp.x402_config import (
     CDP_FACILITATOR_URL,
@@ -129,6 +131,17 @@ def _well_known_mcp_server_card() -> JSONResponse:
     return JSONResponse(build_mcp_server_card(version=__version__))
 
 
+def _well_known_glama() -> JSONResponse:
+    public_base = resolve_public_base_url()
+    if not public_base:
+        return JSONResponse({"error": "discovery metadata unavailable"}, status_code=404)
+    try:
+        payload = build_glama_well_known()
+    except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404)
+    return JSONResponse(payload)
+
+
 def _is_loopback_host(host: str) -> bool:
     normalized = host.strip().lower()
     return normalized in {"127.0.0.1", "localhost", "::1"}
@@ -165,6 +178,7 @@ def build_http_app(
         Route("/llms.txt", lambda req: _llms_txt(settings)),
         Route("/.well-known/x402.json", lambda req: _well_known_x402(settings)),
         Route("/.well-known/mcp/server-card.json", lambda req: _well_known_mcp_server_card()),
+        Route("/.well-known/glama.json", lambda req: _well_known_glama()),
     ]
 
     if not settings.enabled:
