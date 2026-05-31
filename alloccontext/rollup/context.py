@@ -67,6 +67,7 @@ def build_context_bundle(
     rollup: RollupConfig,
     as_of: datetime | None = None,
     save_snapshot: bool = False,
+    alt_symbols: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     now = (as_of or datetime.now(timezone.utc)).replace(microsecond=0)
 
@@ -82,7 +83,7 @@ def build_context_bundle(
     prior_context = _load_prior_context(conn, scope=scope, prior_as_of=prior_as_of)
 
     portfolio = build_portfolio_context(conn, config)
-    market = build_market_context(conn, config)
+    market = build_market_context(conn, config, alt_symbols=alt_symbols)
     sentiment = build_sentiment_context(conn, config, rollup, now=now)
     macro = build_macro_context(conn, config, now=now, scope=scope)
     delta = build_delta_context(

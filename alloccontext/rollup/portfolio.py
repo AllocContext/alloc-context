@@ -8,6 +8,8 @@ from alloccontext.ingest.portfolio_holdings import (
     band_allocation_pct,
     legacy_holdings_from_allocation,
 )
+from alloccontext.ingest.alt_quote_store import latest_alt_quotes
+from alloccontext.ingest.asset_registry import BAND_ASSETS
 from alloccontext.rollup.breadth import build_market_breadth_context
 
 
@@ -61,9 +63,16 @@ def build_portfolio_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
     return payload
 
 
-def build_market_context(conn: sqlite3.Connection, config) -> dict[str, Any]:
+def build_market_context(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    alt_symbols: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
     spot = config.exchanges.primary_spot()
     assets = build_spot_market_assets(conn, spot)
+    if alt_symbols:
+        assets.update(build_alt_market_assets(conn, alt_symbols))
     breadth = build_market_breadth_context(conn)
 
     if not assets and not breadth.get("available"):
@@ -114,4 +123,29 @@ def build_spot_market_assets(conn: sqlite3.Connection, spot) -> dict[str, Any]:
             "price_usd": round(latest, 2),
             "change_pct": {"1_bar": change_pct},
         }
+    return assets
+
+
+def build_alt_market_assets(
+    conn: sqlite3.Connection,
+    alt_symbols: tuple[str, ...],
+) -> dict[str, Any]:
+    wanted = [
+        symbol.upper()
+        for symbol in alt_symbols
+        if symbol.upper() not in BAND_ASSETS
+    ]
+    if not wanted:
+        return {}
+
+    assets: dict[str, Any] = {}
+    for symbol, quote in latest_alt_quotes(conn, wanted).items():
+        block: dict[str, Any] = {
+            "pair": f"{symbol}-USD",
+            "price_usd": round(float(quote.price_usd), 2),
+            "source": quote.source,
+        }
+        if quote.change_pct_24h is not None:
+            block["change_pct"] = {"24h": round(float(quote.change_pct_24h), 2)}
+        assets[symbol.lower()] = block
     return assets

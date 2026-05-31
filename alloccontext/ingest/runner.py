@@ -110,6 +110,13 @@ def run_ingest(
             )
         )
 
+    if not dry_run:
+        from alloccontext.ingest.alt_quotes import refresh_scheduled_alt_quotes
+
+        alt_result = refresh_scheduled_alt_quotes(conn, config)
+        results["alt_quotes"] = alt_result
+        counts["alt_quotes"] = int(alt_result.get("rows") or 0)
+
     outcome = summarize_ingest_outcome(errors, config.ingest.optional_sources)
     pruned: dict[str, int] = {}
     snapshots: dict[str, str] = {}

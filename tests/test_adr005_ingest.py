@@ -41,19 +41,25 @@ def test_run_ingest_fatal_when_kraken_primary_missing_credentials(
 
 def test_live_market_context_fail_closed(config, conn, monkeypatch) -> None:
     monkeypatch.setattr(
-        "alloccontext.ingest.runner.run_ingest",
-        lambda _c, _cfg: {
+        "alloccontext.ingest.alt_quotes.refresh_alt_quotes",
+        lambda _c, _cfg, symbols: {
             "ok": False,
-            "fatal_errors": {"fred": "down"},
-            "errors": {"fred": "down"},
-            "counts": {},
+            "rows": 0,
+            "symbols_requested": symbols,
+            "symbols_fetched": [],
+            "symbols_missing": list(symbols),
         },
     )
     from alloccontext.mcp.handlers import get_market_context
 
     from alloccontext.mcp.contracts import validate_tool_response
 
-    payload = get_market_context(conn, config, freshness="live")
+    payload = get_market_context(
+        conn,
+        config,
+        freshness="live",
+        assets=["HYPE"],
+    )
     assert payload.get("available") is False
-    assert payload.get("reason") == "live_ingest_failed"
+    assert payload.get("reason") == "live_alt_quote_refresh_failed"
     validate_tool_response("get_market_context", payload)

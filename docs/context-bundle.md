@@ -98,8 +98,14 @@ sentiment, and delta. No LLM.
 | `assets.btc.price_usd` | Exchange OHLC | `98500` |
 | `assets.btc.change_pct.1_bar` | OHLC | `-1.2` |
 | `assets.eth.change_pct.1_bar` | OHLC | `-0.8` |
+| `assets.hype.price_usd` | Alt quote snapshot (CMC/CG) | `25.1` |
+| `assets.hype.change_pct.24h` | Alt quote snapshot | `1.2` |
+| `assets.hype.source` | Alt quote snapshot | `"coingecko"` |
 | `breadth.feeds.coingecko` | CoinGecko ingest | dominance, rank, 24h change |
 | `breadth.feeds.coinmarketcap` | CMC ingest | same fields (cross-check) |
+
+Band assets (BTC/ETH) use exchange OHLC bars. Alt holdings (e.g. HYPE) use
+cached quote snapshots when available; missing alts appear in `assets_omitted[]`.
 
 Use the `assets` tool argument to filter market/ETF fields (default `BTC`, `ETH`).
 

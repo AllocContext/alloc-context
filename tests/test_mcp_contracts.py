@@ -63,23 +63,24 @@ def test_get_market_context_contract(conn, config) -> None:
     validate_tool_response("get_market_context", payload)
 
 
-def test_live_ingest_failure_contracts(config, conn, monkeypatch) -> None:
-    ingest_result = {
+def test_live_alt_refresh_failure_contracts(config, conn, monkeypatch) -> None:
+    refresh_result = {
         "ok": False,
-        "fatal_errors": {"kraken": "missing_kraken_credentials"},
-        "errors": {"kraken": "missing_kraken_credentials"},
-        "counts": {},
+        "rows": 0,
+        "symbols_requested": ["HYPE"],
+        "symbols_fetched": [],
+        "symbols_missing": ["HYPE"],
     }
     monkeypatch.setattr(
-        "alloccontext.ingest.runner.run_ingest",
-        lambda _c, _cfg: ingest_result,
+        "alloccontext.ingest.alt_quotes.refresh_alt_quotes",
+        lambda _c, _cfg, symbols: refresh_result,
     )
-    bundle = get_context_bundle(conn, config, freshness="live")
-    market = get_market_context(conn, config, freshness="live")
+    bundle = get_context_bundle(conn, config, freshness="live", assets=["HYPE"])
+    market = get_market_context(conn, config, freshness="live", assets=["HYPE"])
     validate_tool_response("get_context_bundle", bundle)
     validate_tool_response("get_market_context", market)
-    assert bundle["reason"] == "live_ingest_failed"
-    assert market["reason"] == "live_ingest_failed"
+    assert bundle["reason"] == "live_alt_quote_refresh_failed"
+    assert market["reason"] == "live_alt_quote_refresh_failed"
 
 
 def test_get_rebalance_plan_contract() -> None:

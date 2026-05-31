@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -137,6 +137,24 @@ CREATE TABLE IF NOT EXISTS fred_observations (
 
 CREATE INDEX IF NOT EXISTS idx_fred_observations_series_date
   ON fred_observations(series_id, obs_date);
+
+CREATE TABLE IF NOT EXISTS alt_quote_snapshots (
+  symbol TEXT NOT NULL,
+  snapshot_ts TEXT NOT NULL,
+  price_usd REAL NOT NULL,
+  change_pct_24h REAL,
+  source TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (symbol, snapshot_ts)
+);
+
+CREATE INDEX IF NOT EXISTS idx_alt_quote_snapshots_symbol_ts
+  ON alt_quote_snapshots(symbol, snapshot_ts DESC);
+
+CREATE TABLE IF NOT EXISTS alt_quote_scope (
+  symbol TEXT PRIMARY KEY,
+  last_requested_at TEXT NOT NULL
+);
 """
 
 
@@ -185,6 +203,26 @@ def migrate(conn: sqlite3.Connection) -> None:
     elif int(row["value"]) < SCHEMA_VERSION:
         if int(row["value"]) <= 7:
             _migrate_brief_archive_to_context_snapshots(conn)
+        if int(row["value"]) < 9:
+            conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS alt_quote_snapshots (
+                  symbol TEXT NOT NULL,
+                  snapshot_ts TEXT NOT NULL,
+                  price_usd REAL NOT NULL,
+                  change_pct_24h REAL,
+                  source TEXT NOT NULL,
+                  fetched_at TEXT NOT NULL,
+                  PRIMARY KEY (symbol, snapshot_ts)
+                );
+                CREATE INDEX IF NOT EXISTS idx_alt_quote_snapshots_symbol_ts
+                  ON alt_quote_snapshots(symbol, snapshot_ts DESC);
+                CREATE TABLE IF NOT EXISTS alt_quote_scope (
+                  symbol TEXT PRIMARY KEY,
+                  last_requested_at TEXT NOT NULL
+                );
+                """
+            )
         conn.execute(
             "UPDATE schema_meta SET value = ? WHERE key = 'version'",
             (str(SCHEMA_VERSION),),
