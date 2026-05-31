@@ -49,7 +49,8 @@ configure — edit the `.service` files or override with drop-ins for your layou
 |-------|---------|---------|
 | Hourly | ingest | Refresh SQLite cache for MCP context tools |
 
-Run MCP separately (stdio for Cursor, or HTTP + x402 for agents). See
+Run MCP separately (stdio bridge via [cursor-mcp.md](cursor-mcp.md), self-host
+stdio, or HTTP + x402 for agents). See
 [docs/mcp-http.md](mcp-http.md).
 
 ## CI release and deploy

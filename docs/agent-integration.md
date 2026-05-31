@@ -20,21 +20,18 @@ without running ingest locally. Payment is per-call x402 on Base mainnet.
 Pricing: **$0.02** for cached context and math tools; **$0.05** for
 `freshness=live` or `get_portfolio_state`. See [mcp.md](mcp.md).
 
-## Cursor: Bazaar discovery + local stdio
+## Cursor: Bazaar discovery + local MCP
 
-For unpaid local tools, keep stdio AllocContext. Add the CDP discovery MCP to
-search Bazaar and call paid tools when needed:
+**Default (bridge):** see [cursor-mcp.md](cursor-mcp.md) — `alloc-context mcp
+--user-config ~/.config/alloc-context/user.yaml` with optional x402 payer.
+
+Add the CDP discovery MCP to search Bazaar and call paid hosted tools:
 
 ```json
 {
   "mcpServers": {
     "x402-discovery": {
       "url": "https://api.cdp.coinbase.com/platform/v2/x402/discovery/mcp"
-    },
-    "alloc-context": {
-      "command": "${workspaceFolder}/.venv/bin/alloc-context",
-      "args": ["mcp"],
-      "cwd": "${workspaceFolder}"
     }
   }
 }
@@ -43,12 +40,12 @@ search Bazaar and call paid tools when needed:
 Example agent flow:
 
 1. Use `search_resources` on the discovery MCP with a query like
-   `BTC ETH allocation drift` or `rebalance context`.
+   `portfolio holdings context` or `crypto market sentiment MCP`.
 2. Confirm AllocContext (`mcp.alloc-context.com`) appears in results.
 3. Call `get_context_bundle` via an x402 HTTP client against the hosted URL
    (see below), or use discovery `proxy_tool_call` if your client supports it.
 
-More discovery setup: [mcp-discovery.md](mcp-discovery.md).
+For unpaid local bridge or self-host stdio, see [cursor-mcp.md](cursor-mcp.md).
 
 ## x402 HTTP client (programmatic)
 

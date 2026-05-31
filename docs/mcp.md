@@ -1,7 +1,7 @@
 # MCP product
 
 AllocContext is an **agent-native portfolio context API**: discover holdings,
-market, sentiment, macro, and regime; optional BTC/ETH allocation analysis —
+market, sentiment, macro, and regime; optional allocation analysis —
 exposed as MCP tools, with a paid HTTP endpoint via x402 on Base.
 
 This repo is **facts only** — agents narrate JSON with their own model. Email,
@@ -11,7 +11,8 @@ LLM synthesis, and alert delivery are out of scope here.
 
 | Surface | Audience |
 |---------|----------|
-| **MCP (stdio)** | Local development and Cursor |
+| **MCP (stdio bridge)** | Cursor and local agents (default) |
+| **MCP (stdio self-host)** | Local ingest dev and operator-style |
 | **MCP (HTTP + x402)** | Agents and wallets on the public internet |
 | **Bazaar / discovery** | Agent search via CDP and `/.well-known/x402.json` |
 | **CLI + ingest** | Self-hosted cache for MCP context tools |
@@ -26,15 +27,15 @@ Shared optional args on context tools:
 |-----|-------|---------|---------|
 | `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields |
 | `target_pct` | `get_context_bundle` | omitted | Opt-in: attach `allocation_analysis` drift math |
-| `band` | `get_context_bundle`, `get_rebalance_plan` | server config / none | Drift band width (e.g. `0.15`) |
+| `band` | `get_context_bundle`, `get_rebalance_plan` | omitted / none | Drift band width when used with `target_pct` |
 
-Math tools require explicit `target_pct` and `band` (or use `get_context_bundle`
-for cached portfolio drift with optional overrides).
+Math tools require explicit `target_pct` and `band`. On `get_context_bundle`,
+pass `target_pct` (and optional `band`) to attach `allocation_analysis`.
 
 | Tool | Input | Output |
 |------|-------|--------|
 | `get_market_context` | `scope`, optional `freshness`, optional `assets` | Sentiment, macro, ETF, breadth, `market`, `as_of`, `age_seconds` |
-| `get_context_bundle` | `scope`, optional `freshness`, optional `assets`, optional `target_pct`, optional `band` | Full ContextBundle including `regime` hints |
+| `get_context_bundle` | `scope`, optional `freshness`, optional `assets`, optional `target_pct`, optional `band` | Full ContextBundle; optional `allocation_analysis` when targets supplied |
 | `get_context_at` | `as_of`, optional `scope`, `match`, optional `assets` | Saved snapshot from ingest history |
 | `get_context_delta` | `prior_as_of`, optional `scope`, optional `current_as_of`, optional `assets` | `notable_shifts` between two bundles |
 | `get_rebalance_plan` | `allocation_pct`, `target_pct`, `nav_usd`, optional `band` | USD deltas, move lines, optional `band_check` |

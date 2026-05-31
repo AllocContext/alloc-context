@@ -8,6 +8,7 @@ horizon:
   days: 90
 
 portfolio:
+  # Dev defaults for optional allocation_analysis on self-host MCP.
   target_allocations:
     BTC: 0.70
     ETH: 0.30

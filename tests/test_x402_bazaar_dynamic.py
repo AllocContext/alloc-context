@@ -27,7 +27,7 @@ def test_bazaar_index_tags_within_cdp_limit() -> None:
 
 def test_listing_description_includes_search_phrases() -> None:
     lowered = LISTING_DESCRIPTION.lower()
-    for phrase in ("allocation drift", "rebalance", "fear & greed", "etf flows"):
+    for phrase in ("holdings", "allocation analysis", "rebalance", "fear & greed", "etf flows"):
         assert phrase in lowered
 
 
@@ -95,7 +95,7 @@ def test_alloc_http_server_selects_tool_bazaar_extension(
     route_config, _pattern = match
     tool_ext = build_mcp_tool_extensions()["get_rebalance_plan"]
     assert route_config.extensions == tool_ext
-    assert "rebalance" in (route_config.description or "").lower()
+    assert "allocation" in (route_config.description or "").lower()
 
 
 def test_discovery_keyword_markers_in_llms_txt() -> None:
