@@ -47,8 +47,9 @@ JSON document at a point in time. See [context-bundle.md](context-bundle.md).
 
 Sections:
 
-- `portfolio` — NAV, allocation, drift vs target, P&L windows
-- `market` — BTC/ETH OHLC-derived signals
+- `portfolio` — NAV, `holdings[]`, band weights (`allocation_pct`), P&L windows
+- `allocation_analysis` — opt-in drift vs target when `target_pct` supplied
+- `market` — spot OHLC-derived signals (default BTC/ETH filter via `assets`)
 - `sentiment` — Kalshi cluster, F&G, optional breadth
 - `macro` — calendar events past 24h / next 7d, ETF flows when enabled
 - `delta` — changes since prior saved snapshot

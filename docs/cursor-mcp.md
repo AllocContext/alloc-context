@@ -43,16 +43,12 @@ Portfolio requires exchange credentials in user config. Market context calls
 the hosted upstream (x402 payer required).
 
 Examples: [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json).
+The repo [`.cursor/mcp.json`](../.cursor/mcp.json) uses the same bridge pattern.
 
 ## Self-host ingest (Path C)
 
-Requires a local SQLite DB populated by ingest:
-
-```bash
-python -m alloccontext ingest
-```
-
-Copy [cursor-mcp.example.json](cursor-mcp.example.json) or merge:
+Requires a local SQLite DB populated by ingest (`python -m alloccontext ingest`).
+Use [cursor-mcp.example.json](cursor-mcp.example.json) or merge:
 
 ```json
 {

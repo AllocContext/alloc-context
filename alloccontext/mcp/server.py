@@ -166,9 +166,10 @@ def create_server(
     @mcp.tool(
         name="get_portfolio_state",
         description=(
-            "Live portfolio NAV, allocation, drift, and band hint from "
-            "read-only exchange credentials passed in the request. Credentials are "
-            "never stored. Supports kraken and coinbase."
+            "Live portfolio NAV, holdings[], and band weights from read-only "
+            "exchange credentials passed in the request. Optional target_pct "
+            "attaches allocation_analysis. Credentials are never stored. "
+            "Supports kraken and coinbase."
         ),
     )
     def get_portfolio_state(
@@ -191,10 +192,10 @@ def create_server(
     @mcp.tool(
         name="check_allocation_band",
         description=(
-            "Check whether BTC/ETH/CASH allocation is outside a drift band vs "
+            "Check whether BTC/ETH/CASH band weights are outside a drift band vs "
             "target_pct and return hint (within_band, consider_rebalance, etc.). "
-            "All three inputs are required — use get_context_bundle with target_pct "
-            "and band when you want cached portfolio drift from server config."
+            "All three inputs are required. For bundle drift, pass target_pct on "
+            "get_context_bundle to attach allocation_analysis."
         ),
     )
     def check_allocation_band(

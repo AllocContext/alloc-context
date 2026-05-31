@@ -21,9 +21,6 @@ from alloccontext.user_config import (
 from alloccontext.mcp.instructions import PRODUCT_INSTRUCTIONS
 
 
-BRIDGE_INSTRUCTIONS = PRODUCT_INSTRUCTIONS
-
-
 def _effective_target_pct(
     user: UserConfig,
     target_pct: dict[str, float] | None,
@@ -49,7 +46,7 @@ def create_bridge_server(user: UserConfig):
         "alloc-context",
         json_response=True,
         stateless_http=True,
-        instructions=BRIDGE_INSTRUCTIONS,
+        instructions=PRODUCT_INSTRUCTIONS,
     )
 
     @mcp.tool(name="get_market_context")

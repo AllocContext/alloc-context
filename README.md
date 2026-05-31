@@ -3,7 +3,7 @@
 mcp-name: io.github.negillett/alloc-context
 
 **Portfolio-aware crypto context for agents** — discover holdings, market,
-sentiment, macro, and regime; optional BTC/ETH allocation analysis. Deterministic
+sentiment, macro, and regime; optional allocation analysis. Deterministic
 JSON over MCP with x402 pay-per-call on Base.
 
 > **Privacy:** nothing stored · one-time read-only · pass-through only — your
@@ -29,11 +29,12 @@ guide: [docs/agent-integration.md](docs/agent-integration.md). Example JSON:
 **Try free locally** (no payment): `./scripts/dev-up.sh` — see
 [docs/local-dev.md](docs/local-dev.md).
 
-Optional live portfolio reads use read-only exchange credentials passed in
-each request. Not financial advice.
+Optional live portfolio reads use read-only exchange credentials in user config
+(bridge) or per request (hosted). Not financial advice.
 
 ```text
-ingest → store → rollup → MCP tools (+ optional x402 HTTP)
+Path A (bridge): user.yaml → local portfolio + hosted context (x402)
+Path C (self-host): ingest → store → rollup → MCP tools (+ optional x402 HTTP)
 ```
 
 This package is **facts and MCP only** — ingest, rollups, and agent tools.
@@ -54,8 +55,12 @@ python -m alloccontext rollup --scope daily --stdout
 pytest
 ```
 
-**MCP (stdio):** `pip install -e ".[mcp]"` then `alloc-context mcp`.
-See [docs/cursor-mcp.md](docs/cursor-mcp.md).
+**MCP (stdio, default bridge):** `pip install -e ".[mcp,hosted]"` then
+`alloc-context mcp --user-config ~/.config/alloc-context/user.yaml`.
+See [docs/cursor-mcp.md](docs/cursor-mcp.md) and [docs/user-config.md](docs/user-config.md).
+
+**MCP (self-host ingest):** `pip install -e ".[mcp]"` then `alloc-context mcp`
+with local `config/config.yaml` — see [docs/self-hosting.md](docs/self-hosting.md).
 
 **Hosted MCP + x402:** `pip install -e ".[hosted]"` then
 `alloc-context mcp --transport http --x402`. See [docs/mcp-http.md](docs/mcp-http.md).

@@ -8,6 +8,8 @@ horizon:
   days: 90
 
 portfolio:
+  # Self-host legacy defaults: used only when allocation_analysis is requested
+  # via get_context_bundle (band without target_pct) or operator-style paths.
   target_allocations:
     BTC: 0.70
     ETH: 0.30
@@ -15,7 +17,7 @@ portfolio:
   rebalance_band: 0.15
   max_cash_risk_off: 0.50
   notes: >
-    Target 70% BTC / 30% ETH when fully invested. Manual trading on Kraken.
+    Example self-host targets for optional allocation_analysis (70/30 BTC/ETH).
 
 ingest:
   interval_minutes: 60

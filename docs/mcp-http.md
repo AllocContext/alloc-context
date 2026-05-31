@@ -101,7 +101,8 @@ Top-level fields returned by the tool (after optional `assets` filtering):
 
 | Command | Use |
 |---------|-----|
-| `alloc-context mcp` | stdio (Cursor) |
+| `alloc-context mcp --user-config ~/.config/alloc-context/user.yaml` | stdio bridge (Cursor default) |
+| `alloc-context mcp` | stdio self-host (local ingest config) |
 | `alloc-context mcp --transport http` | local HTTP |
 | `alloc-context mcp --transport http --x402` | paid HTTP |
 | `alloc-context-mcp-http` | HTTP from env (`ALLOC_CONTEXT_MCP_*`, `X402_*`) |

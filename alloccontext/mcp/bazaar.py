@@ -45,18 +45,18 @@ BAZAAR_SERVICE_NAME = "AllocContext portfolio MCP"
 SERVICE_TAGS = (
     "btc",
     "eth",
-    "rebalance",
-    "allocation",
-    "crypto",
+    "holdings",
     "portfolio",
-    "drift",
+    "crypto",
     "bitcoin",
     "agent-tools",
     "mcp",
     "sentiment",
     "macro",
+    "rebalance",
+    "allocation",
 )
-BAZAAR_INDEX_TAGS = ("btc", "eth", "rebalance", "allocation", "portfolio")
+BAZAAR_INDEX_TAGS = ("btc", "eth", "portfolio", "holdings", "mcp")
 
 DISCOVERY_KEYWORD_MARKERS = (
     "portfolio allocation",
@@ -68,10 +68,10 @@ DISCOVERY_KEYWORD_MARKERS = (
 )
 
 LISTING_DESCRIPTION = (
-    "Portfolio-aware crypto context for AI agents: discover holdings, allocation "
-    "drift and band checks, USD rebalance plans, fused market backdrop (Fear & "
-    "Greed, Kalshi, ETF flows), optional live Kraken/Coinbase reads. Structured "
-    "JSON only — no LLM. "
+    "Portfolio-aware crypto context for AI agents: discover holdings, market, "
+    "sentiment, macro, and regime; optional allocation analysis and rebalance "
+    "math. Fused backdrop (Fear & Greed, Kalshi, ETF flows), optional live "
+    "Kraken/Coinbase reads. Structured JSON only — no LLM. "
     f"{PRIVACY_COMPACT_COPY} "
     "Source-available (Elastic License 2.0); self-host friendly; official hosted "
     f"MCP at {OFFICIAL_HOSTED_MCP_URL} — see {USE_DOCS_PATH}."
@@ -103,7 +103,7 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_market_context",
         "description": (
-            "Fused market backdrop for BTC/ETH allocation: Fear & Greed, Kalshi "
+            "Fused market backdrop for portfolio context: Fear & Greed, Kalshi "
             "sentiment, macro calendar, FRED indicators, ETF flows, and breadth. "
             "Use freshness=cached for hosted cache; freshness=live runs ingest "
             "first (requires ingest API keys on the host)."
@@ -167,27 +167,32 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
             "scope": "daily",
             "freshness": "cached",
             "assets": ["BTC", "ETH"],
-            "target_pct": {"BTC": 0.70, "ETH": 0.30, "CASH": 0.0},
-            "band": 0.15,
         },
         "output_example": {
             "bundle_id": "daily:2026-05-21T12:00:00+00:00",
             "scope": "daily",
             "assets": ["BTC", "ETH"],
-            "portfolio": {"available": True},
+            "portfolio": {
+                "available": True,
+                "holdings": [{"symbol": "BTC", "kind": "band"}],
+            },
             "market": {"available": True},
             "sentiment": {"available": True},
             "macro": {"available": True},
-            "regime": {"available": True, "summary": "Portfolio allocation is within the configured drift band."},
+            "regime": {
+                "available": True,
+                "allocation": {"available": False},
+                "summary": "Fear & Greed index: 52 (Neutral).",
+            },
             "delta": {"available": True},
         },
     },
     {
         "tool_name": "get_rebalance_plan",
         "description": (
-            "Compute USD deltas and exchange-style move lines to rebalance a "
-            "BTC/ETH/CASH portfolio toward target allocation from current "
-            "weights and NAV. Pure math — rebalance plan for btc/eth splits."
+            "Compute USD deltas and exchange-style move lines toward a target "
+            "BTC/ETH/CASH allocation from current band weights and NAV. Pure "
+            "math — explicit inputs required."
         ),
         "input_schema": {
             "type": "object",
@@ -271,7 +276,7 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
                 },
                 "target_pct": {
                     "type": "object",
-                    "description": "Optional target weights; defaults to server config.",
+                    "description": "Optional target weights for allocation_analysis.",
                     "properties": {
                         "BTC": {"type": "number"},
                         "ETH": {"type": "number"},
@@ -280,7 +285,7 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
                 },
                 "band": {
                     "type": "number",
-                    "description": "Drift band width (default from server config).",
+                    "description": "Drift band width when target_pct is supplied (e.g. 0.15).",
                 },
             },
             "required": ["exchange", "api_key", "api_secret"],
@@ -297,15 +302,16 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
             "as_of": "2026-05-21T12:00:00+00:00",
             "age_seconds": 0,
             "nav_usd": 10000.0,
+            "holdings": [{"symbol": "BTC", "kind": "band"}],
             "allocation_pct": {"BTC": 0.70, "ETH": 0.25, "CASH": 0.05},
-            "rebalance_hint": "within_band",
         },
     },
     {
         "tool_name": "check_allocation_band",
         "description": (
-            "Check whether BTC/ETH/CASH allocation is outside a drift band vs "
-            "target and return hint (within_band, consider_rebalance, etc.)."
+            "Check whether band weights (BTC/ETH/CASH) are outside a drift band "
+            "vs target and return hint (within_band, consider_rebalance, etc.). "
+            "Explicit inputs required."
         ),
         "input_schema": {
             "type": "object",
@@ -610,10 +616,9 @@ portfolio never persist on our servers.
 
 ## Search keywords
 
-bitcoin, ethereum, btc, eth, portfolio allocation, allocation drift,
-rebalance plan, rebalance btc eth, drift band, band check, market context,
-holdings, portfolio context, fear and greed, sentiment, macro calendar,
-etf flows, agent tools, mcp, x402
+bitcoin, ethereum, btc, eth, portfolio allocation, portfolio context, holdings,
+market context, sentiment, macro calendar, etf flows, allocation drift,
+rebalance plan, fear and greed, agent tools, mcp, x402
 
 ## Examples
 

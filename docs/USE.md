@@ -39,9 +39,9 @@ keys.** That clause does not apply; it is standard ELv2 boilerplate.
 ## Privacy (hosted vs self-host)
 
 When you use **official** hosted MCP or the default bridge upstream, see
-[user-config.md](user-config.md) (when published) and ADR-007 privacy pillars:
-nothing stored on shared infrastructure for pass-through portfolio reads;
-one-time read-only; pass-through only.
+[user-config.md](user-config.md) for privacy pillars: nothing stored on shared
+infrastructure for pass-through portfolio reads; one-time read-only;
+pass-through only.
 
 When you **self-host**, portfolio data may exist in **your** SQLite if you run
 ingest — that is your infrastructure, under your control.

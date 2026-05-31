@@ -6,7 +6,7 @@ Thank you for your interest in AllocContext.
 
 Please open a GitHub Issue for:
 
-- Bugs or incorrect rollup / rebalance output
+- Bugs or incorrect rollup / context output
 - ContextBundle schema feedback
 - MCP tool and x402 integration feedback
 - Documentation gaps

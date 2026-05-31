@@ -33,7 +33,7 @@ Paid MCP remains `POST /mcp` behind x402 when `--x402` is enabled.
 
 When x402 is enabled, `POST /mcp` declares:
 
-- Listing copy tuned for semantic search (allocation drift, rebalance, ETF flows)
+- Listing copy tuned for semantic search (holdings, portfolio context, ETF flows)
 - Per-tool MCP Bazaar extensions on `tools/call` (indexed separately on settle)
 - Fallback aggregate JSON-RPC schema for other MCP methods
 - `service_name` and tags on payment resource metadata (CDP index)
@@ -105,28 +105,24 @@ on the schedule.
 
 ## Discovery MCP in Cursor
 
-Add the CDP discovery MCP alongside local stdio AllocContext:
+Add the CDP discovery MCP alongside the AllocContext bridge — see
+[cursor-mcp.md](cursor-mcp.md) for `mcp.json` (default `--user-config`).
 
 ```json
 {
   "mcpServers": {
     "x402-discovery": {
       "url": "https://api.cdp.coinbase.com/platform/v2/x402/discovery/mcp"
-    },
-    "alloc-context": {
-      "command": "${workspaceFolder}/.venv/bin/alloc-context",
-      "args": ["mcp"],
-      "cwd": "${workspaceFolder}"
     }
   }
 }
 ```
 
-1. Search Bazaar for BTC/ETH allocation or rebalance context.
+1. Search Bazaar for portfolio holdings or crypto market context.
 2. Confirm AllocContext appears after your first paid settlement.
 3. Call paid tools via an x402 HTTP client against `X402_PUBLIC_URL/mcp`.
 
-For unpaid local use, keep stdio `alloc-context mcp`.
+For local bridge or self-host stdio, see [cursor-mcp.md](cursor-mcp.md).
 
 Paid HTTP integration (x402 client, Bazaar search flow):
 [agent-integration.md](agent-integration.md). Example tool JSON:
@@ -140,5 +136,5 @@ Privacy and license copy also appear in `GET /llms.txt` (`## Privacy`,
 `## License`) and in the Bazaar listing description. Production checks validate
 those markers via `x402_production_check.py`.
 
-Tags: `btc`, `eth`, `rebalance`, `allocation`, `portfolio` (plus additional
-tags in `/.well-known/x402.json`)
+Tags: `btc`, `eth`, `portfolio`, `holdings`, `mcp` (plus additional tags in
+`/.well-known/x402.json`)
