@@ -6,6 +6,7 @@ from typing import Any
 from alloccontext.config import load_config
 from alloccontext.mcp import handlers
 from alloccontext.mcp.instructions import PRODUCT_INSTRUCTIONS, REBALANCE_HINT_GUIDE
+from alloccontext.mcp.tool_catalog import tool_annotations, tool_title
 from alloccontext.mcp.tool_fields import (
     AllocationPct,
     ApiKey,
@@ -72,6 +73,12 @@ def _require_mcp():
     return FastMCP
 
 
+def _tool_hints(tool_name: str):
+    from mcp.types import ToolAnnotations
+
+    return ToolAnnotations(**tool_annotations(tool_name))
+
+
 def create_server(
     *,
     config_path: str | None = None,
@@ -97,6 +104,8 @@ def create_server(
 
     @mcp.tool(
         name="get_context_bundle",
+        title=tool_title("get_context_bundle"),
+        annotations=_tool_hints("get_context_bundle"),
         description=(
             "Return the full read-only ContextBundle JSON: portfolio holdings, "
             "market, sentiment, macro, regime hints, and delta vs the prior saved "
@@ -133,6 +142,8 @@ def create_server(
 
     @mcp.tool(
         name="get_market_context",
+        title=tool_title("get_market_context"),
+        annotations=_tool_hints("get_market_context"),
         description=(
             "Return read-only fused market backdrop: sentiment (Fear & Greed, "
             "Kalshi), macro events, FRED indicators, ETF flows, and market breadth "
@@ -163,6 +174,8 @@ def create_server(
 
     @mcp.tool(
         name="get_rebalance_plan",
+        title=tool_title("get_rebalance_plan"),
+        annotations=_tool_hints("get_rebalance_plan"),
         description=(
             "Compute read-only USD deltas and suggested exchange move lines to "
             "reach a BTC/ETH/CASH target split. Pure math — no exchange API calls. "
@@ -192,6 +205,8 @@ def create_server(
 
     @mcp.tool(
         name="get_portfolio_state",
+        title=tool_title("get_portfolio_state"),
+        annotations=_tool_hints("get_portfolio_state"),
         description=(
             "Fetch live read-only portfolio NAV, holdings[], and band weights from "
             "Kraken or Coinbase credentials passed in this call (never stored). "
@@ -221,6 +236,8 @@ def create_server(
 
     @mcp.tool(
         name="check_allocation_band",
+        title=tool_title("check_allocation_band"),
+        annotations=_tool_hints("check_allocation_band"),
         description=(
             "Read-only drift check: are BTC/ETH/CASH band weights outside the "
             "drift band vs target_pct? Returns rebalance_hint (within_band, "
@@ -241,6 +258,8 @@ def create_server(
 
     @mcp.tool(
         name="get_context_at",
+        title=tool_title("get_context_at"),
+        annotations=_tool_hints("get_context_at"),
         description=(
             "Load a read-only ContextBundle snapshot from ingest history at a "
             "point in time. Use get_context_bundle for the latest snapshot; use "
@@ -277,6 +296,8 @@ def create_server(
 
     @mcp.tool(
         name="get_context_delta",
+        title=tool_title("get_context_delta"),
+        annotations=_tool_hints("get_context_delta"),
         description=(
             "Compare two read-only ContextBundle snapshots and return "
             "notable_shifts between them. Requires prior_as_of; omit current_as_of "
@@ -307,6 +328,8 @@ def create_server(
 
     @mcp.tool(
         name="check_allocation_bands",
+        title=tool_title("check_allocation_bands"),
+        annotations=_tool_hints("check_allocation_bands"),
         description=(
             "Read-only batch drift check: evaluate allocation_pct against multiple "
             "target_pct/band scenarios in one call. Each scenario requires "

@@ -131,6 +131,12 @@ def test_build_mcp_server_card_lists_tools() -> None:
     assert card["authentication"]["required"] is True
     names = {tool["name"] for tool in card["tools"]}
     assert names == _EXPECTED_TOOLS
+    first = card["tools"][0]
+    assert first.get("title")
+    assert first.get("annotations")
+    assert first.get("outputSchema")
+    assert card["prompts"]
+    assert card["resources"]
 
 
 def test_mcp_server_card_route(monkeypatch: pytest.MonkeyPatch) -> None:
