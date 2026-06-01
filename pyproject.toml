@@ -10,11 +10,15 @@ keywords = [
     "x402",
     "bitcoin",
     "ethereum",
+    "crypto",
+    "cryptocurrency",
     "portfolio",
     "allocation",
-    "agents",
-    "crypto",
+    "holdings",
     "rebalance",
+    "coinbase",
+    "kraken",
+    "agents",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

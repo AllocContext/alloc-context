@@ -43,28 +43,49 @@ SERVICE_TITLE = (
 # CDP Bazaar indexes service_name (≤32 chars) and up to five tags from payments.
 BAZAAR_SERVICE_NAME = "AllocContext portfolio MCP"
 SERVICE_TAGS = (
+    "crypto",
+    "cryptocurrency",
+    "bitcoin",
     "btc",
+    "ethereum",
     "eth",
     "holdings",
     "portfolio",
-    "crypto",
-    "bitcoin",
-    "agent-tools",
-    "mcp",
+    "allocation",
+    "rebalance",
     "sentiment",
     "macro",
-    "rebalance",
-    "allocation",
+    "coinbase",
+    "kraken",
+    "agent-tools",
+    "mcp",
+    "x402",
 )
-BAZAAR_INDEX_TAGS = ("btc", "eth", "portfolio", "holdings", "mcp")
+BAZAAR_INDEX_TAGS = (
+    "crypto",
+    "cryptocurrency",
+    "portfolio",
+    "holdings",
+    "btc",
+)
 
 DISCOVERY_KEYWORD_MARKERS = (
+    "crypto",
+    "cryptocurrency",
+    "digital assets",
+    "crypto portfolio",
     "portfolio allocation",
+    "portfolio context",
     "allocation drift",
     "rebalance plan",
     "fear and greed",
     "etf flows",
     "holdings",
+    "holdings-scoped",
+    "coinbase",
+    "kraken",
+    "market context",
+    "sentiment",
 )
 
 LISTING_DESCRIPTION = (
@@ -616,9 +637,12 @@ portfolio never persist on our servers.
 
 ## Search keywords
 
-bitcoin, ethereum, btc, eth, portfolio allocation, portfolio context, holdings,
-market context, sentiment, macro calendar, etf flows, allocation drift,
-rebalance plan, fear and greed, agent tools, mcp, x402
+bitcoin, ethereum, btc, eth, crypto, cryptocurrency, digital assets, altcoin,
+stablecoin, crypto portfolio, portfolio allocation, portfolio context, holdings,
+holdings-scoped, coinbase, kraken, market context, market data, sentiment,
+macro calendar, etf flows, allocation drift, allocation bands, rebalance plan,
+fear and greed, fear greed index, nav, agent tools, ai agents, mcp, x402,
+model context protocol, context bundle
 
 ## Examples
 
