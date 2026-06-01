@@ -63,6 +63,14 @@ def _print_payment_required(response) -> None:
         )
 
 
+def _reindex_mode() -> bool:
+    return os.environ.get("MCP_SMOKE_REINDEX", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
 def _check_tool_text(text: str) -> None:
     if text.startswith("Error executing tool"):
         _fail(text[:800])
@@ -71,6 +79,13 @@ def _check_tool_text(text: str) -> None:
     except json.JSONDecodeError:
         return
     if isinstance(payload, dict) and payload.get("available") is False:
+        if _reindex_mode():
+            reason = payload.get("reason") or "unavailable"
+            smoke_log(
+                f"Tool returned available=false ({reason}); "
+                "reindex mode — settlement still indexes Bazaar."
+            )
+            return
         _fail(json.dumps(payload, indent=2)[:800])
 
 
