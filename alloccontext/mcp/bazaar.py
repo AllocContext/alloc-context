@@ -10,6 +10,24 @@ from x402.extensions.bazaar import (
     declare_mcp_discovery_extension,
 )
 
+from alloccontext.mcp.tool_catalog import (
+    ASSET_FILTER_SCHEMA,
+    AS_OF_SCHEMA,
+    BAND_SCHEMA,
+    CURRENT_AS_OF_SCHEMA,
+    FRESHNESS_SCHEMA,
+    MATCH_SCHEMA,
+    MCP_SERVER_PROMPTS,
+    MCP_SERVER_RESOURCES,
+    OPTIONAL_TARGET_PCT_SCHEMA,
+    PRIOR_AS_OF_SCHEMA,
+    SCENARIOS_SCHEMA,
+    SCOPE_SCHEMA,
+    TARGET_PCT_SCHEMA,
+    allocation_pct_schema,
+    server_card_tool_entry,
+)
+
 SERVICE_NAME = "AllocContext"
 OFFICIAL_HOSTED_MCP_URL = "https://mcp.alloc-context.com/mcp"
 USE_DOCS_PATH = "docs/USE.md"
@@ -98,54 +116,22 @@ LISTING_DESCRIPTION = (
     f"MCP at {OFFICIAL_HOSTED_MCP_URL} — see {USE_DOCS_PATH}."
 )
 
-_ASSET_FILTER_SCHEMA = {
-    "type": "array",
-    "items": {"type": "string", "enum": ["BTC", "ETH", "CASH"]},
-    "description": "Subset market and ETF fields (default BTC and ETH).",
-}
-
-_TARGET_PCT_SCHEMA = {
-    "type": "object",
-    "description": "Target weights keyed by BTC, ETH, CASH.",
-    "properties": {
-        "BTC": {"type": "number"},
-        "ETH": {"type": "number"},
-        "CASH": {"type": "number"},
-    },
-    "required": ["BTC", "ETH", "CASH"],
-}
-
-_BAND_SCHEMA = {
-    "type": "number",
-    "description": "Drift band width (for example 0.15 = 15%).",
-}
-
 _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_market_context",
         "description": (
-            "Fused market backdrop for portfolio context: Fear & Greed, Kalshi "
-            "sentiment, macro calendar, FRED indicators, ETF flows, and breadth. "
-            "Use freshness=cached for hosted cache; freshness=live runs ingest "
-            "first (requires ingest API keys on the host)."
+            "Return read-only fused market backdrop for crypto portfolio context: "
+            "sentiment (Fear & Greed, Kalshi), macro events, FRED indicators, ETF "
+            "flows, and market breadth — no portfolio holdings. Use "
+            "get_context_bundle when you also need holdings, delta, or regime. "
+            "freshness=cached reads the ingest DB; freshness=live runs ingest first."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "scope": {
-                    "type": "string",
-                    "enum": ["daily", "weekly"],
-                    "description": "Rollup horizon for macro and context bundle.",
-                },
-                "freshness": {
-                    "type": "string",
-                    "enum": ["cached", "live"],
-                    "description": (
-                        "cached reads the ingest DB; live runs ingest first "
-                        "(requires ingest API keys on the host)."
-                    ),
-                },
-                "assets": _ASSET_FILTER_SCHEMA,
+                "scope": SCOPE_SCHEMA,
+                "freshness": FRESHNESS_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
             },
         },
         "example": {"scope": "daily", "freshness": "cached", "assets": ["BTC", "ETH"]},
@@ -163,25 +149,20 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_context_bundle",
         "description": (
-            "Full ContextBundle JSON: portfolio holdings and band weights, "
-            "market, sentiment, macro, regime hints, and delta vs the prior "
-            "saved snapshot. Optional target_pct and band enable "
-            "allocation_analysis (opt-in drift math)."
+            "Return the full read-only ContextBundle JSON: portfolio holdings, "
+            "market, sentiment, macro, regime hints, and delta vs the prior saved "
+            "snapshot. Use get_market_context for market-only; use get_context_at "
+            "for a historical snapshot. Optional target_pct and band attach "
+            "allocation_analysis drift math."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "scope": {
-                    "type": "string",
-                    "enum": ["daily", "weekly"],
-                },
-                "freshness": {
-                    "type": "string",
-                    "enum": ["cached", "live"],
-                },
-                "assets": _ASSET_FILTER_SCHEMA,
-                "target_pct": _TARGET_PCT_SCHEMA,
-                "band": _BAND_SCHEMA,
+                "scope": SCOPE_SCHEMA,
+                "freshness": FRESHNESS_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
+                "target_pct": TARGET_PCT_SCHEMA,
+                "band": BAND_SCHEMA,
             },
         },
         "example": {
@@ -211,45 +192,28 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_rebalance_plan",
         "description": (
-            "Compute USD deltas and exchange-style move lines toward a target "
-            "BTC/ETH/CASH allocation from current band weights and NAV. Pure "
-            "math — explicit inputs required."
+            "Compute read-only USD deltas and suggested exchange move lines to "
+            "reach a BTC/ETH/CASH target split. Pure math — no exchange API calls. "
+            "Requires allocation_pct, target_pct, and nav_usd. Use get_portfolio_state "
+            "or get_context_bundle when you need live weights first."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "allocation_pct": {
-                    "type": "object",
-                    "description": "Current weights keyed by BTC, ETH, CASH.",
-                    "properties": {
-                        "BTC": {"type": "number"},
-                        "ETH": {"type": "number"},
-                        "CASH": {"type": "number"},
-                    },
-                    "required": ["BTC", "ETH", "CASH"],
-                },
-                "target_pct": {
-                    "type": "object",
-                    "description": "Target weights keyed by BTC, ETH, CASH.",
-                    "properties": {
-                        "BTC": {"type": "number"},
-                        "ETH": {"type": "number"},
-                        "CASH": {"type": "number"},
-                    },
-                    "required": ["BTC", "ETH", "CASH"],
-                },
+                "allocation_pct": allocation_pct_schema(role="Current"),
+                "target_pct": allocation_pct_schema(role="Target"),
                 "nav_usd": {
                     "type": "number",
-                    "description": "Portfolio NAV in USD.",
+                    "description": "Portfolio net asset value in USD.",
                 },
                 "exchange": {
                     "type": "string",
                     "enum": ["kraken", "coinbase"],
                     "description": (
-                        "Exchange-specific move wording (default kraken)."
+                        "Spot exchange for move wording: kraken (default) or coinbase."
                     ),
                 },
-                "band": _BAND_SCHEMA,
+                "band": BAND_SCHEMA,
             },
             "required": ["allocation_pct", "target_pct", "nav_usd"],
         },
@@ -272,10 +236,10 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_portfolio_state",
         "description": (
-            "Live portfolio read: NAV, holdings[], band weights, and optional "
-            "allocation_analysis when target_pct is supplied. Pass read-only "
-            "Kraken or Coinbase credentials in the request; never stored "
-            "server-side."
+            "Fetch live read-only portfolio NAV, holdings[], and band weights from "
+            "Kraken or Coinbase credentials passed in this call (never stored). "
+            "Requires exchange, api_key, and api_secret. Returns available=false "
+            "with reason on invalid credentials — no side effects."
         ),
         "input_schema": {
             "type": "object",
@@ -283,11 +247,13 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
                 "exchange": {
                     "type": "string",
                     "enum": ["kraken", "coinbase"],
-                    "description": "Spot exchange to query.",
+                    "description": "Spot exchange to query: kraken or coinbase.",
                 },
                 "api_key": {
                     "type": "string",
-                    "description": "Read-only API key (CDP key name for Coinbase).",
+                    "description": (
+                        "Read-only exchange API key (Coinbase CDP key name)."
+                    ),
                 },
                 "api_secret": {
                     "type": "string",
@@ -295,19 +261,8 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
                         "Read-only API secret (Kraken base64 secret or Coinbase EC PEM)."
                     ),
                 },
-                "target_pct": {
-                    "type": "object",
-                    "description": "Optional target weights for allocation_analysis.",
-                    "properties": {
-                        "BTC": {"type": "number"},
-                        "ETH": {"type": "number"},
-                        "CASH": {"type": "number"},
-                    },
-                },
-                "band": {
-                    "type": "number",
-                    "description": "Drift band width when target_pct is supplied (e.g. 0.15).",
-                },
+                "target_pct": OPTIONAL_TARGET_PCT_SCHEMA,
+                "band": BAND_SCHEMA,
             },
             "required": ["exchange", "api_key", "api_secret"],
         },
@@ -330,34 +285,19 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "check_allocation_band",
         "description": (
-            "Check whether band weights (BTC/ETH/CASH) are outside a drift band "
-            "vs target and return hint (within_band, consider_rebalance, etc.). "
-            "Explicit inputs required."
+            "Check read-only drift: are BTC/ETH/CASH band weights outside the drift "
+            "band vs target_pct? Returns rebalance_hint (within_band, "
+            "consider_rebalance, etc.). Single scenario — use check_allocation_bands "
+            "for multiple targets. Use get_rebalance_plan when you need USD move lines."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "allocation_pct": {
-                    "type": "object",
-                    "properties": {
-                        "BTC": {"type": "number"},
-                        "ETH": {"type": "number"},
-                        "CASH": {"type": "number"},
-                    },
-                    "required": ["BTC", "ETH", "CASH"],
-                },
-                "target_pct": {
-                    "type": "object",
-                    "properties": {
-                        "BTC": {"type": "number"},
-                        "ETH": {"type": "number"},
-                        "CASH": {"type": "number"},
-                    },
-                    "required": ["BTC", "ETH", "CASH"],
-                },
+                "allocation_pct": allocation_pct_schema(role="Current"),
+                "target_pct": allocation_pct_schema(role="Target"),
                 "band": {
                     "type": "number",
-                    "description": "Drift band width (default 0.15 = 15%).",
+                    "description": "Drift band width as a fraction (default 0.15 = 15%).",
                 },
             },
             "required": ["allocation_pct", "target_pct"],
@@ -378,16 +318,20 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_context_at",
         "description": (
-            "Load a saved ContextBundle snapshot from ingest history by ISO "
-            "timestamp (match exact or at_or_before)."
+            "Load a read-only ContextBundle snapshot from ingest history at a point "
+            "in time. Use get_context_bundle for the latest snapshot; use "
+            "get_context_delta to compare two timestamps. Returns unavailable when "
+            "no snapshot matches as_of and match."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "as_of": {"type": "string", "description": "ISO timestamp."},
-                "scope": {"type": "string", "enum": ["daily", "weekly"]},
-                "match": {"type": "string", "enum": ["exact", "at_or_before"]},
-                "assets": _ASSET_FILTER_SCHEMA,
+                "as_of": AS_OF_SCHEMA,
+                "scope": SCOPE_SCHEMA,
+                "match": MATCH_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
+                "target_pct": TARGET_PCT_SCHEMA,
+                "band": BAND_SCHEMA,
             },
             "required": ["as_of"],
         },
@@ -406,15 +350,18 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "get_context_delta",
         "description": (
-            "Compare two ContextBundle snapshots and return notable_shifts."
+            "Compare two read-only ContextBundle snapshots and return notable_shifts "
+            "between them. Requires prior_as_of; omit current_as_of to diff against "
+            "the latest live bundle. Use get_context_at to load one snapshot without "
+            "diffing."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "prior_as_of": {"type": "string"},
-                "scope": {"type": "string", "enum": ["daily", "weekly"]},
-                "current_as_of": {"type": "string"},
-                "assets": _ASSET_FILTER_SCHEMA,
+                "prior_as_of": PRIOR_AS_OF_SCHEMA,
+                "scope": SCOPE_SCHEMA,
+                "current_as_of": CURRENT_AS_OF_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
             },
             "required": ["prior_as_of"],
         },
@@ -431,39 +378,15 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "tool_name": "check_allocation_bands",
         "description": (
-            "Evaluate allocation drift against multiple target/band scenarios."
+            "Evaluate read-only allocation drift against multiple target_pct/band "
+            "scenarios in one call. Each scenario requires target_pct; optional name "
+            "and band (default 0.15). Use check_allocation_band for a single target."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "allocation_pct": {
-                    "type": "object",
-                    "properties": {
-                        "BTC": {"type": "number"},
-                        "ETH": {"type": "number"},
-                        "CASH": {"type": "number"},
-                    },
-                    "required": ["BTC", "ETH", "CASH"],
-                },
-                "scenarios": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "target_pct": {
-                                "type": "object",
-                                "properties": {
-                                    "BTC": {"type": "number"},
-                                    "ETH": {"type": "number"},
-                                    "CASH": {"type": "number"},
-                                },
-                            },
-                            "band": {"type": "number"},
-                        },
-                        "required": ["target_pct"],
-                    },
-                },
+                "allocation_pct": allocation_pct_schema(role="Current"),
+                "scenarios": SCENARIOS_SCHEMA,
             },
             "required": ["allocation_pct", "scenarios"],
         },
@@ -715,14 +638,7 @@ def build_mcp_server_card(*, version: str) -> dict[str, Any]:
                 "see /.well-known/x402.json for pricing."
             ),
         },
-        "tools": [
-            {
-                "name": spec["tool_name"],
-                "description": spec["description"],
-                "inputSchema": spec["input_schema"],
-            }
-            for spec in _MCP_TOOLS
-        ],
-        "resources": [],
-        "prompts": [],
+        "tools": [server_card_tool_entry(spec) for spec in _MCP_TOOLS],
+        "resources": list(MCP_SERVER_RESOURCES),
+        "prompts": list(MCP_SERVER_PROMPTS),
     }

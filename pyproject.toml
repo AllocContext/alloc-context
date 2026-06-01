@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/negillett/alloc-context"
+Homepage = "https://mcp.alloc-context.com/llms.txt"
 Documentation = "https://github.com/negillett/alloc-context/blob/main/docs/agent-integration.md"
 Repository = "https://github.com/negillett/alloc-context"
 Issues = "https://github.com/negillett/alloc-context/issues"
