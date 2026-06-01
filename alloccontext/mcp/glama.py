@@ -29,12 +29,17 @@ def build_glama_well_known() -> dict[str, Any]:
     if email_override:
         maintainers = [{"email": email_override}]
     else:
-        raw = data.get("maintainers") or []
-        for entry in raw:
-            if isinstance(entry, dict) and entry.get("email"):
-                maintainers.append({"email": str(entry["email"])})
-            elif isinstance(entry, str) and "@" in entry:
+        connector_emails = data.get("connector_emails") or []
+        for entry in connector_emails:
+            if isinstance(entry, str) and "@" in entry:
                 maintainers.append({"email": entry})
+        if not maintainers:
+            raw = data.get("maintainers") or []
+            for entry in raw:
+                if isinstance(entry, dict) and entry.get("email"):
+                    maintainers.append({"email": str(entry["email"])})
+                elif isinstance(entry, str) and "@" in entry:
+                    maintainers.append({"email": entry})
 
     if not maintainers:
         msg = "glama.json maintainers must include at least one email"

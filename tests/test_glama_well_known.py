@@ -41,10 +41,11 @@ def test_glama_well_known_route(monkeypatch: pytest.MonkeyPatch) -> None:
     assert body["maintainers"][0]["email"] == "nathangillett@icloud.com"
 
 
-def test_glama_json_is_valid_connector_schema() -> None:
+def test_glama_json_is_valid_server_schema() -> None:
     from pathlib import Path
 
     path = Path(__file__).resolve().parents[1] / "glama.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert data["$schema"] == "https://glama.ai/mcp/schemas/connector.json"
-    assert data["maintainers"][0]["email"]
+    assert data["$schema"] == "https://glama.ai/mcp/schemas/server.json"
+    assert data["maintainers"] == ["negillett"]
+    assert data["connector_emails"][0] == "nathangillett@icloud.com"

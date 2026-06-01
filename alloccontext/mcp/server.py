@@ -6,6 +6,26 @@ from typing import Any
 from alloccontext.config import load_config
 from alloccontext.mcp import handlers
 from alloccontext.mcp.instructions import PRODUCT_INSTRUCTIONS, REBALANCE_HINT_GUIDE
+from alloccontext.mcp.tool_fields import (
+    AllocationPct,
+    ApiKey,
+    ApiSecret,
+    AsOf,
+    Assets,
+    BandDefault,
+    BandOptional,
+    CurrentAsOf,
+    Exchange,
+    ExchangeKrakenDefault,
+    Freshness,
+    MatchMode,
+    NavUsd,
+    OptionalTargetPct,
+    PriorAsOf,
+    Scenarios,
+    Scope,
+    TargetPct,
+)
 from alloccontext.store.db import connect
 
 
@@ -78,19 +98,21 @@ def create_server(
     @mcp.tool(
         name="get_context_bundle",
         description=(
-            "Full ContextBundle JSON: portfolio holdings, market, sentiment, "
-            "macro, regime hints, and delta vs the prior saved snapshot. Optional "
-            "assets filter (default BTC, ETH). Optional target_pct and band attach "
-            "allocation_analysis (opt-in drift math). freshness=cached uses the "
-            "local ingest DB; freshness=live runs ingest first."
+            "Return the full read-only ContextBundle JSON: portfolio holdings, "
+            "market, sentiment, macro, regime hints, and delta vs the prior saved "
+            "snapshot. Use get_market_context for market-only; use get_context_at "
+            "for a historical snapshot; use get_context_delta to compare two times. "
+            "Optional target_pct and band attach allocation_analysis (opt-in drift "
+            "math). freshness=cached uses the local ingest DB; freshness=live runs "
+            "ingest first (may add latency; needs ingest API keys on the host)."
         ),
     )
     def get_context_bundle(
-        scope: str = "daily",
-        freshness: str = "cached",
-        assets: list[str] | None = None,
-        target_pct: dict[str, float] | None = None,
-        band: float | None = None,
+        scope: Scope = "daily",
+        freshness: Freshness = "cached",
+        assets: Assets = None,
+        target_pct: OptionalTargetPct = None,
+        band: BandOptional = None,
     ) -> dict[str, Any]:
         """Return the full deterministic context bundle for daily or weekly scope."""
         validated_scope = handlers.validate_scope(scope)
@@ -112,16 +134,17 @@ def create_server(
     @mcp.tool(
         name="get_market_context",
         description=(
-            "Fused market backdrop: sentiment (Fear & Greed, Kalshi), macro events, "
-            "FRED indicators, ETF flows, and market breadth. Optional assets filter "
-            "(default BTC, ETH). freshness=cached uses the local ingest DB; "
+            "Return read-only fused market backdrop: sentiment (Fear & Greed, "
+            "Kalshi), macro events, FRED indicators, ETF flows, and market breadth "
+            "(no portfolio holdings). Use get_context_bundle when you also need "
+            "holdings, delta, or regime. freshness=cached uses the local ingest DB; "
             "freshness=live runs ingest first (requires ingest API keys on the host)."
         ),
     )
     def get_market_context(
-        scope: str = "daily",
-        freshness: str = "cached",
-        assets: list[str] | None = None,
+        scope: Scope = "daily",
+        freshness: Freshness = "cached",
+        assets: Assets = None,
     ) -> dict[str, Any]:
         """Return ContextBundle subset for daily or weekly scope."""
         validated_scope = handlers.validate_scope(scope)
@@ -141,18 +164,22 @@ def create_server(
     @mcp.tool(
         name="get_rebalance_plan",
         description=(
-            "USD deltas and exchange-style move lines to reach a target BTC/ETH/CASH "
-            "split. Requires allocation_pct, target_pct, and nav_usd. Optional band "
-            "returns a band_check block alongside the plan. exchange=kraken|coinbase "
-            "adjusts move wording."
+            "Compute read-only USD deltas and suggested exchange move lines to "
+            "reach a BTC/ETH/CASH target split. Pure math — no exchange API calls. "
+            "Requires allocation_pct, target_pct, and nav_usd. Use "
+            "get_portfolio_state or get_context_bundle when you need live or cached "
+            "weights first. Use check_allocation_band for pass/fail drift only; use "
+            "check_allocation_bands for multiple scenarios. Optional band adds a "
+            "band_check block alongside the plan. exchange=kraken|coinbase adjusts "
+            "move wording only."
         ),
     )
     def get_rebalance_plan(
-        allocation_pct: dict[str, float],
-        target_pct: dict[str, float],
-        nav_usd: float,
-        exchange: str = "kraken",
-        band: float | None = None,
+        allocation_pct: AllocationPct,
+        target_pct: TargetPct,
+        nav_usd: NavUsd,
+        exchange: ExchangeKrakenDefault = "kraken",
+        band: BandOptional = None,
     ) -> dict[str, Any]:
         """Compute rebalance plan from current allocation and NAV."""
         return handlers.get_rebalance_plan(
@@ -166,18 +193,21 @@ def create_server(
     @mcp.tool(
         name="get_portfolio_state",
         description=(
-            "Live portfolio NAV, holdings[], and band weights from read-only "
-            "exchange credentials passed in the request. Optional target_pct "
-            "attaches allocation_analysis. Credentials are never stored. "
-            "Supports kraken and coinbase."
+            "Fetch live read-only portfolio NAV, holdings[], and band weights from "
+            "Kraken or Coinbase credentials passed in this call (never stored). "
+            "Requires exchange, api_key, and api_secret. Use get_context_bundle "
+            "for cached market and history without exchange keys. Optional "
+            "target_pct attaches allocation_analysis; optional band sets drift "
+            "width when target_pct is supplied. Returns an error payload on invalid "
+            "credentials or unsupported exchange — no side effects."
         ),
     )
     def get_portfolio_state(
-        exchange: str,
-        api_key: str,
-        api_secret: str,
-        target_pct: dict[str, float] | None = None,
-        band: float | None = None,
+        exchange: Exchange,
+        api_key: ApiKey,
+        api_secret: ApiSecret,
+        target_pct: OptionalTargetPct = None,
+        band: BandOptional = None,
     ) -> dict[str, Any]:
         """Fetch live portfolio state using caller-supplied read-only API keys."""
         return handlers.get_portfolio_state(
@@ -192,16 +222,19 @@ def create_server(
     @mcp.tool(
         name="check_allocation_band",
         description=(
-            "Check whether BTC/ETH/CASH band weights are outside a drift band vs "
-            "target_pct and return hint (within_band, consider_rebalance, etc.). "
-            "All three inputs are required. For bundle drift, pass target_pct on "
-            "get_context_bundle to attach allocation_analysis."
+            "Read-only drift check: are BTC/ETH/CASH band weights outside the "
+            "drift band vs target_pct? Returns rebalance_hint (within_band, "
+            "consider_rebalance, etc.). Requires allocation_pct and target_pct; "
+            "band defaults to 0.15. Single-scenario only — use check_allocation_bands "
+            "for multiple targets in one call. Use get_rebalance_plan when you need "
+            "USD move lines, not just a hint. For bundle drift, pass target_pct on "
+            "get_context_bundle to attach allocation_analysis instead."
         ),
     )
     def check_allocation_band(
-        allocation_pct: dict[str, float],
-        target_pct: dict[str, float],
-        band: float = 0.15,
+        allocation_pct: AllocationPct,
+        target_pct: TargetPct,
+        band: BandDefault = 0.15,
     ) -> dict[str, Any]:
         """Evaluate allocation drift against band width (default 0.15 = 15%)."""
         return handlers.check_band(allocation_pct, target_pct, band)
@@ -209,18 +242,20 @@ def create_server(
     @mcp.tool(
         name="get_context_at",
         description=(
-            "Load a saved ContextBundle snapshot from ingest history. "
-            "as_of is an ISO timestamp; match=at_or_before returns the latest "
-            "snapshot on or before that time."
+            "Load a read-only ContextBundle snapshot from ingest history at a "
+            "point in time. Use get_context_bundle for the latest snapshot; use "
+            "get_context_delta to compare two timestamps. Read-only; returns an "
+            "unavailable payload when no snapshot matches as_of and match. Optional "
+            "target_pct and band attach allocation_analysis to the historical bundle."
         ),
     )
     def get_context_at(
-        as_of: str,
-        scope: str = "daily",
-        match: str = "at_or_before",
-        assets: list[str] | None = None,
-        target_pct: dict[str, float] | None = None,
-        band: float | None = None,
+        as_of: AsOf,
+        scope: Scope = "daily",
+        match: MatchMode = "at_or_before",
+        assets: Assets = None,
+        target_pct: OptionalTargetPct = None,
+        band: BandOptional = None,
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
         if match not in ("exact", "at_or_before"):
@@ -243,15 +278,18 @@ def create_server(
     @mcp.tool(
         name="get_context_delta",
         description=(
-            "Compare two ContextBundle snapshots and return notable_shifts. "
-            "prior_as_of is required; omit current_as_of for latest live bundle."
+            "Compare two read-only ContextBundle snapshots and return "
+            "notable_shifts between them. Requires prior_as_of; omit current_as_of "
+            "to diff against the latest live bundle. Use get_context_at to load one "
+            "snapshot without diffing. Read-only; no ingest unless you combine with "
+            "a live current_as_of path."
         ),
     )
     def get_context_delta(
-        prior_as_of: str,
-        scope: str = "daily",
-        current_as_of: str | None = None,
-        assets: list[str] | None = None,
+        prior_as_of: PriorAsOf,
+        scope: Scope = "daily",
+        current_as_of: CurrentAsOf = None,
+        assets: Assets = None,
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
         conn = connect(config.paths.db)
@@ -270,14 +308,16 @@ def create_server(
     @mcp.tool(
         name="check_allocation_bands",
         description=(
-            "Evaluate allocation drift against multiple target_pct/band "
-            "scenarios in one call. Each scenario needs target_pct; optional "
-            "name and band (default 0.15)."
+            "Read-only batch drift check: evaluate allocation_pct against multiple "
+            "target_pct/band scenarios in one call. Each scenario requires "
+            "target_pct; optional name and band (default 0.15). Use "
+            "check_allocation_band for a single target. Use get_rebalance_plan when "
+            "you need USD move lines after identifying drift."
         ),
     )
     def check_allocation_bands(
-        allocation_pct: dict[str, float],
-        scenarios: list[dict[str, Any]],
+        allocation_pct: AllocationPct,
+        scenarios: Scenarios,
     ) -> dict[str, Any]:
         return handlers.check_allocation_bands(allocation_pct, scenarios)
 
