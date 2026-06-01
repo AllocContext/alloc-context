@@ -60,11 +60,15 @@ BAZAAR_INDEX_TAGS = ("btc", "eth", "portfolio", "holdings", "mcp")
 
 DISCOVERY_KEYWORD_MARKERS = (
     "portfolio allocation",
+    "portfolio context",
     "allocation drift",
     "rebalance plan",
     "fear and greed",
     "etf flows",
     "holdings",
+    "holdings-scoped",
+    "coinbase",
+    "kraken",
 )
 
 LISTING_DESCRIPTION = (
@@ -617,8 +621,9 @@ portfolio never persist on our servers.
 ## Search keywords
 
 bitcoin, ethereum, btc, eth, portfolio allocation, portfolio context, holdings,
-market context, sentiment, macro calendar, etf flows, allocation drift,
-rebalance plan, fear and greed, agent tools, mcp, x402
+holdings-scoped, coinbase, kraken, market context, sentiment, macro calendar,
+etf flows, allocation drift, rebalance plan, fear and greed, agent tools, mcp,
+x402
 
 ## Examples
 

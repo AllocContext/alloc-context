@@ -69,6 +69,7 @@ Not financial advice.
 | **Discovery** | [llms.txt](https://mcp.alloc-context.com/llms.txt), [x402 manifest](https://mcp.alloc-context.com/.well-known/x402.json) |
 | **Pricing** | **$0.02** cached context/math · **$0.05** live ingest or portfolio |
 | **Payment** | x402 on Base — USDC or EURC |
+| **Market scope** | Holdings-scoped (BTC/ETH OHLC; alt quote snapshots); bridge auto-scopes from portfolio |
 
 Agents and wallets connect directly to the hosted endpoint — see
 [agent-integration.md](docs/agent-integration.md). The Cursor bridge above
