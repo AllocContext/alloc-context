@@ -74,11 +74,19 @@ jobs:
     needs: [check, publish-pypi]
     if: needs.check.outputs.release == 'true'
     runs-on: ubuntu-latest
+    env:
+      PYPI_VERSION: ${{ needs.check.outputs.version }}
+      PYPI_PACKAGE: alloc-context
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Wait for PyPI release index
+        run: bash scripts/wait-for-pypi.sh
       - name: Install mcp-publisher
         run: bash scripts/install-mcp-publisher.sh ./mcp-publisher
       - name: Publish to MCP Registry
