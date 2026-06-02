@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-DEFAULT_CORE_DBS = ("alloccontext.db", "analyst.db")
+DEFAULT_CORE_DBS = ("alloccontext.db",)
 DEFAULT_OPERATOR_DBS = ("operator.db",)
 
 
