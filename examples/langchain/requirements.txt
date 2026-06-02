@@ -1,0 +1,2 @@
+# Example-only deps (also included in pip install -e ".[dev]")
+langchain-core>=0.3.0

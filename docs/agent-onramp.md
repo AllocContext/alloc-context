@@ -140,6 +140,7 @@ Default smoke calls `get_market_context`. Override:
 ```
 
 Programmatic clients: [agent-integration.md](agent-integration.md).
+LangChain tools: [langchain-integration.md](langchain-integration.md).
 
 ---
 
@@ -162,4 +163,5 @@ Self-host evaluation (ingest + MCP on your infra): [self-hosting.md](self-hostin
 - All tools and args: [mcp.md](mcp.md)
 - ContextBundle fields: [context-bundle.md](context-bundle.md)
 - CDP Bazaar discovery: [mcp-discovery.md](mcp-discovery.md)
+- LangChain / agent frameworks: [langchain-integration.md](langchain-integration.md)
 - Embed or license inquiries: GitHub Issues (inbound only; no outbound sales)
