@@ -1,5 +1,5 @@
 # Docker self-host stack — all ingest sources off by default.
-# Enable sources in ingest.sources when you have keys in docker/.env.
+# Enable sources in ingest.sources when you have keys in .env (see .env.example).
 # DB path overridden by ALLOC_CONTEXT_DB=/data/alloccontext.db in compose.
 
 paths:
@@ -17,7 +17,7 @@ portfolio:
   max_cash_risk_off: 0.50
   notes: >
     Docker defaults for self-host evaluation. Enable exchange sources and add
-    keys in docker/.env when testing live portfolio reads.
+    keys in .env when testing live portfolio reads.
 
 ingest:
   interval_minutes: 60

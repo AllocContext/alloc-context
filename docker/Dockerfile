@@ -1,4 +1,4 @@
-# Self-host evaluation stack (Stage E1b). Built locally — not published to a registry.
+# Self-host evaluation stack. Built locally — not published to a registry.
 FROM python:3.11-slim-bookworm
 
 WORKDIR /app
@@ -11,10 +11,11 @@ COPY pyproject.toml README.md glama.json server.json ./
 COPY alloccontext ./alloccontext
 COPY config ./config
 COPY schemas ./schemas
+COPY docker/config.yaml ./docker/config.yaml
 
 RUN pip install --no-cache-dir -e ".[hosted]"
 
-ENV ALLOC_CONTEXT_CONFIG=/app/config/config.docker.yaml \
+ENV ALLOC_CONTEXT_CONFIG=/app/docker/config.yaml \
     ALLOC_CONTEXT_DB=/data/alloccontext.db \
     ALLOC_CONTEXT_MCP_HOST=0.0.0.0 \
     ALLOC_CONTEXT_MCP_PORT=8000 \
