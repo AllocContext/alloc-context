@@ -43,7 +43,8 @@ After payment, retry with `PAYMENT-SIGNATURE` header per x402 spec.
 export X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402
 export X402_NETWORK=eip155:8453
 export CDP_API_KEY_ID=...
-export CDP_API_KEY_SECRET=...
+export CDP_API_KEY_SECRET_FILE=/opt/trading/shared/cdp_api_key.pem
+# Or inline: export CDP_API_KEY_SECRET=...
 export X402_PUBLIC_URL=https://mcp.yourdomain.com
 export X402_PAY_TO=0xYourWallet
 export X402_ACCEPTED_STABLES=USDC,EURC
@@ -51,7 +52,9 @@ export X402_ACCEPTED_STABLES=USDC,EURC
 
 CDP auth is required for verify/settle when using the CDP facilitator URL.
 USDC and EURC use EIP-3009 on Base per CDP network support docs.
-The hosted install includes `cdp-sdk`, which wires `CDP_API_KEY_*` into the
+On systemd hosts, prefer `CDP_API_KEY_SECRET_FILE` pointing at a PEM file
+(mode `640`, service user) instead of a multi-line inline secret in `.env`.
+The hosted install includes `cdp-sdk`, which wires CDP credentials into the
 facilitator client automatically.
 
 HTTP startup **exits** when CDP facilitator + `X402_PAY_TO` are set but

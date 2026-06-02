@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Mapping
 
 from alloccontext.mcp.bazaar import (
     LISTING_DESCRIPTION,
@@ -74,6 +76,30 @@ def _is_cdp_facilitator_url(url: str) -> bool:
     return url.rstrip("/").startswith(CDP_FACILITATOR_URL.rstrip("/"))
 
 
+def _normalize_cdp_api_secret(raw: str) -> str:
+    secret = raw.strip()
+    if len(secret) >= 2 and secret[0] == secret[-1] and secret[0] in ('"', "'"):
+        secret = secret[1:-1]
+    if "\\n" in secret:
+        secret = secret.replace("\\n", "\n")
+    return secret.strip()
+
+
+def load_cdp_api_credentials(
+    env: Mapping[str, str] | None = None,
+) -> tuple[str, str] | None:
+    source = env if env is not None else os.environ
+    api_key_id = source.get("CDP_API_KEY_ID", "").strip()
+    secret = source.get("CDP_API_KEY_SECRET", "").strip()
+    if not secret:
+        secret_file = source.get("CDP_API_KEY_SECRET_FILE", "").strip()
+        if secret_file:
+            secret = Path(secret_file).read_text(encoding="utf-8")
+    if not api_key_id or not secret:
+        return None
+    return api_key_id, _normalize_cdp_api_secret(secret)
+
+
 def build_x402_facilitator_client(settings: X402Settings) -> HTTPFacilitatorClient:
     if _is_cdp_facilitator_url(settings.facilitator_url):
         try:
@@ -82,11 +108,16 @@ def build_x402_facilitator_client(settings: X402Settings) -> HTTPFacilitatorClie
             raise RuntimeError(
                 "CDP facilitator requires cdp-sdk (pip install 'alloc-context[hosted]')"
             ) from exc
-        if not cdp_facilitator_configured():
+        credentials = load_cdp_api_credentials()
+        if not credentials:
             raise RuntimeError(
-                "CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET"
+                "CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET "
+                "(or CDP_API_KEY_SECRET_FILE)"
             )
-        return HTTPFacilitatorClient(create_facilitator_config())
+        api_key_id, api_key_secret = credentials
+        return HTTPFacilitatorClient(
+            create_facilitator_config(api_key_id, api_key_secret)
+        )
 
     return HTTPFacilitatorClient(FacilitatorConfig(url=settings.facilitator_url))
 
@@ -127,5 +158,5 @@ def build_x402_routes(settings: X402Settings) -> dict[str, RouteConfig]:
     }
 
 
-def cdp_facilitator_configured() -> bool:
-    return bool(os.environ.get("CDP_API_KEY_ID") and os.environ.get("CDP_API_KEY_SECRET"))
+def cdp_facilitator_configured(env: Mapping[str, str] | None = None) -> bool:
+    return load_cdp_api_credentials(env) is not None

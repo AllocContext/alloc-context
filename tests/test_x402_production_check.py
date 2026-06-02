@@ -27,6 +27,21 @@ def test_load_check_config_requires_pay_to() -> None:
         load_check_config({"X402_PUBLIC_URL": "https://mcp.example.com"})
 
 
+def test_load_check_config_reads_cdp_secret_file(tmp_path) -> None:
+    pem = tmp_path / "cdp.pem"
+    pem.write_text("secret-from-file")
+    config = load_check_config(
+        {
+            "X402_PUBLIC_URL": "https://mcp.example.com",
+            "X402_PAY_TO": "0xabc",
+            "CDP_API_KEY_ID": "key-id",
+            "CDP_API_KEY_SECRET_FILE": str(pem),
+        }
+    )
+    assert config.cdp_api_key_id == "key-id"
+    assert config.cdp_api_key_secret == "secret-from-file"
+
+
 def test_check_discovery_paths_requires_public(monkeypatch) -> None:
     config = X402CheckConfig(
         public_url="https://mcp.example.com",

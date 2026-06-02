@@ -9,6 +9,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Mapping
 
+from alloccontext.mcp.x402_config import load_cdp_api_credentials
+
 
 class X402ProductionCheckError(RuntimeError):
     """One or more production checks failed."""
@@ -33,6 +35,7 @@ def load_check_config(env: Mapping[str, str] | None = None) -> X402CheckConfig:
     pay_to = source.get("X402_PAY_TO", "").strip()
     if not pay_to:
         raise X402ProductionCheckError("X402_PAY_TO is required")
+    credentials = load_cdp_api_credentials(source)
     return X402CheckConfig(
         public_url=public_url,
         local_url=source.get("X402_CHECK_LOCAL", "http://127.0.0.1:8000").rstrip("/"),
@@ -42,8 +45,8 @@ def load_check_config(env: Mapping[str, str] | None = None) -> X402CheckConfig:
             "X402_FACILITATOR_URL",
             "https://x402.org/facilitator",
         ).strip(),
-        cdp_api_key_id=source.get("CDP_API_KEY_ID"),
-        cdp_api_key_secret=source.get("CDP_API_KEY_SECRET"),
+        cdp_api_key_id=credentials[0] if credentials else None,
+        cdp_api_key_secret=credentials[1] if credentials else None,
     )
 
 
@@ -52,7 +55,8 @@ def check_cdp_facilitator(config: X402CheckConfig) -> str:
         return f"facilitator {config.facilitator} (non-CDP)"
     if not (config.cdp_api_key_id and config.cdp_api_key_secret):
         raise X402ProductionCheckError(
-            "CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET"
+            "CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET "
+            "(or CDP_API_KEY_SECRET_FILE)"
         )
     try:
         import httpx
@@ -61,7 +65,10 @@ def check_cdp_facilitator(config: X402CheckConfig) -> str:
         raise X402ProductionCheckError(
             "cdp-sdk and httpx required for CDP facilitator check"
         ) from exc
-    cfg = create_facilitator_config()
+    cfg = create_facilitator_config(
+        config.cdp_api_key_id,
+        config.cdp_api_key_secret,
+    )
     headers = cfg["create_headers"]()["supported"]
     with httpx.Client(timeout=30) as client:
         response = client.get(f"{cfg['url']}/supported", headers=headers)

@@ -63,3 +63,8 @@ def test_remote_install_substitutes_environment_file() -> None:
     text = (REPO_ROOT / "deploy/remote-install.sh").read_text()
     assert "EnvironmentFile=/.*" in text
     assert "EnvironmentFile=-${ENV_FILE}" in text
+
+
+def test_restore_sqlite_stops_quarterly_review_timer() -> None:
+    text = (REPO_ROOT / "deploy/restore-sqlite.sh").read_text()
+    assert "alloc-context-operator-quarterly-review.timer" in text
