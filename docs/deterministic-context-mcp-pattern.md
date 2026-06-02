@@ -7,8 +7,7 @@ AllocContext implements this pattern for **portfolio-aware crypto context**.
 The pipeline and trust boundaries generalize to other domains (inventory,
 logistics, compliance snapshots) without changing the core idea.
 
-> **Privacy (AllocContext):** nothing stored · one-time read-only · pass-through
-> only on the hosted MCP.
+**Privacy (AllocContext):** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.
 
 > **Not financial advice.** Facts-only JSON; no trade execution.
 

@@ -3,7 +3,7 @@
 Redacted samples from hosted tools (`freshness=cached`). Values are
 illustrative — your `as_of`, prices, and NAV will differ. Not financial advice.
 
-> **Privacy:** nothing stored · one-time read-only · pass-through only.
+**Privacy:** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.
 
 Full schema: [context-bundle.md](context-bundle.md). Tool args: [mcp.md](mcp.md).
 

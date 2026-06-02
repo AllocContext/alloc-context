@@ -3,8 +3,7 @@
 Use the **production** AllocContext endpoint from agents, wallets, or Cursor
 without running ingest locally. Payment is per-call x402 on Base mainnet.
 
-> **Privacy:** nothing stored · one-time read-only · pass-through only — your
-> keys and portfolio never persist on our servers.
+**Privacy:** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.
 
 > **License:** source-available ([Elastic License 2.0](../LICENSE)), self-host
 > friendly. Official hosted MCP only at `https://mcp.alloc-context.com/mcp` —

@@ -9,7 +9,7 @@ scheduled ingest in compose is a **v2** follow-up.
 > loopback (`127.0.0.1:8000`) or place x402 in front for production. See
 > [mcp-http.md](mcp-http.md).
 
-> **Privacy:** nothing stored · one-time read-only · pass-through only.
+**Privacy:** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.
 
 Default quickstart: [agent-onramp.md](agent-onramp.md) (stdio bridge). Use this
 doc when you want to **evaluate self-host HTTP + SQLite** without a host venv.
