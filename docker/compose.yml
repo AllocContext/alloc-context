@@ -7,6 +7,8 @@
 #
 # See docs/docker-self-host.md
 
+name: alloc-context
+
 services:
   mcp:
     build:
@@ -25,6 +27,7 @@ services:
         required: false
     volumes:
       - alloc-data:/data
+      - ./config.yaml:/app/docker/config.yaml:ro
     healthcheck:
       test:
         [

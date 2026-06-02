@@ -32,6 +32,7 @@ ingest:
     coinmarketcap: false
     fred: false
   optional_sources:
+    # Keyed feeds (and coingecko demo) — missing credentials are non-fatal.
     - fred
     - finnhub
     - fmp

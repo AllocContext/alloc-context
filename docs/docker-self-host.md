@@ -12,7 +12,7 @@ scheduled ingest in compose is a **v2** follow-up.
 > **Privacy:** nothing stored · one-time read-only · pass-through only.
 
 Default quickstart: [agent-onramp.md](agent-onramp.md) (stdio bridge). Use this
-doc when you want to **evaluate self-host HTTP + SQLite** in one command.
+doc when you want to **evaluate self-host HTTP + SQLite** without a host venv.
 
 ## Prerequisites
 
@@ -35,7 +35,9 @@ feeds** stay off until you add credentials (below).
 ### Enable keyed sources
 
 Edit `docker/config.yaml` → `ingest.sources` and add keys in `.env` for feeds
-that require credentials. Keyless feeds are already on by default.
+that require credentials. Keyless feeds are already on by default. Compose
+mounts `config.yaml` into the container — edits apply on the next ingest without
+rebuild. Restart the service after changing `.env` (`docker compose up -d`).
 
 ```bash
 cd alloc-context/docker
@@ -90,12 +92,14 @@ docker compose run --rm mcp ingest
 Dry run:
 
 ```bash
+cd alloc-context/docker
 docker compose run --rm mcp ingest --dry-run
 ```
 
 Status (includes MCP health when the `mcp` service is up):
 
 ```bash
+cd alloc-context/docker
 docker compose run --rm mcp status --mcp-url http://mcp:8000/health
 ```
 
@@ -107,13 +111,15 @@ For Cursor stdio instead of HTTP, run interactively from the repo root:
 docker build -f docker/Dockerfile -t alloc-context:local .
 docker run -i --rm \
   -v alloc-context-data:/data \
+  -v "$(pwd)/docker/config.yaml:/app/docker/config.yaml:ro" \
   -e ALLOC_CONTEXT_CONFIG=/app/docker/config.yaml \
   -e ALLOC_CONTEXT_DB=/data/alloccontext.db \
   alloc-context:local \
   mcp --transport stdio
 ```
 
-Mount your own config when moving beyond the docker defaults.
+Edit `docker/config.yaml` on the host before run; the mount keeps stdio in sync
+with compose. Use a different config path when moving beyond the docker defaults.
 
 ## Layout
 
@@ -122,11 +128,11 @@ All stack artifacts live under `docker/`:
 | Path | Purpose |
 |------|---------|
 | `docker/Dockerfile` | Pinned `python:3.11-slim-bookworm`; installs `.[hosted]` |
-| `docker/compose.yml` | `mcp` service, SQLite volume `alloc-data` |
-| `docker/config.yaml` | Keyless ingest on; keyed optional sources off |
+| `docker/compose.yml` | `mcp` service; mounts `config.yaml`; volume `alloc-data` |
+| `docker/config.yaml` | Keyless ingest on; keyed optional sources off (live-mounted) |
 | `docker/.env.example` | Optional ingest API keys |
 
-SQLite lives in the `alloc-data` volume at `/data/alloccontext.db`.
+SQLite lives in the `alloc-context_alloc-data` volume at `/data/alloccontext.db`.
 
 ## Production self-host
 
