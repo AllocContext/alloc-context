@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   publish:
-    if: github.repository == 'negillett/alloc-context'
+    if: github.repository == 'AllocContext/alloc-context'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -36,5 +36,5 @@ jobs:
 
       - name: Verify registry listing
         run: |
-          curl -fsS "https://registry.modelcontextprotocol.io/v0/servers?search=negillett/alloc-context" \
+          curl -fsS "https://registry.modelcontextprotocol.io/v0/servers?search=AllocContext/alloc-context" \
             | jq -e '[.servers[] | select(.name | test("alloc-context"; "i"))] | length > 0'

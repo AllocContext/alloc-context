@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/negillett/alloc-context/context-bundle.v2.json",
+  "$id": "https://github.com/AllocContext/alloc-context/context-bundle.v2.json",
   "title": "ContextBundle",
   "description": "Portfolio-first context bundle. Default portfolio has holdings[] and band weights only; allocation drift is opt-in via allocation_analysis.",
   "type": "object",

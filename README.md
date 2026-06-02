@@ -1,9 +1,9 @@
 # AllocContext
 
-[![smithery badge](https://smithery.ai/badge/@negillett/alloc-context)](https://smithery.ai/server/@negillett/alloc-context)
-[![Glama MCP server](https://glama.ai/mcp/servers/negillett/alloc-context/badges/score.svg)](https://glama.ai/mcp/servers/negillett/alloc-context)
+[![smithery badge](https://smithery.ai/badge/@AllocContext/alloc-context)](https://smithery.ai/server/@AllocContext/alloc-context)
+[![Glama MCP server](https://glama.ai/mcp/servers/AllocContext/alloc-context/badges/score.svg)](https://glama.ai/mcp/servers/AllocContext/alloc-context)
 
-mcp-name: io.github.negillett/alloc-context
+mcp-name: io.github.AllocContext/alloc-context
 
 **Portfolio-aware crypto context for whatever you hold** — discover your
 holdings, holdings-scoped market data, sentiment, macro, and regime; optional
@@ -103,7 +103,7 @@ See [self-hosting.md](docs/self-hosting.md) (`self_host: true` in user config)
 or [local-dev.md](docs/local-dev.md) for the dev stack.
 
 ```bash
-git clone git@github.com:negillett/alloc-context.git
+git clone git@github.com:AllocContext/alloc-context.git
 cd alloc-context
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"

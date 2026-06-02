@@ -47,5 +47,5 @@ def test_glama_json_is_valid_server_schema() -> None:
     path = Path(__file__).resolve().parents[1] / "glama.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["$schema"] == "https://glama.ai/mcp/schemas/server.json"
-    assert data["maintainers"] == ["negillett"]
+    assert data["maintainers"] == ["AllocContext"]
     assert data["connector_emails"][0] == "nathangillett@icloud.com"

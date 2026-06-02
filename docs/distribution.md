@@ -31,7 +31,7 @@ hosted MCP: https://mcp.alloc-context.com/mcp — see docs/USE.md. x402 on Base
 The workspace PAT cannot set these via `gh repo edit` (needs **Administration**
 scope). Use the GitHub UI:
 
-1. Open [github.com/negillett/alloc-context](https://github.com/negillett/alloc-context)
+1. Open [github.com/AllocContext/alloc-context](https://github.com/AllocContext/alloc-context)
 2. **Settings** is not required — click the **gear** next to About on the repo home
 3. Set **Description** and **Website** as in the table above
 4. Add **Topics** from the table (include `model-context-protocol`)
@@ -39,7 +39,7 @@ scope). Use the GitHub UI:
 Or, from a machine with a PAT that has **Administration** on the repo:
 
 ```bash
-gh repo edit negillett/alloc-context \
+gh repo edit AllocContext/alloc-context \
   --description "Portfolio crypto context MCP for agents — holdings, market, optional drift. Hosted: https://mcp.alloc-context.com/mcp (x402). ELv2." \
   --add-topic mcp --add-topic x402 --add-topic bitcoin --add-topic ethereum \
   --add-topic model-context-protocol --add-topic agents --add-topic portfolio \
@@ -60,7 +60,7 @@ This repo ships [`server.json`](../server.json) at the root with:
 ### Publish steps
 
 1. Ensure PyPI has the release — see [publishing.md](publishing.md).
-   The package **README** must include `mcp-name: io.github.negillett/alloc-context`
+   The package **README** must include `mcp-name: io.github.AllocContext/alloc-context`
    (registry ownership check against the PyPI long description).
 2. **Automated (recommended):** every **release** run publishes after PyPI
    upload. For an out-of-band registry-only publish, Actions →
@@ -76,10 +76,10 @@ This repo ships [`server.json`](../server.json) at the root with:
 Verify after publish:
 
 ```bash
-curl -sS "https://registry.modelcontextprotocol.io/v0/servers?search=negillett/alloc-context" | jq .
+curl -sS "https://registry.modelcontextprotocol.io/v0/servers?search=AllocContext/alloc-context" | jq .
 ```
 
-Namespace `io.github.negillett/alloc-context` requires GitHub auth as the repo owner.
+Namespace `io.github.AllocContext/alloc-context` requires GitHub auth as the repo owner.
 
 ## PyPI
 

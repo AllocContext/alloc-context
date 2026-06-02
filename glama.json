@@ -1,5 +1,5 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
-  "maintainers": ["negillett"],
+  "maintainers": ["AllocContext"],
   "connector_emails": ["nathangillett@icloud.com"]
 }

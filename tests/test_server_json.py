@@ -32,4 +32,4 @@ def test_server_json_version_matches_pyproject():
 
 def test_readme_includes_mcp_registry_name_for_pypi():
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    assert "mcp-name: io.github.negillett/alloc-context" in readme
+    assert "mcp-name: io.github.AllocContext/alloc-context" in readme

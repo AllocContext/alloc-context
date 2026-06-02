@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   open-release-pr:
-    if: github.repository == 'negillett/alloc-context'
+    if: github.repository == 'AllocContext/alloc-context'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
