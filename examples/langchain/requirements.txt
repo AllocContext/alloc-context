@@ -1,0 +1,2 @@
+# Example-only deps for examples/langchain/run_example.py
+langchain-core>=0.3.0
