@@ -22,6 +22,7 @@ UNITS=(
   alloc-context-operator-daily-brief.timer
   alloc-context-operator-weekly-brief.timer
   alloc-context-operator-monthly-review.timer
+  alloc-context-operator-quarterly-review.timer
 )
 
 if [[ "$(id -u)" -eq 0 ]]; then

@@ -7,9 +7,11 @@ from alloccontext.mcp.x402_config import (
     MCP_HTTP_PATH,
     CDP_FACILITATOR_URL,
     X402Settings,
+    _normalize_cdp_api_secret,
     build_x402_facilitator_client,
     build_x402_routes,
     cdp_facilitator_configured,
+    load_cdp_api_credentials,
     load_x402_settings,
 )
 from alloccontext.mcp.x402_pricing import DEFAULT_MCP_PRICE_HEAVY
@@ -207,6 +209,7 @@ def test_cdp_facilitator_client_requires_keys(monkeypatch: pytest.MonkeyPatch) -
     pytest.importorskip("cdp")
     monkeypatch.delenv("CDP_API_KEY_ID", raising=False)
     monkeypatch.delenv("CDP_API_KEY_SECRET", raising=False)
+    monkeypatch.delenv("CDP_API_KEY_SECRET_FILE", raising=False)
     settings = X402Settings(
         enabled=True,
         pay_to="0xSeller",
@@ -217,6 +220,56 @@ def test_cdp_facilitator_client_requires_keys(monkeypatch: pytest.MonkeyPatch) -
     )
     with pytest.raises(RuntimeError, match="CDP_API_KEY"):
         build_x402_facilitator_client(settings)
+
+
+def test_normalize_cdp_api_secret_unescapes_pem() -> None:
+    raw = '"-----BEGIN EC PRIVATE KEY-----\\nABC\\n-----END EC PRIVATE KEY-----\\n"'
+    assert _normalize_cdp_api_secret(raw).splitlines()[0] == "-----BEGIN EC PRIVATE KEY-----"
+
+
+def test_load_cdp_api_credentials_from_file(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    pem = tmp_path / "cdp.pem"
+    pem.write_text("-----BEGIN EC PRIVATE KEY-----\nTEST\n-----END EC PRIVATE KEY-----\n")
+    monkeypatch.setenv("CDP_API_KEY_ID", "organizations/test/apiKeys/key")
+    monkeypatch.delenv("CDP_API_KEY_SECRET", raising=False)
+    monkeypatch.setenv("CDP_API_KEY_SECRET_FILE", str(pem))
+    creds = load_cdp_api_credentials()
+    assert creds is not None
+    assert creds[0] == "organizations/test/apiKeys/key"
+    assert "BEGIN EC PRIVATE KEY" in creds[1]
+
+
+def test_load_cdp_api_credentials_inline_precedence_over_file(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pem = tmp_path / "cdp.pem"
+    pem.write_text("from-file")
+    monkeypatch.setenv("CDP_API_KEY_ID", "key-id")
+    monkeypatch.setenv("CDP_API_KEY_SECRET", "from-inline")
+    monkeypatch.setenv("CDP_API_KEY_SECRET_FILE", str(pem))
+    creds = load_cdp_api_credentials()
+    assert creds == ("key-id", "from-inline")
+
+
+def test_cdp_facilitator_configured_from_file_env(tmp_path) -> None:
+    pem = tmp_path / "cdp.pem"
+    pem.write_text("secret-from-file")
+    assert cdp_facilitator_configured(
+        {
+            "CDP_API_KEY_ID": "key-id",
+            "CDP_API_KEY_SECRET_FILE": str(pem),
+        }
+    )
+
+
+def test_load_cdp_api_credentials_missing_file_raises() -> None:
+    with pytest.raises(RuntimeError, match="CDP_API_KEY_SECRET_FILE not readable"):
+        load_cdp_api_credentials(
+            {
+                "CDP_API_KEY_ID": "key-id",
+                "CDP_API_KEY_SECRET_FILE": "/no/such/cdp.pem",
+            }
+        )
 
 
 def test_cdp_facilitator_client_with_keys(monkeypatch: pytest.MonkeyPatch) -> None:
