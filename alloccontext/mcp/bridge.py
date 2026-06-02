@@ -24,6 +24,11 @@ from alloccontext.user_config import (
 
 
 from alloccontext.mcp.instructions import PRODUCT_INSTRUCTIONS
+from alloccontext.mcp.tool_catalog import (
+    tool_description,
+    tool_mcp_annotations,
+    tool_title,
+)
 
 
 def _effective_target_pct(
@@ -41,6 +46,15 @@ def _effective_band(user: UserConfig, band: float | None) -> float | None:
     return user.band
 
 
+def _bridge_tool_meta(tool_name: str) -> dict[str, Any]:
+    return {
+        "name": tool_name,
+        "title": tool_title(tool_name),
+        "annotations": tool_mcp_annotations(tool_name),
+        "description": tool_description(tool_name),
+    }
+
+
 def create_bridge_server(user: UserConfig):
     from alloccontext.mcp.server import _require_mcp
 
@@ -54,7 +68,7 @@ def create_bridge_server(user: UserConfig):
         instructions=PRODUCT_INSTRUCTIONS,
     )
 
-    @mcp.tool(name="get_market_context")
+    @mcp.tool(**_bridge_tool_meta("get_market_context"))
     def get_market_context(
         scope: str = "daily",
         freshness: str = "cached",
@@ -90,7 +104,7 @@ def create_bridge_server(user: UserConfig):
             payload = merge_assets_omitted(payload, portfolio)
         return attach_assets_scope(payload, assets_scope)
 
-    @mcp.tool(name="get_context_bundle")
+    @mcp.tool(**_bridge_tool_meta("get_context_bundle"))
     def get_context_bundle(
         scope: str = "daily",
         freshness: str = "cached",
@@ -144,7 +158,7 @@ def create_bridge_server(user: UserConfig):
         merged = merge_assets_omitted(merged, portfolio)
         return attach_assets_scope(merged, assets_scope)
 
-    @mcp.tool(name="get_portfolio_state")
+    @mcp.tool(**_bridge_tool_meta("get_portfolio_state"))
     def get_portfolio_state(
         exchange: str | None = None,
         api_key: str | None = None,
@@ -169,7 +183,7 @@ def create_bridge_server(user: UserConfig):
             band=_effective_band(user, band),
         )
 
-    @mcp.tool(name="get_rebalance_plan")
+    @mcp.tool(**_bridge_tool_meta("get_rebalance_plan"))
     def get_rebalance_plan(
         allocation_pct: dict[str, float],
         target_pct: dict[str, float] | None = None,
@@ -188,7 +202,7 @@ def create_bridge_server(user: UserConfig):
             band=_effective_band(user, band),
         )
 
-    @mcp.tool(name="check_allocation_band")
+    @mcp.tool(**_bridge_tool_meta("check_allocation_band"))
     def check_allocation_band(
         allocation_pct: dict[str, float],
         target_pct: dict[str, float] | None = None,
@@ -200,14 +214,14 @@ def create_bridge_server(user: UserConfig):
         effective_band = _effective_band(user, band) or 0.15
         return handlers.check_band(allocation_pct, effective_target, effective_band)
 
-    @mcp.tool(name="check_allocation_bands")
+    @mcp.tool(**_bridge_tool_meta("check_allocation_bands"))
     def check_allocation_bands(
         allocation_pct: dict[str, float],
         scenarios: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return handlers.check_allocation_bands(allocation_pct, scenarios)
 
-    @mcp.tool(name="get_context_at")
+    @mcp.tool(**_bridge_tool_meta("get_context_at"))
     def get_context_at(
         as_of: str,
         scope: str = "daily",
@@ -233,7 +247,7 @@ def create_bridge_server(user: UserConfig):
             args["band"] = effective_band
         return call_upstream_tool(user, "get_context_at", args)
 
-    @mcp.tool(name="get_context_delta")
+    @mcp.tool(**_bridge_tool_meta("get_context_delta"))
     def get_context_delta(
         prior_as_of: str,
         scope: str = "daily",

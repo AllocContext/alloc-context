@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from alloccontext.mcp.bazaar import build_mcp_server_card, mcp_tool_specs
+from alloccontext.mcp.bazaar import build_mcp_server_card, smoke_tool_arguments
 from alloccontext.mcp.tool_catalog import (
     MCP_SERVER_PROMPTS,
     MCP_SERVER_RESOURCES,
     assert_input_schema_descriptions,
+    mcp_tool_specs,
     tool_annotations,
+    tool_description,
+    tool_title,
 )
 
 
@@ -50,7 +53,6 @@ def test_mcp_server_tools_expose_titles_and_annotations() -> None:
     import asyncio
 
     from alloccontext.mcp.server import create_server
-    from alloccontext.mcp.tool_catalog import tool_title
 
     async def _check() -> None:
         server = create_server()
@@ -58,8 +60,34 @@ def test_mcp_server_tools_expose_titles_and_annotations() -> None:
         assert len(tools) == 8
         for tool in tools:
             assert tool.title == tool_title(tool.name)
+            assert tool.description == tool_description(tool.name)
             assert tool.annotations is not None
             assert tool.annotations.readOnlyHint is True
             assert tool.annotations.destructiveHint is False
+
+    asyncio.run(_check())
+
+
+def test_bridge_tools_use_catalog_descriptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("mcp")
+    import asyncio
+
+    from alloccontext.mcp.bridge import create_bridge_server
+    from alloccontext.user_config import UserConfig
+
+    user = UserConfig.empty()
+    monkeypatch.setattr(
+        "alloccontext.mcp.bridge.bridge_upstream_ready",
+        lambda _user: False,
+    )
+
+    async def _check() -> None:
+        server = create_bridge_server(user)
+        tools = await server.list_tools()
+        assert len(tools) == 8
+        for tool in tools:
+            assert tool.description == tool_description(tool.name)
 
     asyncio.run(_check())

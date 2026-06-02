@@ -1,4 +1,4 @@
-"""Shared MCP tool metadata for Smithery server cards and FastMCP registration."""
+"""Canonical MCP tool registry — descriptions, schemas, Bazaar/Smithery metadata."""
 
 from __future__ import annotations
 
@@ -168,6 +168,356 @@ SCENARIOS_SCHEMA: dict[str, Any] = {
         "required": ["target_pct"],
     },
 }
+
+
+NAV_USD_SCHEMA: dict[str, Any] = {
+    "type": "number",
+    "description": "Portfolio net asset value in USD.",
+}
+
+EXCHANGE_KRAKEN_COINBASE_SCHEMA: dict[str, Any] = {
+    "type": "string",
+    "enum": ["kraken", "coinbase"],
+    "description": "Spot exchange for move wording: kraken (default) or coinbase.",
+}
+
+EXCHANGE_REQUIRED_SCHEMA: dict[str, Any] = {
+    "type": "string",
+    "enum": ["kraken", "coinbase"],
+    "description": "Spot exchange to query: kraken or coinbase.",
+}
+
+API_KEY_SCHEMA: dict[str, Any] = {
+    "type": "string",
+    "description": "Read-only exchange API key (Coinbase CDP key name).",
+}
+
+API_SECRET_SCHEMA: dict[str, Any] = {
+    "type": "string",
+    "description": (
+        "Read-only API secret (Kraken base64 secret or Coinbase EC PEM)."
+    ),
+}
+
+BAND_DEFAULT_SCHEMA: dict[str, Any] = {
+    "type": "number",
+    "description": "Drift band width as a fraction (default 0.15 = 15%).",
+}
+
+TOOL_DESCRIPTIONS: dict[str, str] = {
+    "get_context_bundle": (
+        "Return the full read-only ContextBundle JSON: portfolio holdings, "
+        "market, sentiment, macro, regime hints, and delta vs the prior saved "
+        "snapshot. Use get_market_context for market-only; use get_context_at "
+        "for a historical snapshot; use get_context_delta to compare two times. "
+        "Optional target_pct and band attach allocation_analysis (opt-in drift "
+        "math). freshness=cached uses the local ingest DB; freshness=live runs "
+        "ingest first (may add latency; needs ingest API keys on the host)."
+    ),
+    "get_market_context": (
+        "Return read-only fused market backdrop: sentiment (Fear & Greed, "
+        "Kalshi), macro events, FRED indicators, ETF flows, and market breadth "
+        "(no portfolio holdings). Use get_context_bundle when you also need "
+        "holdings, delta, or regime. freshness=cached uses the local ingest DB; "
+        "freshness=live runs ingest first (requires ingest API keys on the host)."
+    ),
+    "get_rebalance_plan": (
+        "Compute read-only USD deltas and suggested exchange move lines to "
+        "reach a BTC/ETH/CASH target split. Pure math — no exchange API calls. "
+        "Requires allocation_pct, target_pct, and nav_usd. Use "
+        "get_portfolio_state or get_context_bundle when you need live or cached "
+        "weights first. Use check_allocation_band for pass/fail drift only; use "
+        "check_allocation_bands for multiple scenarios. Optional band adds a "
+        "band_check block alongside the plan. exchange=kraken|coinbase adjusts "
+        "move wording only."
+    ),
+    "get_portfolio_state": (
+        "Fetch live read-only portfolio NAV, holdings[], and band weights from "
+        "a supported spot exchange (e.g. Kraken, Coinbase) using credentials "
+        "passed in this call (never stored). "
+        "Requires exchange, api_key, and api_secret. Use get_context_bundle "
+        "for cached market and history without exchange keys. Optional "
+        "target_pct attaches allocation_analysis; optional band sets drift "
+        "width when target_pct is supplied. Returns an error payload on invalid "
+        "credentials or unsupported exchange — no side effects."
+    ),
+    "check_allocation_band": (
+        "Read-only drift check: are BTC/ETH/CASH band weights outside the "
+        "drift band vs target_pct? Returns rebalance_hint (within_band, "
+        "consider_rebalance, etc.). Requires allocation_pct and target_pct; "
+        "band defaults to 0.15. Single-scenario only — use check_allocation_bands "
+        "for multiple targets in one call. Use get_rebalance_plan when you need "
+        "USD move lines, not just a hint. For bundle drift, pass target_pct on "
+        "get_context_bundle to attach allocation_analysis instead."
+    ),
+    "get_context_at": (
+        "Load a read-only ContextBundle snapshot from ingest history at a "
+        "point in time. Use get_context_bundle for the latest snapshot; use "
+        "get_context_delta to compare two timestamps. Read-only; returns an "
+        "unavailable payload when no snapshot matches as_of and match. Optional "
+        "target_pct and band attach allocation_analysis to the historical bundle."
+    ),
+    "get_context_delta": (
+        "Compare two read-only ContextBundle snapshots and return "
+        "notable_shifts between them. Requires prior_as_of; omit current_as_of "
+        "to diff against the latest live bundle. Use get_context_at to load one "
+        "snapshot without diffing. Read-only; no ingest unless you combine with "
+        "a live current_as_of path."
+    ),
+    "check_allocation_bands": (
+        "Read-only batch drift check: evaluate allocation_pct against multiple "
+        "target_pct/band scenarios in one call. Each scenario requires "
+        "target_pct; optional name and band (default 0.15). Use "
+        "check_allocation_band for a single target. Use get_rebalance_plan when "
+        "you need USD move lines after identifying drift."
+    ),
+}
+
+MCP_TOOL_SPECS: tuple[dict[str, Any], ...] = (
+    {
+        "tool_name": "get_market_context",
+        "description": TOOL_DESCRIPTIONS["get_market_context"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "scope": SCOPE_SCHEMA,
+                "freshness": FRESHNESS_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
+            },
+        },
+        "example": {"scope": "daily", "freshness": "cached", "assets": ["BTC", "ETH"]},
+        "output_example": {
+            "scope": "daily",
+            "freshness": "cached",
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "age_seconds": 3600,
+            "sentiment": {"available": True},
+            "macro": {"available": True, "sources": []},
+            "etf": {"available": True, "assets": {}},
+            "breadth": {"available": True},
+        },
+    },
+    {
+        "tool_name": "get_context_bundle",
+        "description": TOOL_DESCRIPTIONS["get_context_bundle"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "scope": SCOPE_SCHEMA,
+                "freshness": FRESHNESS_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
+                "target_pct": TARGET_PCT_SCHEMA,
+                "band": BAND_SCHEMA,
+            },
+        },
+        "example": {
+            "scope": "daily",
+            "freshness": "cached",
+            "assets": ["BTC", "ETH"],
+        },
+        "output_example": {
+            "bundle_id": "daily:2026-05-21T12:00:00+00:00",
+            "scope": "daily",
+            "assets": ["BTC", "ETH"],
+            "portfolio": {
+                "available": True,
+                "holdings": [{"symbol": "BTC", "kind": "band"}],
+            },
+            "market": {"available": True},
+            "sentiment": {"available": True},
+            "macro": {"available": True},
+            "regime": {
+                "available": True,
+                "allocation": {"available": False},
+                "summary": "Fear & Greed index: 52 (Neutral).",
+            },
+            "delta": {"available": True},
+        },
+    },
+    {
+        "tool_name": "get_rebalance_plan",
+        "description": TOOL_DESCRIPTIONS["get_rebalance_plan"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "allocation_pct": allocation_pct_schema(role="Current"),
+                "target_pct": allocation_pct_schema(role="Target"),
+                "nav_usd": NAV_USD_SCHEMA,
+                "exchange": EXCHANGE_KRAKEN_COINBASE_SCHEMA,
+                "band": BAND_SCHEMA,
+            },
+            "required": ["allocation_pct", "target_pct", "nav_usd"],
+        },
+        "example": {
+            "allocation_pct": {"BTC": 0.45, "ETH": 0.45, "CASH": 0.10},
+            "target_pct": {"BTC": 0.50, "ETH": 0.40, "CASH": 0.10},
+            "nav_usd": 10000,
+            "exchange": "kraken",
+            "band": 0.15,
+        },
+        "output_example": {
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "age_seconds": 0,
+            "exchange": "kraken",
+            "moves": [],
+            "deltas_usd": {"BTC": 500.0, "ETH": -500.0, "CASH": 0.0},
+            "band_check": {"outside_band": False, "hint": "within_band"},
+        },
+    },
+    {
+        "tool_name": "get_portfolio_state",
+        "description": TOOL_DESCRIPTIONS["get_portfolio_state"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "exchange": EXCHANGE_REQUIRED_SCHEMA,
+                "api_key": API_KEY_SCHEMA,
+                "api_secret": API_SECRET_SCHEMA,
+                "target_pct": OPTIONAL_TARGET_PCT_SCHEMA,
+                "band": BAND_SCHEMA,
+            },
+            "required": ["exchange", "api_key", "api_secret"],
+        },
+        "example": {
+            "exchange": "kraken",
+            "api_key": "YOUR_READ_ONLY_KEY",
+            "api_secret": "YOUR_READ_ONLY_SECRET",
+        },
+        "output_example": {
+            "available": True,
+            "exchange": "kraken",
+            "source": "live",
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "age_seconds": 0,
+            "nav_usd": 10000.0,
+            "holdings": [{"symbol": "BTC", "kind": "band"}],
+            "allocation_pct": {"BTC": 0.70, "ETH": 0.25, "CASH": 0.05},
+        },
+    },
+    {
+        "tool_name": "check_allocation_band",
+        "description": TOOL_DESCRIPTIONS["check_allocation_band"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "allocation_pct": allocation_pct_schema(role="Current"),
+                "target_pct": allocation_pct_schema(role="Target"),
+                "band": BAND_DEFAULT_SCHEMA,
+            },
+            "required": ["allocation_pct", "target_pct"],
+        },
+        "example": {
+            "allocation_pct": {"BTC": 0.45, "ETH": 0.45, "CASH": 0.10},
+            "target_pct": {"BTC": 0.50, "ETH": 0.40, "CASH": 0.10},
+            "band": 0.15,
+        },
+        "output_example": {
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "age_seconds": 0,
+            "outside_band": False,
+            "hint": "within_band",
+            "max_drift": 0.05,
+        },
+    },
+    {
+        "tool_name": "get_context_at",
+        "description": TOOL_DESCRIPTIONS["get_context_at"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "as_of": AS_OF_SCHEMA,
+                "scope": SCOPE_SCHEMA,
+                "match": MATCH_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
+                "target_pct": TARGET_PCT_SCHEMA,
+                "band": BAND_SCHEMA,
+            },
+            "required": ["as_of"],
+        },
+        "example": {
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "scope": "daily",
+            "match": "at_or_before",
+        },
+        "output_example": {
+            "scope": "daily",
+            "as_of": "2026-05-21T12:00:00+00:00",
+            "portfolio": {"available": True},
+            "regime": {"available": True},
+        },
+    },
+    {
+        "tool_name": "get_context_delta",
+        "description": TOOL_DESCRIPTIONS["get_context_delta"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "prior_as_of": PRIOR_AS_OF_SCHEMA,
+                "scope": SCOPE_SCHEMA,
+                "current_as_of": CURRENT_AS_OF_SCHEMA,
+                "assets": ASSET_FILTER_SCHEMA,
+            },
+            "required": ["prior_as_of"],
+        },
+        "example": {
+            "prior_as_of": "2026-05-20T12:00:00+00:00",
+            "scope": "daily",
+        },
+        "output_example": {
+            "prior_as_of": "2026-05-20T12:00:00+00:00",
+            "current_as_of": "2026-05-21T12:00:00+00:00",
+            "notable_shifts": ["F&G 30 → 25 (-5)"],
+        },
+    },
+    {
+        "tool_name": "check_allocation_bands",
+        "description": TOOL_DESCRIPTIONS["check_allocation_bands"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "allocation_pct": allocation_pct_schema(role="Current"),
+                "scenarios": SCENARIOS_SCHEMA,
+            },
+            "required": ["allocation_pct", "scenarios"],
+        },
+        "example": {
+            "allocation_pct": {"BTC": 0.65, "ETH": 0.30, "CASH": 0.05},
+            "scenarios": [
+                {
+                    "name": "base",
+                    "target_pct": {"BTC": 0.70, "ETH": 0.30, "CASH": 0.00},
+                    "band": 0.15,
+                }
+            ],
+        },
+        "output_example": {
+            "allocation_pct": {"BTC": 0.65, "ETH": 0.30, "CASH": 0.05},
+            "scenarios": [{"name": "base", "hint": "within_band"}],
+        },
+    },
+)
+
+MCP_TOOL_NAMES: tuple[str, ...] = tuple(
+    spec["tool_name"] for spec in MCP_TOOL_SPECS
+)
+
+
+def tool_description(tool_name: str) -> str:
+    try:
+        return TOOL_DESCRIPTIONS[tool_name]
+    except KeyError as exc:
+        raise KeyError(f"unknown MCP tool: {tool_name}") from exc
+
+
+def mcp_tool_specs() -> tuple[dict[str, Any], ...]:
+    return MCP_TOOL_SPECS
+
+
+def tool_mcp_annotations(tool_name: str):
+    """FastMCP ToolAnnotations for a registered tool (requires mcp package)."""
+    from mcp.types import ToolAnnotations
+
+    return ToolAnnotations(**tool_annotations(tool_name))
 
 
 def output_schema_from_example(example: dict[str, Any]) -> dict[str, Any]:
