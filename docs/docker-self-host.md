@@ -28,19 +28,34 @@ docker compose run --rm mcp ingest
 curl -sf http://127.0.0.1:8000/health | python3 -m json.tool
 ```
 
-First ingest pulls public sources (Kalshi, Fear & Greed, CoinGecko demo, etc.).
-Exchange portfolio reads stay off until you add keys (below).
+First ingest runs with **all sources disabled** in `config/config.docker.yaml`.
+The MCP server starts immediately; enable feeds and add keys before expecting
+market context in tool output.
 
-### Optional API keys
+### Enable sources
+
+Edit `config/config.docker.yaml` → `ingest.sources` (set desired feeds to
+`true`). Keyless feeds: `fear_greed`, `kalshi`, `macro_calendar`. Keyed feeds
+need `docker/.env` (see below).
 
 ```bash
 cp docker/.env.example docker/.env
 # edit docker/.env — never commit
+# edit config/config.docker.yaml — enable matching ingest.sources
 docker compose run --rm mcp ingest
 docker compose up -d
 ```
 
-Enable exchanges in `config/config.docker.yaml` when testing live portfolio.
+| Source | Config flag | Typical env var |
+|--------|-------------|-----------------|
+| Kraken | `kraken: true` + `exchanges.kraken.enabled` | `KRAKEN_API_*` |
+| Coinbase | `coinbase: true` + `exchanges.coinbase.enabled` | `COINBASE_API_*` |
+| FRED macro | `fred: true` | `FRED_API_KEY` |
+| CoinGecko | `coingecko: true` | optional (`use_demo_key: true`) |
+| CoinMarketCap | `coinmarketcap: true` | `COINMARKETCAP_API_KEY` |
+| ETF flows | `etf_flows: true` + `etf.sosovalue_enabled` | `SOSOVALUE_API_KEY` |
+| Fear & Greed | `fear_greed: true` | — |
+| Kalshi | `kalshi: true` | — |
 
 ## MCP endpoint
 
@@ -104,7 +119,7 @@ Mount your own `config/config.yaml` when moving beyond the docker defaults.
 |------|---------|
 | `Dockerfile` | Pinned `python:3.11-slim-bookworm`; installs `.[hosted]` |
 | `docker-compose.yml` | `mcp` service, SQLite volume `alloc-data` |
-| `config/config.docker.yaml` | Public-source defaults (no keys) |
+| `config/config.docker.yaml` | All ingest sources off by default; opt-in when keyed |
 | `docker/.env.example` | Optional ingest API keys |
 
 SQLite lives in the `alloc-data` volume at `/data/alloccontext.db`.
