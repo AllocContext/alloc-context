@@ -6,7 +6,8 @@ GitHub Actions runs three parallel gates on every push and pull request to
 | Job | Tool | Purpose |
 |-----|------|---------|
 | `test` | [pytest-cov](https://pytest-cov.readthedocs.io/) | Unit tests plus line coverage (minimum 75%) |
-| `bandit` | [Bandit](https://bandit.readthedocs.io/) | Python SAST — fails on medium+ after documented skips |
+| `test` | actionlint | GitHub Actions workflow lint (downloaded in CI) |
+| `bandit` | [Bandit](https://bandit.readthedocs.io/) | Python SAST on `alloccontext/` — fails on medium+ after documented skips |
 | `pip-audit` | [pip-audit](https://pypi.org/project/pip-audit/) | Dependency vulnerability scan (OSV database) |
 
 ## Local parity
@@ -27,6 +28,12 @@ scripts/run-quality-gates.sh alloc-context
 ```
 
 When working from a standalone clone of this repo, use the commands above only.
+
+## Bandit scope
+
+Bandit scans the `alloccontext/` package only. Operational scripts under
+`scripts/` (x402 smoke, registry publish, etc.) are not included — review
+those manually when they handle secrets such as `EVM_PRIVATE_KEY`.
 
 ## Bandit skips
 
