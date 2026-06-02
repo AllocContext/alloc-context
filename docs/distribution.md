@@ -13,18 +13,18 @@ Use this for directory forms, community posts, and registry descriptions.
 
 ```text
 AllocContext — portfolio-aware crypto context for AI agents over MCP. Discover
-holdings, market, sentiment, macro, and regime; optional allocation
-analysis. Privacy: nothing stored; one-time read-only; pass-through only.
-Source-available (Elastic License 2.0); self-host friendly. Official hosted MCP:
-https://mcp.alloc-context.com/mcp — see docs/USE.md. x402 on Base ($0.02 cached
-/ $0.05 live).
+holdings and holdings-scoped market, sentiment, macro, and regime; optional
+allocation analysis. Privacy: nothing stored; one-time read-only; pass-through
+only. Source-available (Elastic License 2.0); self-host friendly. Official
+hosted MCP: https://mcp.alloc-context.com/mcp — see docs/USE.md. x402 on Base
+($0.02 cached / $0.05 live).
 ```
 
 ## GitHub repository metadata
 
 | Field | Value |
 |-------|-------|
-| **Description** | Portfolio crypto context MCP for agents — holdings, market, optional drift. Hosted: https://mcp.alloc-context.com/mcp (x402). ELv2. |
+| **Description** | Portfolio crypto context MCP — holdings-scoped market for agents. Hosted: https://mcp.alloc-context.com/mcp (x402). ELv2. |
 | **Topics** | `mcp`, `x402`, `bitcoin`, `ethereum`, `model-context-protocol`, `agents`, `portfolio` |
 | **Website** | `https://mcp.alloc-context.com/llms.txt` |
 
