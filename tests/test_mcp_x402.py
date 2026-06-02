@@ -72,6 +72,17 @@ def test_build_http_app_rejects_public_bind_without_x402() -> None:
         build_http_app(host="0.0.0.0", x402=False)
 
 
+def test_build_http_app_allows_public_bind_with_self_host_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("x402")
+    monkeypatch.setenv("ALLOC_CONTEXT_SELF_HOST_HTTP", "1")
+    from alloccontext.mcp.http import build_http_app
+
+    app = build_http_app(host="0.0.0.0", x402=False)
+    assert app is not None
+
+
 def test_build_http_app_allows_public_bind_with_x402(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("x402")
     monkeypatch.setenv("X402_PAY_TO", "0xSeller")

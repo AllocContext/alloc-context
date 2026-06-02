@@ -84,3 +84,8 @@ python -m alloccontext_operator brief daily --stdout
 - **Port in use:** `DEV_MCP_PORT=8002 ./scripts/dev-up.sh` and update operator
   `mcp.url` accordingly.
 - **Stale process:** `./scripts/dev-down.sh` then `./scripts/dev-up.sh`
+
+## Docker alternative
+
+Prefer containers over a host venv: `./docker/up.sh` — see
+[docker-self-host.md](docker-self-host.md) (`:8000`, same keyless ingest idea).

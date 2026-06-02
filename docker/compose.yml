@@ -1,0 +1,46 @@
+# Self-host evaluation stack (v1): HTTP MCP + shared SQLite volume.
+# On-demand ingest only — no scheduled ingest service (v2 follow-up).
+#
+#   ./docker/up.sh
+#   ./docker/down.sh
+#   ./docker/run.sh ingest
+#   curl -sf http://127.0.0.1:8000/health
+#
+# See docs/docker-self-host.md
+
+name: alloc-context
+
+services:
+  mcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ALLOC_CONTEXT_CONFIG: /app/docker/config.yaml
+      ALLOC_CONTEXT_DB: /data/alloccontext.db
+      ALLOC_CONTEXT_MCP_HOST: 0.0.0.0
+      ALLOC_CONTEXT_MCP_PORT: "8000"
+      ALLOC_CONTEXT_SELF_HOST_HTTP: "1"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - alloc-data:/data
+      - ./config.yaml:/app/docker/config.yaml:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  alloc-data:

@@ -147,6 +147,15 @@ def _is_loopback_host(host: str) -> bool:
     return normalized in {"127.0.0.1", "localhost", "::1"}
 
 
+def _self_host_http_allowed() -> bool:
+    """Explicit opt-in for Docker/local HTTP on 0.0.0.0 without x402 (not for public WAN)."""
+    return os.environ.get("ALLOC_CONTEXT_SELF_HOST_HTTP", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
 def build_http_app(
     *,
     config_path: str | None = None,
@@ -155,7 +164,11 @@ def build_http_app(
     stateless_http: bool = True,
     x402: bool = False,
 ) -> Starlette:
-    if not _is_loopback_host(host) and not x402:
+    if (
+        not _is_loopback_host(host)
+        and not x402
+        and not _self_host_http_allowed()
+    ):
         raise RuntimeError(
             "HTTP MCP on a non-loopback host requires x402 payment protection"
         )
