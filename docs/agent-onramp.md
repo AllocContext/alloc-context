@@ -164,4 +164,5 @@ Self-host evaluation (ingest + MCP on your infra): [self-hosting.md](self-hostin
 - ContextBundle fields: [context-bundle.md](context-bundle.md)
 - CDP Bazaar discovery: [mcp-discovery.md](mcp-discovery.md)
 - LangChain / agent frameworks: [langchain-integration.md](langchain-integration.md)
+- Architecture pattern: [deterministic-context-mcp-pattern.md](deterministic-context-mcp-pattern.md)
 - Embed or license inquiries: GitHub Issues (inbound only; no outbound sales)

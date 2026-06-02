@@ -13,6 +13,10 @@ scope for this repository.
 
 Agent-facing MCP + x402: [mcp.md](mcp.md).
 
+For the **reusable architecture pattern** (ingest → store → rollup → MCP → x402)
+with AllocContext as the worked example, see
+[deterministic-context-mcp-pattern.md](deterministic-context-mcp-pattern.md).
+
 ## Pipeline
 
 ```text
