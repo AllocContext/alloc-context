@@ -146,7 +146,7 @@ SQLite lives in the `alloc-context_alloc-data` volume at `/data/alloccontext.db`
 For Linux + systemd, VPS deploy, and x402 on a public URL, see
 [self-hosting.md](self-hosting.md) and [publishing.md](publishing.md). This
 compose stack is for **local evaluation** only — not a substitute for the
-release workflow or operator delivery layer.
+production VPS systemd layout in [self-hosting.md](self-hosting.md).
 
 ## Related
 

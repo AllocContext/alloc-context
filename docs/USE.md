@@ -12,7 +12,7 @@ file is authoritative** if anything here differs.
 |----------|-----|
 | Run ingest + MCP on **your** VPS for **your** portfolio, briefs, or agents | Yes |
 | Stdio MCP in Cursor; local bridge with `user.yaml` | Yes |
-| Internal loopback HTTP MCP (no payment gate) for operator or dev | Yes |
+| Internal loopback HTTP MCP (no payment gate) for local dev or automation | Yes |
 | Optional x402 on **your** host where **you** are the only consumer | Yes |
 | Bridge that calls **official** hosted AllocContext (you pay x402 per call) | Yes |
 | Modify the code for your own non-competing deployment | Yes |

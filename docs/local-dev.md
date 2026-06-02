@@ -1,7 +1,7 @@
 # Local development stack
 
-One-command loopback MCP for core development and operator integration testing
-without VPS access or x402.
+One-command loopback MCP for core development and HTTP client testing without
+VPS access or x402.
 
 ## Quick start
 
@@ -29,7 +29,7 @@ Stop the server:
 |----------|---------|---------|
 | `ALLOC_CONTEXT_CONFIG` | `config/config.dev.yaml` | Dev ingest + MCP config |
 | `DEV_MCP_HOST` | `127.0.0.1` | HTTP bind address |
-| `DEV_MCP_PORT` | `8001` | HTTP port (operator `mcp.url`) |
+| `DEV_MCP_PORT` | `8001` | HTTP port (loopback MCP listener) |
 | `SKIP_DEV_INGEST` | unset | Set to `1` to restart MCP without re-ingesting |
 
 Dev config uses public sources only (Kalshi, Fear & Greed, CoinGecko demo, etc.).
@@ -50,21 +50,16 @@ curl -s http://127.0.0.1:8001/mcp \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}'
 ```
 
-## Operator on the same machine
+## HTTP client testing
 
-Point operator `mcp.url` at the dev listener:
+Point any MCP HTTP client at the dev listener, for example:
 
 ```yaml
 mcp:
   url: http://127.0.0.1:8001/mcp
 ```
 
-Then run briefs or smoke against local facts:
-
-```bash
-cd ../alloc-context-operator
-python -m alloccontext_operator brief daily --stdout
-```
+Verify tool calls with curl or your agent client against loopback facts.
 
 ## Logs and state
 
@@ -81,8 +76,7 @@ python -m alloccontext_operator brief daily --stdout
   a warning; otherwise ingest must succeed on first run.
 - **Wrong config from `.env`:** dev-up forces `ALLOC_CONTEXT_CONFIG` to
   `config/config.dev.yaml` (or your override) so MCP and ingest stay aligned.
-- **Port in use:** `DEV_MCP_PORT=8002 ./scripts/dev-up.sh` and update operator
-  `mcp.url` accordingly.
+- **Port in use:** `DEV_MCP_PORT=8002 ./scripts/dev-up.sh` and point clients at the new port.
 - **Stale process:** `./scripts/dev-down.sh` then `./scripts/dev-up.sh`
 
 ## Docker alternative
