@@ -6,7 +6,11 @@ from typing import Any
 from alloccontext.config import load_config
 from alloccontext.mcp import handlers
 from alloccontext.mcp.instructions import PRODUCT_INSTRUCTIONS, REBALANCE_HINT_GUIDE
-from alloccontext.mcp.tool_catalog import tool_annotations, tool_title
+from alloccontext.mcp.tool_catalog import (
+    tool_description,
+    tool_mcp_annotations,
+    tool_title,
+)
 from alloccontext.mcp.tool_fields import (
     AllocationPct,
     ApiKey,
@@ -74,9 +78,7 @@ def _require_mcp():
 
 
 def _tool_hints(tool_name: str):
-    from mcp.types import ToolAnnotations
-
-    return ToolAnnotations(**tool_annotations(tool_name))
+    return tool_mcp_annotations(tool_name)
 
 
 def create_server(
@@ -106,15 +108,7 @@ def create_server(
         name="get_context_bundle",
         title=tool_title("get_context_bundle"),
         annotations=_tool_hints("get_context_bundle"),
-        description=(
-            "Return the full read-only ContextBundle JSON: portfolio holdings, "
-            "market, sentiment, macro, regime hints, and delta vs the prior saved "
-            "snapshot. Use get_market_context for market-only; use get_context_at "
-            "for a historical snapshot; use get_context_delta to compare two times. "
-            "Optional target_pct and band attach allocation_analysis (opt-in drift "
-            "math). freshness=cached uses the local ingest DB; freshness=live runs "
-            "ingest first (may add latency; needs ingest API keys on the host)."
-        ),
+        description=tool_description("get_context_bundle"),
     )
     def get_context_bundle(
         scope: Scope = "daily",
@@ -144,13 +138,7 @@ def create_server(
         name="get_market_context",
         title=tool_title("get_market_context"),
         annotations=_tool_hints("get_market_context"),
-        description=(
-            "Return read-only fused market backdrop: sentiment (Fear & Greed, "
-            "Kalshi), macro events, FRED indicators, ETF flows, and market breadth "
-            "(no portfolio holdings). Use get_context_bundle when you also need "
-            "holdings, delta, or regime. freshness=cached uses the local ingest DB; "
-            "freshness=live runs ingest first (requires ingest API keys on the host)."
-        ),
+        description=tool_description("get_market_context"),
     )
     def get_market_context(
         scope: Scope = "daily",
@@ -176,16 +164,7 @@ def create_server(
         name="get_rebalance_plan",
         title=tool_title("get_rebalance_plan"),
         annotations=_tool_hints("get_rebalance_plan"),
-        description=(
-            "Compute read-only USD deltas and suggested exchange move lines to "
-            "reach a BTC/ETH/CASH target split. Pure math — no exchange API calls. "
-            "Requires allocation_pct, target_pct, and nav_usd. Use "
-            "get_portfolio_state or get_context_bundle when you need live or cached "
-            "weights first. Use check_allocation_band for pass/fail drift only; use "
-            "check_allocation_bands for multiple scenarios. Optional band adds a "
-            "band_check block alongside the plan. exchange=kraken|coinbase adjusts "
-            "move wording only."
-        ),
+        description=tool_description("get_rebalance_plan"),
     )
     def get_rebalance_plan(
         allocation_pct: AllocationPct,
@@ -207,16 +186,7 @@ def create_server(
         name="get_portfolio_state",
         title=tool_title("get_portfolio_state"),
         annotations=_tool_hints("get_portfolio_state"),
-        description=(
-            "Fetch live read-only portfolio NAV, holdings[], and band weights from "
-            "a supported spot exchange (e.g. Kraken, Coinbase) using credentials "
-            "passed in this call (never stored). "
-            "Requires exchange, api_key, and api_secret. Use get_context_bundle "
-            "for cached market and history without exchange keys. Optional "
-            "target_pct attaches allocation_analysis; optional band sets drift "
-            "width when target_pct is supplied. Returns an error payload on invalid "
-            "credentials or unsupported exchange — no side effects."
-        ),
+        description=tool_description("get_portfolio_state"),
     )
     def get_portfolio_state(
         exchange: Exchange,
@@ -239,15 +209,7 @@ def create_server(
         name="check_allocation_band",
         title=tool_title("check_allocation_band"),
         annotations=_tool_hints("check_allocation_band"),
-        description=(
-            "Read-only drift check: are BTC/ETH/CASH band weights outside the "
-            "drift band vs target_pct? Returns rebalance_hint (within_band, "
-            "consider_rebalance, etc.). Requires allocation_pct and target_pct; "
-            "band defaults to 0.15. Single-scenario only — use check_allocation_bands "
-            "for multiple targets in one call. Use get_rebalance_plan when you need "
-            "USD move lines, not just a hint. For bundle drift, pass target_pct on "
-            "get_context_bundle to attach allocation_analysis instead."
-        ),
+        description=tool_description("check_allocation_band"),
     )
     def check_allocation_band(
         allocation_pct: AllocationPct,
@@ -261,13 +223,7 @@ def create_server(
         name="get_context_at",
         title=tool_title("get_context_at"),
         annotations=_tool_hints("get_context_at"),
-        description=(
-            "Load a read-only ContextBundle snapshot from ingest history at a "
-            "point in time. Use get_context_bundle for the latest snapshot; use "
-            "get_context_delta to compare two timestamps. Read-only; returns an "
-            "unavailable payload when no snapshot matches as_of and match. Optional "
-            "target_pct and band attach allocation_analysis to the historical bundle."
-        ),
+        description=tool_description("get_context_at"),
     )
     def get_context_at(
         as_of: AsOf,
@@ -299,13 +255,7 @@ def create_server(
         name="get_context_delta",
         title=tool_title("get_context_delta"),
         annotations=_tool_hints("get_context_delta"),
-        description=(
-            "Compare two read-only ContextBundle snapshots and return "
-            "notable_shifts between them. Requires prior_as_of; omit current_as_of "
-            "to diff against the latest live bundle. Use get_context_at to load one "
-            "snapshot without diffing. Read-only; no ingest unless you combine with "
-            "a live current_as_of path."
-        ),
+        description=tool_description("get_context_delta"),
     )
     def get_context_delta(
         prior_as_of: PriorAsOf,
@@ -331,13 +281,7 @@ def create_server(
         name="check_allocation_bands",
         title=tool_title("check_allocation_bands"),
         annotations=_tool_hints("check_allocation_bands"),
-        description=(
-            "Read-only batch drift check: evaluate allocation_pct against multiple "
-            "target_pct/band scenarios in one call. Each scenario requires "
-            "target_pct; optional name and band (default 0.15). Use "
-            "check_allocation_band for a single target. Use get_rebalance_plan when "
-            "you need USD move lines after identifying drift."
-        ),
+        description=tool_description("check_allocation_bands"),
     )
     def check_allocation_bands(
         allocation_pct: AllocationPct,
