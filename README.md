@@ -9,6 +9,9 @@ holdings, holdings-scoped market data, sentiment, macro, and regime; optional
 allocation analysis when you supply targets. Deterministic JSON over MCP with
 x402 pay-per-call on Base.
 
+**New here?** [Agent on-ramp (~2 min)](docs/agent-onramp.md) — copy-paste path to
+your first ContextBundle.
+
 > **Privacy:** nothing stored · one-time read-only · pass-through only — your
 > keys and portfolio never persist on our servers. See [USE.md](docs/USE.md).
 
@@ -128,6 +131,7 @@ HTTP MCP + x402: [mcp-http.md](docs/mcp-http.md). CLI entry point:
 
 | Document | Purpose |
 |----------|---------|
+| [docs/agent-onramp.md](docs/agent-onramp.md) | **Start here** — ~2 min to first ContextBundle |
 | [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP (bridge default) |
 | [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` reference |
 | [docs/mcp.md](docs/mcp.md) | MCP tools and x402 |
