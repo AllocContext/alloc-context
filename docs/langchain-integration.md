@@ -4,7 +4,7 @@ Use AllocContext as **LangChain tools** against the **hosted x402 MCP** — same
 endpoint as [agent-integration.md](agent-integration.md), wrapped for
 `create_agent` / tool-calling chains.
 
-> **Privacy:** nothing stored · one-time read-only · pass-through only.
+**Privacy:** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.
 
 > **Not financial advice.** Deterministic JSON facts only.
 

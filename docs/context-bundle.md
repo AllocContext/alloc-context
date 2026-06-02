@@ -3,8 +3,7 @@
 Deterministic facts document passed to the LLM. All narrative must trace to
 fields here.
 
-> **Privacy:** nothing stored · one-time read-only · pass-through only on hosted
-> and bridge paths. See [USE.md](USE.md).
+**Privacy:** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.
 
 ## Top-level shape
 
