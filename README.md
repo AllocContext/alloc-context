@@ -134,6 +134,7 @@ HTTP MCP + x402: [mcp-http.md](docs/mcp-http.md). CLI entry point:
 | Document | Purpose |
 |----------|---------|
 | [docs/agent-onramp.md](docs/agent-onramp.md) | **Start here** — ~2 min to first ContextBundle |
+| [docs/deterministic-context-mcp-pattern.md](docs/deterministic-context-mcp-pattern.md) | Reusable ingest → rollup → MCP → x402 pattern |
 | [docs/langchain-integration.md](docs/langchain-integration.md) | LangChain tools for hosted MCP (x402) |
 | [docs/docker-self-host.md](docs/docker-self-host.md) | Docker Compose self-host evaluation |
 | [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP (bridge default) |

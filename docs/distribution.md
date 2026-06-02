@@ -20,6 +20,9 @@ hosted MCP: https://mcp.alloc-context.com/mcp — see docs/USE.md. x402 on Base
 ($0.02 cached / $0.05 live).
 ```
 
+Architecture pattern (ingest → rollup → MCP → x402):
+[docs/deterministic-context-mcp-pattern.md](deterministic-context-mcp-pattern.md).
+
 ## GitHub repository metadata
 
 | Field | Value |
