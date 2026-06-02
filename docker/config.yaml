@@ -1,5 +1,5 @@
-# Docker self-host stack — all ingest sources off by default.
-# Enable sources in ingest.sources when you have keys in .env (see .env.example).
+# Docker self-host stack — keyless ingest on; keyed sources off by default.
+# Enable keyed sources in ingest.sources and add keys in .env (see .env.example).
 # DB path overridden by ALLOC_CONTEXT_DB=/data/alloccontext.db in compose.
 
 paths:
@@ -16,19 +16,19 @@ portfolio:
   rebalance_band: 0.15
   max_cash_risk_off: 0.50
   notes: >
-    Docker defaults for self-host evaluation. Enable exchange sources and add
-    keys in .env when testing live portfolio reads.
+    Docker defaults for self-host evaluation. Keyless public feeds run on first
+    ingest; enable exchange and keyed sources when you add .env credentials.
 
 ingest:
   interval_minutes: 60
   sources:
     kraken: false
     coinbase: false
-    kalshi: false
-    fear_greed: false
-    macro_calendar: false
+    kalshi: true
+    fear_greed: true
+    macro_calendar: true
     etf_flows: false
-    coingecko: false
+    coingecko: true
     coinmarketcap: false
     fred: false
   optional_sources:

@@ -28,15 +28,14 @@ docker compose run --rm mcp ingest
 curl -sf http://127.0.0.1:8000/health | python3 -m json.tool
 ```
 
-First ingest runs with **all sources disabled** in `docker/config.yaml`.
-The MCP server starts immediately; enable feeds and add keys before expecting
-market context in tool output.
+First ingest pulls **keyless public sources** (Kalshi, Fear & Greed, macro
+calendar, CoinGecko demo). Exchange portfolio reads and other **keyed optional
+feeds** stay off until you add credentials (below).
 
-### Enable sources
+### Enable keyed sources
 
-Edit `docker/config.yaml` → `ingest.sources` (set desired feeds to `true`).
-Keyless feeds: `fear_greed`, `kalshi`, `macro_calendar`. Keyed feeds need
-`.env` in this directory (see below).
+Edit `docker/config.yaml` → `ingest.sources` and add keys in `.env` for feeds
+that require credentials. Keyless feeds are already on by default.
 
 ```bash
 cd alloc-context/docker
@@ -47,16 +46,17 @@ docker compose run --rm mcp ingest
 docker compose up -d
 ```
 
-| Source | Config flag | Typical env var |
-|--------|-------------|-----------------|
-| Kraken | `kraken: true` + `exchanges.kraken.enabled` | `KRAKEN_API_*` |
-| Coinbase | `coinbase: true` + `exchanges.coinbase.enabled` | `COINBASE_API_*` |
-| FRED macro | `fred: true` | `FRED_API_KEY` |
-| CoinGecko | `coingecko: true` | optional (`use_demo_key: true`) |
-| CoinMarketCap | `coinmarketcap: true` | `COINMARKETCAP_API_KEY` |
-| ETF flows | `etf_flows: true` + `etf.sosovalue_enabled` | `SOSOVALUE_API_KEY` |
-| Fear & Greed | `fear_greed: true` | — |
-| Kalshi | `kalshi: true` | — |
+| Source | Default | Config flag | Typical env var |
+|--------|---------|-------------|-----------------|
+| Fear & Greed | on | `fear_greed: true` | — |
+| Kalshi | on | `kalshi: true` | — |
+| Macro calendar | on | `macro_calendar: true` | — |
+| CoinGecko | on | `coingecko: true` | optional (`use_demo_key: true`) |
+| Kraken | off | `kraken: true` + `exchanges.kraken.enabled` | `KRAKEN_API_*` |
+| Coinbase | off | `coinbase: true` + `exchanges.coinbase.enabled` | `COINBASE_API_*` |
+| FRED macro | off | `fred: true` | `FRED_API_KEY` |
+| CoinMarketCap | off | `coinmarketcap: true` | `COINMARKETCAP_API_KEY` |
+| ETF flows | off | `etf_flows: true` + `etf.sosovalue_enabled` | `SOSOVALUE_API_KEY` |
 
 ## MCP endpoint
 
@@ -123,7 +123,7 @@ All stack artifacts live under `docker/`:
 |------|---------|
 | `docker/Dockerfile` | Pinned `python:3.11-slim-bookworm`; installs `.[hosted]` |
 | `docker/compose.yml` | `mcp` service, SQLite volume `alloc-data` |
-| `docker/config.yaml` | All ingest sources off by default; opt-in when keyed |
+| `docker/config.yaml` | Keyless ingest on; keyed optional sources off |
 | `docker/.env.example` | Optional ingest API keys |
 
 SQLite lives in the `alloc-data` volume at `/data/alloccontext.db`.
