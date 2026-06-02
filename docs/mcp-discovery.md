@@ -90,7 +90,7 @@ CDP rejects payments when payer and payTo match (`self_send_not_allowed`).
 2. Fund it with a small balance of **Base mainnet USDC** (Circle on Base).
    A few dollars lasts months at one call per week.
 3. Add the wallet private key as GitHub repository secret **`EVM_PRIVATE_KEY`**
-   on `negillett/alloc-context` (Settings → Secrets and variables → Actions).
+   on `AllocContext/alloc-context` (Settings → Secrets and variables → Actions).
 
 Testnet USDC does **not** count toward Bazaar visibility — production uses
 `eip155:8453` and the CDP facilitator.

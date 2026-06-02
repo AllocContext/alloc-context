@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   check:
-    if: github.repository == 'negillett/alloc-context'
+    if: github.repository == 'AllocContext/alloc-context'
     runs-on: ubuntu-latest
     outputs:
       release: ${{ steps.decide.outputs.release }}

@@ -38,10 +38,10 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://mcp.alloc-context.com/llms.txt"
-Documentation = "https://github.com/negillett/alloc-context/blob/main/docs/agent-integration.md"
-Repository = "https://github.com/negillett/alloc-context"
-Issues = "https://github.com/negillett/alloc-context/issues"
-Changelog = "https://github.com/negillett/alloc-context/releases"
+Documentation = "https://github.com/AllocContext/alloc-context/blob/main/docs/agent-integration.md"
+Repository = "https://github.com/AllocContext/alloc-context"
+Issues = "https://github.com/AllocContext/alloc-context/issues"
+Changelog = "https://github.com/AllocContext/alloc-context/releases"
 "MCP Server" = "https://mcp.alloc-context.com/mcp"
 
 [project.optional-dependencies]

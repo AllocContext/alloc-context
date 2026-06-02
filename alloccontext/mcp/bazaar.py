@@ -572,7 +572,7 @@ model context protocol, context bundle
 ## Examples
 
 Redacted tool JSON samples (evaluate before paying):
-https://github.com/negillett/alloc-context/blob/main/docs/examples.md
+https://github.com/AllocContext/alloc-context/blob/main/docs/examples.md
 """
 
 
