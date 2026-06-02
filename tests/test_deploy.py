@@ -56,6 +56,7 @@ def test_mcp_internal_systemd_unit() -> None:
     text = (REPO_ROOT / "deploy/systemd/alloc-context-mcp-internal.service").read_text()
     assert "--port 8001" in text
     assert "--x402" not in text
+    assert "ALLOC_CONTEXT_ALLOW_UNPAID_HTTP=1" in text
 
 
 def test_remote_install_substitutes_environment_file() -> None:

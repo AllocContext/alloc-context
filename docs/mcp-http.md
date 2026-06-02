@@ -54,6 +54,11 @@ USDC and EURC use EIP-3009 on Base per CDP network support docs.
 The hosted install includes `cdp-sdk`, which wires `CDP_API_KEY_*` into the
 facilitator client automatically.
 
+HTTP startup **exits** when CDP facilitator + `X402_PAY_TO` are set but
+payment is not enabled (`--x402` or `X402_ENABLED=true`). Internal MCP
+(`:8001`) and Docker self-host set `ALLOC_CONTEXT_ALLOW_UNPAID_HTTP=1` or
+`ALLOC_CONTEXT_SELF_HOST_HTTP=1` to opt out intentionally.
+
 After deploy, run:
 
 ```bash
