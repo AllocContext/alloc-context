@@ -149,11 +149,7 @@ def _is_loopback_host(host: str) -> bool:
 
 def _self_host_http_allowed() -> bool:
     """Explicit opt-in for Docker/local HTTP on 0.0.0.0 without x402 (not for public WAN)."""
-    return os.environ.get("ALLOC_CONTEXT_SELF_HOST_HTTP", "").lower() in (
-        "1",
-        "true",
-        "yes",
-    )
+    return _truthy_env("ALLOC_CONTEXT_SELF_HOST_HTTP")
 
 
 def _truthy_env(name: str) -> bool:
@@ -182,11 +178,11 @@ def enforce_x402_when_payment_env_configured(*, x402: bool) -> None:
         return
     if _allow_unpaid_http_despite_payment_env():
         return
-    raise SystemExit(
-        "X402 payment env is set (CDP facilitator + X402_PAY_TO) but payment "
-        "is not enabled. Set X402_ENABLED=1, pass --x402, or set "
+    raise RuntimeError(
+        "CDP payment env is set (CDP facilitator + X402_PAY_TO) but x402 is "
+        "disabled. Pass --x402, set X402_ENABLED=1, or set "
         "ALLOC_CONTEXT_ALLOW_UNPAID_HTTP=1 for intentional unpaid loopback "
-        "(internal MCP / Docker self-host)."
+        "(internal MCP); Docker self-host uses ALLOC_CONTEXT_SELF_HOST_HTTP=1."
     )
 
 
@@ -198,6 +194,7 @@ def build_http_app(
     stateless_http: bool = True,
     x402: bool = False,
 ) -> Starlette:
+    enforce_x402_when_payment_env_configured(x402=x402)
     if (
         not _is_loopback_host(host)
         and not x402
@@ -267,7 +264,6 @@ def run_http(
     import uvicorn
 
     x402 = resolve_x402_enabled(cli_x402=x402)
-    enforce_x402_when_payment_env_configured(x402=x402)
     app = build_http_app(
         config_path=config_path,
         host=host,
@@ -287,7 +283,6 @@ async def run_http_async(
     import uvicorn
 
     x402 = resolve_x402_enabled(cli_x402=x402)
-    enforce_x402_when_payment_env_configured(x402=x402)
     app = build_http_app(
         config_path=config_path,
         host=host,
