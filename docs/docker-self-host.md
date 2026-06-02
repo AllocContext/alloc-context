@@ -1,4 +1,4 @@
-# Docker self-host stack (Track C)
+# Docker self-host stack
 
 Evaluate the full ingest + HTTP MCP path with **Docker Compose** — no systemd,
 no venv on the host. **v1** ships HTTP MCP and **on-demand ingest** only;
@@ -13,6 +13,7 @@ scheduled ingest in compose is a **v2** follow-up.
 
 Default quickstart: [agent-onramp.md](agent-onramp.md) (stdio bridge). Use this
 doc when you want to **evaluate self-host HTTP + SQLite** without a host venv.
+Native venv alternative: [local-dev.md](local-dev.md) (`:8001`, no Docker).
 
 ## Prerequisites
 
@@ -27,16 +28,10 @@ cd alloc-context
 curl -sf http://127.0.0.1:8000/health | python3 -m json.tool
 ```
 
-Or run compose directly:
+Stop: `./docker/down.sh` (`--volumes` removes SQLite data).
 
-```bash
-cd alloc-context/docker
-docker compose up --build -d
-docker compose run --rm mcp ingest
-curl -sf http://127.0.0.1:8000/health | python3 -m json.tool
-```
-
-Stop: `./docker/down.sh` (from repo root) or `docker compose down` in `docker/`.
+Advanced: `cd docker && docker compose up --build -d --wait` — same stack without
+the helper scripts.
 
 First ingest pulls **keyless public sources** (Kalshi, Fear & Greed, macro
 calendar, CoinGecko demo). Exchange portfolio reads and other **keyed optional
@@ -44,18 +39,19 @@ feeds** stay off until you add credentials (below).
 
 ### Enable keyed sources
 
-Edit `docker/config.yaml` → `ingest.sources` and add keys in `.env` for feeds
-that require credentials. Keyless feeds are already on by default. Compose
-mounts `config.yaml` into the container — edits apply on the next ingest without
-rebuild. Restart the service after changing `.env` (`docker compose up -d`).
+Edit `docker/config.yaml` → `ingest.sources` and add keys in `docker/.env` for
+feeds that require credentials. Keyless feeds are already on by default. Compose
+mounts `config.yaml` read-only — edits apply on the next ingest without rebuild.
+Restart the stack after changing `.env` (`./docker/down.sh && ./docker/up.sh` or
+`docker compose up -d` from `docker/`).
 
 ```bash
 cd alloc-context/docker
 cp .env.example .env
 # edit .env — never commit
 # edit config.yaml — enable matching ingest.sources
-docker compose run --rm mcp ingest
 docker compose up -d
+./run.sh ingest
 ```
 
 | Source | Default | Config flag | Typical env var |
@@ -95,22 +91,19 @@ client. Tool args: [mcp.md](mcp.md).
 facts:
 
 ```bash
-cd alloc-context/docker
-docker compose run --rm mcp ingest
+./docker/run.sh ingest
 ```
 
 Dry run:
 
 ```bash
-cd alloc-context/docker
-docker compose run --rm mcp ingest --dry-run
+./docker/run.sh ingest --dry-run
 ```
 
 Status (includes MCP health when the `mcp` service is up):
 
 ```bash
-cd alloc-context/docker
-docker compose run --rm mcp status --mcp-url http://mcp:8000/health
+./docker/run.sh status --mcp-url http://mcp:8000/health
 ```
 
 ## Stdio via Docker (optional)
@@ -124,6 +117,7 @@ docker run -i --rm \
   -v "$(pwd)/docker/config.yaml:/app/docker/config.yaml:ro" \
   -e ALLOC_CONTEXT_CONFIG=/app/docker/config.yaml \
   -e ALLOC_CONTEXT_DB=/data/alloccontext.db \
+  -e ALLOC_CONTEXT_SELF_HOST_HTTP=1 \
   alloc-context:local \
   mcp --transport stdio
 ```
@@ -137,8 +131,9 @@ All stack artifacts live under `docker/`:
 
 | Path | Purpose |
 |------|---------|
-| `docker/up.sh` | Build, start, ingest, and health-check the stack |
+| `docker/up.sh` | Build, start, ingest, wait for health |
 | `docker/down.sh` | Stop stack (`--volumes` removes SQLite data) |
+| `docker/run.sh` | Run CLI in stack (`ingest`, `status`, …) |
 | `docker/Dockerfile` | Pinned `python:3.11-slim-bookworm`; installs `.[hosted]` |
 | `docker/compose.yml` | `mcp` service; mounts `config.yaml`; volume `alloc-data` |
 | `docker/config.yaml` | Keyless ingest on; keyed optional sources off (live-mounted) |

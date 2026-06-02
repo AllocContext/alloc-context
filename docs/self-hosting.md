@@ -12,8 +12,9 @@ part of this repository.
 See the [README](../README.md) quick start. You need your own API keys in
 `.env` (never commit) and a copy of `config/config.yaml`.
 
-**Docker Compose (local evaluation):** [docker-self-host.md](docker-self-host.md)
-— HTTP MCP on loopback `:8000`, on-demand ingest, no systemd.
+**Docker Compose (local evaluation):** `./docker/up.sh` or
+[docker-self-host.md](docker-self-host.md) — HTTP MCP on loopback `:8000`,
+on-demand ingest, no systemd.
 
 ## Linux host + systemd (advanced)
 

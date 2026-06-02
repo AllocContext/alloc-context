@@ -1,4 +1,5 @@
-# Docker self-host stack — keyless ingest on; keyed sources off by default.
+# Self-host evaluation defaults — keyless ingest aligned with config/config.dev.yaml
+# (etf_flows off here; fred/coinmarketcap listed in optional_sources).
 # Enable keyed sources in ingest.sources and add keys in .env (see .env.example).
 # DB path overridden by ALLOC_CONTEXT_DB=/data/alloccontext.db in compose.
 

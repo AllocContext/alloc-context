@@ -3,7 +3,7 @@
 #
 #   ./docker/up.sh
 #   ./docker/down.sh
-#   cd docker && docker compose run --rm mcp ingest
+#   ./docker/run.sh ingest
 #   curl -sf http://127.0.0.1:8000/health
 #
 # See docs/docker-self-host.md
