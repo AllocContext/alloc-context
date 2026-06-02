@@ -42,6 +42,18 @@ def test_load_check_config_reads_cdp_secret_file(tmp_path) -> None:
     assert config.cdp_api_key_secret == "secret-from-file"
 
 
+def test_load_check_config_missing_secret_file_raises() -> None:
+    with pytest.raises(X402ProductionCheckError, match="CDP_API_KEY_SECRET_FILE not readable"):
+        load_check_config(
+            {
+                "X402_PUBLIC_URL": "https://mcp.example.com",
+                "X402_PAY_TO": "0xabc",
+                "CDP_API_KEY_ID": "key-id",
+                "CDP_API_KEY_SECRET_FILE": "/no/such/cdp.pem",
+            }
+        )
+
+
 def test_check_discovery_paths_requires_public(monkeypatch) -> None:
     config = X402CheckConfig(
         public_url="https://mcp.example.com",

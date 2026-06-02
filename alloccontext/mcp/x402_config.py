@@ -94,7 +94,12 @@ def load_cdp_api_credentials(
     if not secret:
         secret_file = source.get("CDP_API_KEY_SECRET_FILE", "").strip()
         if secret_file:
-            secret = Path(secret_file).read_text(encoding="utf-8")
+            try:
+                secret = Path(secret_file).read_text(encoding="utf-8")
+            except OSError as exc:
+                raise RuntimeError(
+                    f"CDP_API_KEY_SECRET_FILE not readable: {secret_file} ({exc})"
+                ) from exc
     if not api_key_id or not secret:
         return None
     return api_key_id, _normalize_cdp_api_secret(secret)

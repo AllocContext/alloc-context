@@ -35,7 +35,10 @@ def load_check_config(env: Mapping[str, str] | None = None) -> X402CheckConfig:
     pay_to = source.get("X402_PAY_TO", "").strip()
     if not pay_to:
         raise X402ProductionCheckError("X402_PAY_TO is required")
-    credentials = load_cdp_api_credentials(source)
+    try:
+        credentials = load_cdp_api_credentials(source)
+    except RuntimeError as exc:
+        raise X402ProductionCheckError(str(exc)) from exc
     return X402CheckConfig(
         public_url=public_url,
         local_url=source.get("X402_CHECK_LOCAL", "http://127.0.0.1:8000").rstrip("/"),

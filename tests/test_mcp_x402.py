@@ -239,6 +239,39 @@ def test_load_cdp_api_credentials_from_file(tmp_path, monkeypatch: pytest.Monkey
     assert "BEGIN EC PRIVATE KEY" in creds[1]
 
 
+def test_load_cdp_api_credentials_inline_precedence_over_file(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pem = tmp_path / "cdp.pem"
+    pem.write_text("from-file")
+    monkeypatch.setenv("CDP_API_KEY_ID", "key-id")
+    monkeypatch.setenv("CDP_API_KEY_SECRET", "from-inline")
+    monkeypatch.setenv("CDP_API_KEY_SECRET_FILE", str(pem))
+    creds = load_cdp_api_credentials()
+    assert creds == ("key-id", "from-inline")
+
+
+def test_cdp_facilitator_configured_from_file_env(tmp_path) -> None:
+    pem = tmp_path / "cdp.pem"
+    pem.write_text("secret-from-file")
+    assert cdp_facilitator_configured(
+        {
+            "CDP_API_KEY_ID": "key-id",
+            "CDP_API_KEY_SECRET_FILE": str(pem),
+        }
+    )
+
+
+def test_load_cdp_api_credentials_missing_file_raises() -> None:
+    with pytest.raises(RuntimeError, match="CDP_API_KEY_SECRET_FILE not readable"):
+        load_cdp_api_credentials(
+            {
+                "CDP_API_KEY_ID": "key-id",
+                "CDP_API_KEY_SECRET_FILE": "/no/such/cdp.pem",
+            }
+        )
+
+
 def test_cdp_facilitator_client_with_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("x402")
     pytest.importorskip("cdp")

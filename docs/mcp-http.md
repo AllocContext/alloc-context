@@ -54,6 +54,8 @@ CDP auth is required for verify/settle when using the CDP facilitator URL.
 USDC and EURC use EIP-3009 on Base per CDP network support docs.
 On systemd hosts, prefer `CDP_API_KEY_SECRET_FILE` pointing at a PEM file
 (mode `640`, service user) instead of a multi-line inline secret in `.env`.
+When both inline `CDP_API_KEY_SECRET` and `CDP_API_KEY_SECRET_FILE` are set,
+the inline value takes precedence.
 The hosted install includes `cdp-sdk`, which wires CDP credentials into the
 facilitator client automatically.
 
