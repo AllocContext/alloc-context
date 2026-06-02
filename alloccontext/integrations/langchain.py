@@ -8,7 +8,12 @@ from typing import Any
 
 from alloccontext.mcp.bazaar import OFFICIAL_HOSTED_MCP_URL, mcp_tool_specs
 from alloccontext.mcp.upstream import call_upstream_tool
-from alloccontext.user_config import DEFAULT_UPSTREAM_URL, UserConfig
+from alloccontext.user_config import (
+    DEFAULT_UPSTREAM_URL,
+    UserConfig,
+    load_user_config,
+    resolve_user_config_path,
+)
 
 DEFAULT_HOSTED_TOOLS = (
     "get_market_context",
@@ -26,6 +31,28 @@ def hosted_user_config(*, upstream_url: str | None = None) -> UserConfig:
         upstream=upstream_url or DEFAULT_UPSTREAM_URL,
         self_host=False,
     )
+
+
+def resolve_hosted_user_config(*, upstream_url: str | None = None) -> UserConfig:
+    """Hosted bridge config: ``user.yaml`` when present, else env-only defaults.
+
+    Loads ``~/.config/alloc-context/user.yaml`` (or ``ALLOC_CONTEXT_USER_CONFIG``)
+    so ``x402.payer_private_key_file`` and inline payer keys work like the stdio
+    bridge. Exchange blocks in ``user.yaml`` are ignored for hosted tool calls.
+    """
+    path = resolve_user_config_path()
+    if path is None or not path.is_file():
+        return hosted_user_config(upstream_url=upstream_url)
+
+    loaded = load_user_config(path)
+    upstream = upstream_url or loaded.upstream
+    if loaded.self_host:
+        return replace(
+            hosted_user_config(upstream_url=upstream),
+            x402=loaded.x402,
+            path=loaded.path,
+        )
+    return replace(loaded, upstream=upstream, self_host=False)
 
 
 def _args_model(tool_name: str, input_schema: dict[str, Any]) -> type[Any]:
@@ -51,8 +78,9 @@ def build_hosted_langchain_tools(
 ) -> list[Any]:
     """Return LangChain tools that call the hosted MCP with x402 payment.
 
-    Requires ``langchain-core`` and ``alloc-context[hosted]``. Set
-    ``EVM_PRIVATE_KEY`` (or configure ``user.yaml`` x402 payer) before use.
+    Requires ``langchain-core`` and ``alloc-context[hosted]``. Configure an x402
+    payer via ``EVM_PRIVATE_KEY``, ``user.yaml`` (``x402.payer_private_key_file``),
+    or pass a ``UserConfig`` explicitly.
     """
     try:
         from langchain_core.tools import StructuredTool
@@ -61,7 +89,7 @@ def build_hosted_langchain_tools(
             "LangChain integration requires langchain-core: pip install langchain-core"
         ) from exc
 
-    user = user or hosted_user_config()
+    user = user or resolve_hosted_user_config()
     selected = frozenset(tool_names or DEFAULT_HOSTED_TOOLS)
     specs = {spec["tool_name"]: spec for spec in mcp_tool_specs()}
     missing = selected - specs.keys()

@@ -19,6 +19,17 @@ pip install -r examples/langchain/requirements.txt
 export EVM_PRIVATE_KEY=0x...   # payer wallet, not the seller address
 ```
 
+Or use bridge-style `user.yaml` (file key avoids exporting the key in your shell):
+
+```yaml
+# ~/.config/alloc-context/user.yaml
+x402:
+  payer_private_key_file: ~/.config/alloc-context/x402-payer.key
+```
+
+The example script and ``build_hosted_langchain_tools()`` load that path automatically
+(override with ``ALLOC_CONTEXT_USER_CONFIG``).
+
 ## Quick invoke (no LLM)
 
 ```bash

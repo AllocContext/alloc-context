@@ -9,8 +9,10 @@ from alloccontext.integrations.langchain import (
     build_hosted_langchain_tools,
     hosted_user_config,
     official_hosted_mcp_url,
+    resolve_hosted_user_config,
 )
-from alloccontext.user_config import DEFAULT_UPSTREAM_URL
+from alloccontext.mcp.payer import resolve_payer_private_key
+from alloccontext.user_config import DEFAULT_UPSTREAM_URL, ENV_USER_CONFIG
 
 
 def test_official_hosted_mcp_url() -> None:
@@ -21,6 +23,19 @@ def test_hosted_user_config_uses_upstream() -> None:
     user = hosted_user_config()
     assert user.uses_upstream() is True
     assert user.upstream == DEFAULT_UPSTREAM_URL
+
+
+def test_resolve_hosted_user_config_payer_file(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    key_file = tmp_path / "payer.key"
+    key_file.write_text("0x" + "ab" * 32 + "\n", encoding="utf-8")
+    user_yaml = tmp_path / "user.yaml"
+    user_yaml.write_text(
+        f"x402:\n  payer_private_key_file: {key_file}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(ENV_USER_CONFIG, str(user_yaml))
+    user = resolve_hosted_user_config()
+    assert resolve_payer_private_key(user) == "0x" + "ab" * 32
 
 
 def test_build_hosted_langchain_tools_invokes_upstream() -> None:

@@ -32,8 +32,8 @@ def main() -> None:
     parsed = json.loads(payload)
     if parsed.get("reason") == "upstream_payment_required":
         print(
-            "Configure x402 payer: export EVM_PRIVATE_KEY=0x... "
-            "(see docs/langchain-integration.md)",
+            "Configure x402 payer: EVM_PRIVATE_KEY, user.yaml "
+            "(x402.payer_private_key_file), or see docs/langchain-integration.md",
             file=sys.stderr,
         )
         sys.exit(1)
