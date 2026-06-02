@@ -153,7 +153,7 @@ Programmatic clients: [agent-integration.md](agent-integration.md).
 | Best for | Cursor / Claude daily use | Agents, wallets, serverless |
 
 Self-host evaluation (ingest + MCP on your infra): [self-hosting.md](self-hosting.md).
-In-repo Docker compose: coming in a follow-up PR (Track C).
+**Docker (one command):** [docker-self-host.md](docker-self-host.md).
 
 ---
 

@@ -11,7 +11,7 @@ actionlint
 dist/
 build/
 
-.env
+docker/.env
 config/config.yaml
 state/
 *.db

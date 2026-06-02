@@ -101,8 +101,10 @@ See [mcp.md](docs/mcp.md) for arguments, pricing, and resources.
 ## Self-host and development
 
 Run ingest and MCP entirely on your machine — no x402 upstream required.
-See [self-hosting.md](docs/self-hosting.md) (`self_host: true` in user config)
-or [local-dev.md](docs/local-dev.md) for the dev stack.
+See [self-hosting.md](docs/self-hosting.md) (`self_host: true` in user config),
+[local-dev.md](docs/local-dev.md) for the native dev stack, or
+[docker-self-host.md](docs/docker-self-host.md) for Docker Compose on loopback
+`:8000`.
 
 ```bash
 git clone git@github.com:AllocContext/alloc-context.git
@@ -132,6 +134,7 @@ HTTP MCP + x402: [mcp-http.md](docs/mcp-http.md). CLI entry point:
 | Document | Purpose |
 |----------|---------|
 | [docs/agent-onramp.md](docs/agent-onramp.md) | **Start here** — ~2 min to first ContextBundle |
+| [docs/docker-self-host.md](docs/docker-self-host.md) | Docker Compose self-host evaluation (Track C) |
 | [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP (bridge default) |
 | [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` reference |
 | [docs/mcp.md](docs/mcp.md) | MCP tools and x402 |
