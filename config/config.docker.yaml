@@ -27,7 +27,7 @@ ingest:
     kalshi: true
     fear_greed: true
     macro_calendar: true
-    etf_flows: true
+    etf_flows: false
     coingecko: true
     coinmarketcap: false
     fred: false
