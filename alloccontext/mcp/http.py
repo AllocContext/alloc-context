@@ -156,6 +156,40 @@ def _self_host_http_allowed() -> bool:
     )
 
 
+def _truthy_env(name: str) -> bool:
+    return os.environ.get(name, "").lower() in ("1", "true", "yes")
+
+
+def payment_env_configured() -> bool:
+    """CDP production facilitator + seller wallet are both set."""
+    return (
+        os.environ.get("X402_FACILITATOR_URL", "").startswith(CDP_FACILITATOR_URL)
+        and bool(os.environ.get("X402_PAY_TO", "").strip())
+    )
+
+
+def _allow_unpaid_http_despite_payment_env() -> bool:
+    """Internal MCP (:8001) and Docker self-host may share a payment-capable .env."""
+    return _truthy_env("ALLOC_CONTEXT_ALLOW_UNPAID_HTTP") or _self_host_http_allowed()
+
+
+def resolve_x402_enabled(*, cli_x402: bool = False) -> bool:
+    return cli_x402 or _truthy_env("X402_ENABLED")
+
+
+def enforce_x402_when_payment_env_configured(*, x402: bool) -> None:
+    if x402 or not payment_env_configured():
+        return
+    if _allow_unpaid_http_despite_payment_env():
+        return
+    raise SystemExit(
+        "X402 payment env is set (CDP facilitator + X402_PAY_TO) but payment "
+        "is not enabled. Set X402_ENABLED=1, pass --x402, or set "
+        "ALLOC_CONTEXT_ALLOW_UNPAID_HTTP=1 for intentional unpaid loopback "
+        "(internal MCP / Docker self-host)."
+    )
+
+
 def build_http_app(
     *,
     config_path: str | None = None,
@@ -232,6 +266,8 @@ def run_http(
 ) -> None:
     import uvicorn
 
+    x402 = resolve_x402_enabled(cli_x402=x402)
+    enforce_x402_when_payment_env_configured(x402=x402)
     app = build_http_app(
         config_path=config_path,
         host=host,
@@ -250,6 +286,8 @@ async def run_http_async(
 ) -> None:
     import uvicorn
 
+    x402 = resolve_x402_enabled(cli_x402=x402)
+    enforce_x402_when_payment_env_configured(x402=x402)
     app = build_http_app(
         config_path=config_path,
         host=host,
@@ -274,22 +312,9 @@ def _parse_mcp_port(raw: str) -> int:
 
 
 def main() -> None:
-    import logging
-
-    logger = logging.getLogger(__name__)
     host = os.environ.get("ALLOC_CONTEXT_MCP_HOST", "127.0.0.1")
     port = _parse_mcp_port(os.environ.get("ALLOC_CONTEXT_MCP_PORT", "8000"))
-    x402 = os.environ.get("X402_ENABLED", "").lower() in ("1", "true", "yes")
-    payment_env = (
-        os.environ.get("X402_FACILITATOR_URL", "").startswith(CDP_FACILITATOR_URL)
-        and os.environ.get("X402_PAY_TO", "").strip()
-    )
-    if payment_env and not x402:
-        logger.warning(
-            "X402 payment env vars are set but X402 is not enabled; "
-            "set X402_ENABLED=1 or pass --x402 to require payment"
-        )
-    run_http(host=host, port=port, x402=x402)
+    run_http(host=host, port=port, x402=False)
 
 
 if __name__ == "__main__":

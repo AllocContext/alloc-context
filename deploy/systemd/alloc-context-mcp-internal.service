@@ -9,6 +9,7 @@ User=trading
 Group=trading
 WorkingDirectory=/opt/alloc-context
 EnvironmentFile=-/opt/alloc-context/.env
+Environment=ALLOC_CONTEXT_ALLOW_UNPAID_HTTP=1
 ExecStart=/opt/alloc-context/.venv/bin/alloc-context mcp --transport http --host 127.0.0.1 --port 8001
 Restart=on-failure
 RestartSec=5

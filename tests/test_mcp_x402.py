@@ -115,6 +115,67 @@ def test_cdp_facilitator_does_not_auto_enable_x402_without_pay_to(
     assert not app.user_middleware
 
 
+def test_run_http_fails_when_payment_env_without_x402(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("x402")
+    from alloccontext.mcp.http import run_http
+
+    monkeypatch.setenv("X402_FACILITATOR_URL", CDP_FACILITATOR_URL)
+    monkeypatch.setenv("X402_PAY_TO", "0xSeller")
+    monkeypatch.delenv("X402_ENABLED", raising=False)
+    monkeypatch.delenv("ALLOC_CONTEXT_ALLOW_UNPAID_HTTP", raising=False)
+    monkeypatch.delenv("ALLOC_CONTEXT_SELF_HOST_HTTP", raising=False)
+    with pytest.raises(SystemExit, match="payment env is set"):
+        run_http(x402=False)
+
+
+def test_enforce_x402_fails_when_payment_env_without_x402(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from alloccontext.mcp.http import enforce_x402_when_payment_env_configured
+
+    monkeypatch.setenv("X402_FACILITATOR_URL", CDP_FACILITATOR_URL)
+    monkeypatch.setenv("X402_PAY_TO", "0xSeller")
+    monkeypatch.delenv("ALLOC_CONTEXT_ALLOW_UNPAID_HTTP", raising=False)
+    monkeypatch.delenv("ALLOC_CONTEXT_SELF_HOST_HTTP", raising=False)
+    with pytest.raises(SystemExit, match="payment env is set"):
+        enforce_x402_when_payment_env_configured(x402=False)
+
+
+def test_enforce_x402_allows_payment_env_with_x402_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from alloccontext.mcp.http import enforce_x402_when_payment_env_configured
+
+    monkeypatch.setenv("X402_FACILITATOR_URL", CDP_FACILITATOR_URL)
+    monkeypatch.setenv("X402_PAY_TO", "0xSeller")
+    enforce_x402_when_payment_env_configured(x402=True)
+
+
+def test_enforce_x402_allows_internal_unpaid_opt_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from alloccontext.mcp.http import enforce_x402_when_payment_env_configured
+
+    monkeypatch.setenv("X402_FACILITATOR_URL", CDP_FACILITATOR_URL)
+    monkeypatch.setenv("X402_PAY_TO", "0xSeller")
+    monkeypatch.setenv("ALLOC_CONTEXT_ALLOW_UNPAID_HTTP", "1")
+    enforce_x402_when_payment_env_configured(x402=False)
+
+
+def test_x402_enabled_from_env_without_cli_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from alloccontext.mcp.http import resolve_x402_enabled
+
+    monkeypatch.setenv("X402_ENABLED", "true")
+    assert resolve_x402_enabled(cli_x402=False) is True
+    assert resolve_x402_enabled(cli_x402=True) is True
+    monkeypatch.delenv("X402_ENABLED", raising=False)
+    assert resolve_x402_enabled(cli_x402=False) is False
+
+
 def test_cdp_facilitator_client_requires_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("x402")
     pytest.importorskip("cdp")
