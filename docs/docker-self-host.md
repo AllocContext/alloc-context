@@ -22,11 +22,21 @@ doc when you want to **evaluate self-host HTTP + SQLite** without a host venv.
 ## Quick start
 
 ```bash
+cd alloc-context
+./docker/up.sh
+curl -sf http://127.0.0.1:8000/health | python3 -m json.tool
+```
+
+Or run compose directly:
+
+```bash
 cd alloc-context/docker
 docker compose up --build -d
 docker compose run --rm mcp ingest
 curl -sf http://127.0.0.1:8000/health | python3 -m json.tool
 ```
+
+Stop: `./docker/down.sh` (from repo root) or `docker compose down` in `docker/`.
 
 First ingest pulls **keyless public sources** (Kalshi, Fear & Greed, macro
 calendar, CoinGecko demo). Exchange portfolio reads and other **keyed optional
@@ -127,6 +137,8 @@ All stack artifacts live under `docker/`:
 
 | Path | Purpose |
 |------|---------|
+| `docker/up.sh` | Build, start, ingest, and health-check the stack |
+| `docker/down.sh` | Stop stack (`--volumes` removes SQLite data) |
 | `docker/Dockerfile` | Pinned `python:3.11-slim-bookworm`; installs `.[hosted]` |
 | `docker/compose.yml` | `mcp` service; mounts `config.yaml`; volume `alloc-data` |
 | `docker/config.yaml` | Keyless ingest on; keyed optional sources off (live-mounted) |
