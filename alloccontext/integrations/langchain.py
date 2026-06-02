@@ -103,6 +103,11 @@ def build_hosted_langchain_tools(
         def _invoke(*, _tool_name: str = name, **kwargs: Any) -> str:
             arguments = {key: value for key, value in kwargs.items() if value is not None}
             payload = call_upstream_tool(user, _tool_name, arguments)
+            if payload.get("reason") == "upstream_payment_required":
+                message = payload.get("message") or (
+                    "Configure an x402 payer wallet to call hosted upstream."
+                )
+                raise RuntimeError(message)
             return json.dumps(payload, separators=(",", ":"))
 
         tools.append(

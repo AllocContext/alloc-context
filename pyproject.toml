@@ -63,6 +63,7 @@ dev = [
     "x402[fastapi,evm]>=2.0",
     "cdp-sdk>=1.46",
     "uvicorn[standard]>=0.30",
+    "langchain-core>=0.3.0",
 ]
 
 [project.scripts]

@@ -7,6 +7,7 @@ import json
 import sys
 
 from alloccontext.integrations.langchain import build_hosted_langchain_tools
+from alloccontext.mcp.bazaar import smoke_tool_arguments
 
 
 def main() -> None:
@@ -20,23 +21,25 @@ def main() -> None:
         print(f"Unknown tool {tool_name!r}. Choose from: {', '.join(by_name)}", file=sys.stderr)
         sys.exit(1)
 
-    payload = tool.invoke(
-        {
-            "scope": "daily",
-            "freshness": "cached",
-            "assets": ["BTC", "ETH"],
-        }
-        if tool_name in {"get_market_context", "get_context_bundle"}
-        else {}
-    )
-    parsed = json.loads(payload)
-    if parsed.get("reason") == "upstream_payment_required":
-        print(
-            "Configure x402 payer: EVM_PRIVATE_KEY, user.yaml "
-            "(x402.payer_private_key_file), or see docs/langchain-integration.md",
-            file=sys.stderr,
-        )
+    try:
+        args = smoke_tool_arguments(tool_name)
+    except KeyError:
+        print(f"No smoke defaults for tool {tool_name!r}", file=sys.stderr)
         sys.exit(1)
+
+    try:
+        raw = tool.invoke(args)
+    except RuntimeError as exc:
+        if "payer" in str(exc).lower() or "x402" in str(exc).lower():
+            print(
+                "Configure x402 payer: EVM_PRIVATE_KEY, user.yaml "
+                "(x402.payer_private_key_file), or see docs/langchain-integration.md",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        raise
+
+    parsed = json.loads(raw)
     print(json.dumps(parsed, indent=2)[:4000])
 
 

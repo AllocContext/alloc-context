@@ -1,2 +1,2 @@
-# Example-only deps for examples/langchain/run_example.py
+# Example-only deps (also included in pip install -e ".[dev]")
 langchain-core>=0.3.0

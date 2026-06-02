@@ -81,6 +81,23 @@ def test_build_hosted_langchain_tools_unknown_name() -> None:
         )
 
 
+def test_build_hosted_langchain_tools_raises_when_payment_missing() -> None:
+    pytest.importorskip("langchain_core")
+
+    user = hosted_user_config()
+    setup = {"reason": "upstream_payment_required", "message": "Configure payer."}
+    with patch(
+        "alloccontext.integrations.langchain.call_upstream_tool",
+        return_value=setup,
+    ):
+        tools = build_hosted_langchain_tools(
+            user=user,
+            tool_names=("get_market_context",),
+        )
+        with pytest.raises(RuntimeError, match="Configure payer"):
+            tools[0].invoke({"scope": "daily", "freshness": "cached"})
+
+
 def test_build_hosted_langchain_tools_requires_langchain_core(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
