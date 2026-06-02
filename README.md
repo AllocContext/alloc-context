@@ -11,8 +11,7 @@ x402 pay-per-call on Base.
 
 **New here?** [Agent on-ramp (~2 min)](docs/agent-onramp.md) — copy-paste path to
 your first ContextBundle. **Organization:**
-[AllocContext on GitHub](https://github.com/AllocContext) — overview, sibling
-repos, and integration links.
+[AllocContext on GitHub](https://github.com/AllocContext) — overview and integration links.
 
 > **Privacy:** nothing stored · one-time read-only · pass-through only — your
 > keys and portfolio never persist on our servers. See [USE.md](docs/USE.md).

@@ -5,8 +5,6 @@ pull request; merging it to `main` automatically tags the version and runs the
 release (PyPI, MCP Registry, VPS deploy). Production always runs what is on
 `main`, and every `vX.Y.Z` tag points at a real `main` commit.
 
-The operator repo (`alloc-context-operator`) still deploys on every `main` push.
-
 ## How it works
 
 Two workflows:

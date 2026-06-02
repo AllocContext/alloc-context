@@ -66,7 +66,6 @@ workflow publishes to PyPI. See [publishing.md](publishing.md).
 | Repo | `main` push | Production deploy |
 |------|-------------|-------------------|
 | `alloc-context` | Tests only (`ci`) | **release** workflow |
-| `alloc-context-operator` | Tests + deploy (`ci`) | On every `main` merge |
 
 Release deploy requires repository secrets:
 
@@ -85,7 +84,6 @@ Variables) for non-secret deploy paths:
 | Variable | Example | Purpose |
 |----------|---------|---------|
 | `ALLOC_CONTEXT_REMOTE` | `/opt/trading/alloc-context` | Rsync + systemd install root |
-| `ALLOC_CONTEXT_OPERATOR_REMOTE` | `/opt/trading/alloc-context-operator` | Operator checkout (post-deploy smoke) |
 | `ALLOC_CONTEXT_ENV_FILE` | `/opt/trading/shared/.env` | systemd `EnvironmentFile` |
 
 Template: [deploy/shared.env.example](../deploy/shared.env.example).
@@ -104,11 +102,9 @@ Set `ALLOC_CONTEXT_REMOTE` and optional `ALLOC_CONTEXT_ENV_FILE` when running
 Release deploy runs only on the primary GitHub repository; forks run tests
 only.
 
-After install, CI runs the operator `smoke` command on the VPS via
+After install, CI runs post-deploy smoke on the VPS via
 `deploy/run-vps-smoke.sh` (health checks plus cached `get_context_bundle`).
 When `X402_ENABLED=true` in the shared env file, CI also runs
 `deploy/run-vps-x402-check.sh` (discovery URLs, manifest, 402 gate, CDP
 facilitator when configured). Smoke or x402 failure marks the deploy job red
-but does not roll back rsync or systemd changes. Set
-`ALLOC_CONTEXT_OPERATOR_REMOTE` if the operator checkout path differs from
-`/opt/trading/alloc-context-operator`.
+but does not roll back rsync or systemd changes.
