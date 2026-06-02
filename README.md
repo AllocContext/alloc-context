@@ -1,7 +1,6 @@
 # AllocContext
 
-[![smithery badge](https://smithery.ai/badge/@AllocContext/alloc-context)](https://smithery.ai/server/@AllocContext/alloc-context)
-[![Glama MCP server](https://glama.ai/mcp/servers/AllocContext/alloc-context/badges/score.svg)](https://glama.ai/mcp/servers/AllocContext/alloc-context)
+[![smithery badge](https://smithery.ai/badge/alloccontext/alloc-context)](https://smithery.ai/servers/alloccontext/alloc-context)
 
 mcp-name: io.github.AllocContext/alloc-context
 
