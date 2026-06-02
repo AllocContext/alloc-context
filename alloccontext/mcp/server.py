@@ -209,7 +209,8 @@ def create_server(
         annotations=_tool_hints("get_portfolio_state"),
         description=(
             "Fetch live read-only portfolio NAV, holdings[], and band weights from "
-            "Kraken or Coinbase credentials passed in this call (never stored). "
+            "a supported spot exchange (e.g. Kraken, Coinbase) using credentials "
+            "passed in this call (never stored). "
             "Requires exchange, api_key, and api_secret. Use get_context_bundle "
             "for cached market and history without exchange keys. Optional "
             "target_pct attaches allocation_analysis; optional band sets drift "

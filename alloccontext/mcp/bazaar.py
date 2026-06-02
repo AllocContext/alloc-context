@@ -107,10 +107,11 @@ DISCOVERY_KEYWORD_MARKERS = (
 )
 
 LISTING_DESCRIPTION = (
-    "Portfolio-aware crypto context for AI agents: discover holdings, market, "
-    "sentiment, macro, and regime; optional allocation analysis and rebalance "
-    "math. Fused backdrop (Fear & Greed, Kalshi, ETF flows), optional live "
-    "Kraken/Coinbase reads. Structured JSON only — no LLM. "
+    "Portfolio-aware crypto context for AI agents: discover holdings and "
+    "holdings-scoped market, sentiment, macro, and regime; optional allocation "
+    "analysis and rebalance math. Fused backdrop (Fear & Greed, Kalshi, ETF "
+    "flows), optional live portfolio reads (e.g. Coinbase, Kraken). Structured "
+    "JSON only — no LLM. "
     f"{PRIVACY_COMPACT_COPY} "
     "Source-available (Elastic License 2.0); self-host friendly; official hosted "
     f"MCP at {OFFICIAL_HOSTED_MCP_URL} — see {USE_DOCS_PATH}."
@@ -237,9 +238,10 @@ _MCP_TOOLS: tuple[dict[str, Any], ...] = (
         "tool_name": "get_portfolio_state",
         "description": (
             "Fetch live read-only portfolio NAV, holdings[], and band weights from "
-            "Kraken or Coinbase credentials passed in this call (never stored). "
-            "Requires exchange, api_key, and api_secret. Returns available=false "
-            "with reason on invalid credentials — no side effects."
+            "a supported spot exchange (e.g. Kraken, Coinbase) using credentials "
+            "passed in this call (never stored). Requires exchange, api_key, and "
+            "api_secret. Returns available=false with reason on invalid "
+            "credentials — no side effects."
         ),
         "input_schema": {
             "type": "object",

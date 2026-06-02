@@ -1,24 +1,24 @@
 [project]
 name = "alloc-context"
 version = "0.2.2"
-description = "Portfolio-aware crypto context for agents — holdings, market, optional allocation analysis"
+description = "Portfolio-aware crypto context for agents — holdings-scoped market, sentiment, optional allocation analysis"
 readme = "README.md"
 license = { text = "Elastic-2.0" }
 requires-python = ">=3.11"
 keywords = [
     "mcp",
     "x402",
-    "bitcoin",
-    "ethereum",
+    "holdings",
+    "portfolio",
     "crypto",
     "cryptocurrency",
-    "portfolio",
+    "bitcoin",
+    "ethereum",
+    "agents",
     "allocation",
-    "holdings",
     "rebalance",
     "coinbase",
     "kraken",
-    "agents",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

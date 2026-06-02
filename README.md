@@ -5,9 +5,10 @@
 
 mcp-name: io.github.negillett/alloc-context
 
-**Portfolio-aware crypto context for agents** — discover holdings, market,
-sentiment, macro, and regime; optional allocation analysis. Deterministic
-JSON over MCP with x402 pay-per-call on Base.
+**Portfolio-aware crypto context for whatever you hold** — discover your
+holdings, holdings-scoped market data, sentiment, macro, and regime; optional
+allocation analysis when you supply targets. Deterministic JSON over MCP with
+x402 pay-per-call on Base.
 
 > **Privacy:** nothing stored · one-time read-only · pass-through only — your
 > keys and portfolio never persist on our servers. See [USE.md](docs/USE.md).
@@ -69,7 +70,7 @@ Not financial advice.
 | **Discovery** | [llms.txt](https://mcp.alloc-context.com/llms.txt), [x402 manifest](https://mcp.alloc-context.com/.well-known/x402.json) |
 | **Pricing** | **$0.02** cached context/math · **$0.05** live ingest or portfolio |
 | **Payment** | x402 on Base — USDC or EURC |
-| **Market scope** | Holdings-scoped (BTC/ETH OHLC; alt quote snapshots); bridge auto-scopes from portfolio |
+| **Market scope** | Tailored to your holdings (band OHLC for BTC/ETH; alt quote snapshots); bridge auto-scopes from portfolio |
 
 Agents and wallets connect directly to the hosted endpoint — see
 [agent-integration.md](docs/agent-integration.md). The Cursor bridge above
@@ -86,7 +87,7 @@ combines local portfolio reads with this upstream for market context.
 | `get_rebalance_plan` | USD rebalance moves from allocation, target, and NAV |
 | `check_allocation_band` | Drift vs target and whether allocation is outside the band |
 | `check_allocation_bands` | Batch band checks for multiple target scenarios |
-| `get_portfolio_state` | Live NAV and holdings from Kraken or Coinbase |
+| `get_portfolio_state` | Live NAV and holdings (e.g. Coinbase, Kraken read-only keys) |
 
 Market context is **holdings-scoped**: band assets (BTC/ETH) use OHLC bars; alt
 holdings (e.g. HYPE) use quote snapshots when cached. The bridge auto-scopes
