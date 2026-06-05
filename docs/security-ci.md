@@ -16,10 +16,14 @@ From the repo root:
 
 ```bash
 pip install -e ".[dev]"
+python -m pip install --upgrade "pip>=26.1.2"
 pytest -q --cov=alloccontext --cov-report=term-missing:skip-covered
 bandit -r alloccontext -c .bandit.yaml -ll
 pip-audit
 ```
+
+`pip-audit` includes the active environment's `pip` package; upgrade pip to
+the current fix release before auditing (CI does this automatically).
 
 Or from the AllocContext workspace monorepo (when using the parent checkout):
 
