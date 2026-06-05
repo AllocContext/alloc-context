@@ -51,5 +51,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
+      - name: Upgrade pip (audit baseline)
+        run: python -m pip install --upgrade "pip>=26.1.2"
       - name: Dependency vulnerability audit
         run: pip-audit
