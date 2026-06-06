@@ -52,6 +52,7 @@ for unit in \
   alloc-context-ingest.service \
   alloc-context-ingest.timer \
   alloc-context-mcp-http.service \
+  alloc-context-mcp-internal.service \
   alloc-context-backup.service \
   alloc-context-backup.timer; do
   install_systemd_unit "${unit}"
@@ -87,10 +88,8 @@ _enable_timer alloc-context-backup.timer
 systemctl enable alloc-context-mcp-http.service
 systemctl restart alloc-context-mcp-http.service
 
-# Optional loopback MCP unit (no x402) — restart when present on the host.
-if systemctl cat alloc-context-mcp-internal.service &>/dev/null; then
-  systemctl restart alloc-context-mcp-internal.service
-fi
+systemctl enable alloc-context-mcp-internal.service
+systemctl restart alloc-context-mcp-internal.service
 
 bash "${REMOTE}/deploy/wait-for-mcp-ready.sh"
 

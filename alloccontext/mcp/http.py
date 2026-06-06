@@ -170,6 +170,8 @@ def _allow_unpaid_http_despite_payment_env() -> bool:
 
 
 def resolve_x402_enabled(*, cli_x402: bool = False) -> bool:
+    if _allow_unpaid_http_despite_payment_env():
+        return False
     return cli_x402 or _truthy_env("X402_ENABLED")
 
 
