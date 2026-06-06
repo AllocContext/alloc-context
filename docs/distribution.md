@@ -100,7 +100,6 @@ endpoint automatically via `[project.urls]`.
 | **MCP Registry** | `server.json` + `mcp-publisher` | Primary; do this first |
 | **PulseMCP** | Email `hello@pulsemcp.com` with blurb + GitHub URL | Often picks up registry entries; email if missing after ~1 week |
 | **Smithery** | [smithery.ai](https://smithery.ai) submit flow | Prefer registry publish; HTTP/x402 remote URL |
-| **Glama** | [glama.ai](https://glama.ai) MCP directory | Remote URL + tags |
 | **awesome-mcp** | PR to a maintained awesome list | Link `docs/agent-integration.md` |
 
 Track stable inbound links here as directories pick up the listing.
