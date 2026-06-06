@@ -28,6 +28,7 @@
     "delta": { "type": "object" },
     "regime": { "type": "object" },
     "allocation_analysis": { "$ref": "#/$defs/allocationAnalysis" },
+    "expectation_review": { "$ref": "#/$defs/expectationReview" },
     "freshness": { "enum": ["cached", "live"] },
     "age_seconds": { "type": "number", "minimum": 0 },
     "target_pct": { "$ref": "#/$defs/bandWeights" },
@@ -109,6 +110,37 @@
         "band": { "type": "number", "minimum": 0, "maximum": 1 }
       },
       "additionalProperties": false
+    },
+    "expectationReview": {
+      "type": "object",
+      "required": ["available"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "baseline_as_of": { "type": ["string", "null"], "format": "date-time" },
+        "current_as_of": { "type": ["string", "null"], "format": "date-time" },
+        "supported": { "type": "integer", "minimum": 0 },
+        "weakened": { "type": "integer", "minimum": 0 },
+        "unknown": { "type": "integer", "minimum": 0 },
+        "claims": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/expectationClaim" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "expectationClaim": {
+      "type": "object",
+      "required": ["thesis_id", "type", "status", "evidence"],
+      "properties": {
+        "thesis_id": { "type": "string" },
+        "type": { "type": "string" },
+        "asset": { "type": ["string", "null"] },
+        "status": { "enum": ["supported", "weakened", "unknown"] },
+        "reason": { "type": ["string", "null"] },
+        "evidence": { "type": "object" }
+      },
+      "additionalProperties": true
     }
   }
 }

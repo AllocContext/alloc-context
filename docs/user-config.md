@@ -68,6 +68,17 @@ when you need alt filters on historical reads.
 Tools return `available: false` with a `setup` block explaining how to enable
 portfolio, x402 payment, or allocation analysis.
 
+## Local theses (expectation review)
+
+Optional `theses:` entries in `user.yaml` (or per-call `theses` on
+`get_context_bundle`) enable deterministic `expectation_review` scoring. Core
+never stores beliefs — pass-through only. Each thesis requires `id`,
+`recorded_at`, and `claims[]`. See
+[context-bundle.md](context-bundle.md) and `config/user.example.yaml`.
+
+`ALLOCATION_FIT` claims need `target_allocation` / `band` (here or on the tool
+call). Bridge mode loads baselines via hosted `get_context_at` per `recorded_at`.
+
 ## Hosted wallet portfolio (no user.yaml)
 
 On the hosted MCP, call `get_portfolio_state` with `exchange=wallet` and a

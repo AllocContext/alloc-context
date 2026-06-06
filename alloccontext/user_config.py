@@ -37,6 +37,7 @@ class UserConfig:
     exchanges: dict[str, ExchangeCredentials]
     target_allocation: dict[str, float] | None
     band: float | None
+    theses: list[dict[str, Any]] | None
     x402: X402PayerConfig
 
     @classmethod
@@ -50,6 +51,7 @@ class UserConfig:
             exchanges={},
             target_allocation=None,
             band=None,
+            theses=None,
             x402=X402PayerConfig(),
         )
 
@@ -95,6 +97,19 @@ def _parse_exchange_block(block: dict[str, Any]) -> ExchangeCredentials:
         api_key=api_key,
         api_secret=api_secret,
     )
+
+
+def _parse_theses(raw: Any) -> list[dict[str, Any]] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, list):
+        raise ValueError("theses must be a list")
+    result: list[dict[str, Any]] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            raise ValueError("each thesis entry must be a mapping")
+        result.append(dict(entry))
+    return result or None
 
 
 def _parse_target_allocation(raw: Any) -> dict[str, float] | None:
@@ -157,6 +172,15 @@ def load_user_config(path: Path | None) -> UserConfig:
     band_raw = data.get("band")
     band = float(band_raw) if band_raw is not None else None
 
+    theses = _parse_theses(data.get("theses"))
+    if theses:
+        from alloccontext.mcp.validation import McpValidationError, validate_theses
+
+        try:
+            validate_theses(theses)
+        except McpValidationError as exc:
+            raise ValueError(str(exc)) from exc
+
     return UserConfig(
         path=path,
         upstream=upstream,
@@ -166,6 +190,7 @@ def load_user_config(path: Path | None) -> UserConfig:
         exchanges=exchanges,
         target_allocation=_parse_target_allocation(data.get("target_allocation")),
         band=band,
+        theses=theses,
         x402=X402PayerConfig(
             payer_private_key_env=payer_env or DEFAULT_PAYER_ENV,
             payer_private_key_file=payer_file_path,

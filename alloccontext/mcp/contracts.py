@@ -34,6 +34,22 @@ REGIME_AVAILABLE_KEYS = (
     "allocation",
 )
 
+EXPECTATION_REVIEW_KEYS = (
+    "available",
+    "current_as_of",
+    "supported",
+    "weakened",
+    "unknown",
+    "claims",
+)
+
+EXPECTATION_CLAIM_KEYS = (
+    "thesis_id",
+    "type",
+    "status",
+    "evidence",
+)
+
 MCP_TOOL_NAMES = frozenset(spec["tool_name"] for spec in mcp_tool_specs())
 
 
@@ -121,6 +137,25 @@ def validate_context_bundle(payload: dict[str, Any]) -> None:
         label="regime",
         when_available=REGIME_AVAILABLE_KEYS,
     )
+    review = payload.get("expectation_review")
+    if isinstance(review, dict) and review.get("available"):
+        assert_available_block(
+            review,
+            label="expectation_review",
+            when_available=EXPECTATION_REVIEW_KEYS,
+        )
+        for index, claim in enumerate(review.get("claims") or []):
+            if not isinstance(claim, dict):
+                raise AssertionError(f"expectation_review.claims[{index}] must be object")
+            assert_has_keys(
+                claim,
+                EXPECTATION_CLAIM_KEYS,
+                label=f"expectation_review.claims[{index}]",
+            )
+            if claim.get("status") == "unknown" and not claim.get("reason"):
+                raise AssertionError(
+                    f"expectation_review.claims[{index}] unknown requires reason"
+                )
 
 
 def validate_market_context(payload: dict[str, Any]) -> None:

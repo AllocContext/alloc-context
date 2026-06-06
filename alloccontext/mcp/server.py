@@ -26,6 +26,7 @@ from alloccontext.mcp.tool_fields import (
     MatchMode,
     NavUsd,
     OptionalTargetPct,
+    OptionalTheses,
     PriorAsOf,
     Scenarios,
     Scope,
@@ -117,6 +118,7 @@ def create_server(
         assets: Assets = None,
         target_pct: OptionalTargetPct = None,
         band: BandOptional = None,
+        theses: OptionalTheses = None,
     ) -> dict[str, Any]:
         """Return the full deterministic context bundle for daily or weekly scope."""
         validated_scope = handlers.validate_scope(scope)
@@ -131,6 +133,7 @@ def create_server(
                 assets=assets,
                 target_pct=target_pct,
                 band=band,
+                theses=theses,
             )
         finally:
             conn.close()

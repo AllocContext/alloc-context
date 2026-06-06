@@ -25,7 +25,8 @@ USE_DOCS_PATH = "docs/USE.md"
 
 PRIVACY_COMPACT_COPY = (
     "Privacy: nothing stored. One-time read-only fetch. Pass-through only — "
-    "your keys, wallet address, and portfolio never persist on our servers."
+    "your keys, wallet address, theses, and portfolio never persist on our "
+    "servers."
 )
 
 PRIVACY_PILLAR_MARKERS = (

@@ -27,6 +27,15 @@ exchanges:
 #   CASH: 0.00
 # band: 0.15
 
+# Optional — local thesis entries for expectation_review (bridge inject)
+# theses:
+#   - id: zec-2026-06
+#     recorded_at: "2026-06-01T00:00:00Z"
+#     claims:
+#       - type: RELATIVE_STRENGTH
+#         asset: ZEC
+#         benchmark: BTC
+
 # x402 payer — required for bridge → hosted upstream (Path A)
 x402:
   payer_private_key_env: EVM_PRIVATE_KEY
