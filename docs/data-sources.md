@@ -113,10 +113,11 @@ ingest and no stored wallet addresses.
 |------|--------|
 | **Input** | Public EVM address (`wallet_address`); `api_key` / `api_secret` omitted |
 | **Chains** | Ethereum, Arbitrum, Base, Optimism, Polygon (`wallet.chain_ids`) |
-| **Upstream** | [Etherscan API v2](https://docs.etherscan.io/) multichain (`chainid` param) |
-| **Host env** | `ETHERSCAN_API_KEY` (server-side; not passed by MCP callers) |
-| **Token scope** | Free tier: native balance + curated major tokens per chain (not full wallet scan) |
-| **Free-tier L2** | Some L2 `chainid`s may be skipped when the API key plan lacks coverage; mainnet still returns |
+| **Provider** | `wallet.provider: alchemy` (default) or `etherscan` |
+| **Upstream** | [Alchemy Portfolio API](https://www.alchemy.com/docs/reference/portfolio-apis) (`tokens/by-address`, multichain) or Etherscan v2 fallback |
+| **Host env** | `ALCHEMY_API_KEY` (default) or `ETHERSCAN_API_KEY` — server-side only |
+| **Etherscan fallback** | Curated tokens only; some L2 chains skipped on free explorer plans |
+| **Spam / dust** | Alchemy USD marks + min value filter; top 40 symbols; fake BTC/ETH ERC-20 excluded |
 | **Valuation** | Existing quote resolver (CoinGecko / CoinMarketCap when configured) |
 | **Dust filter** | `wallet.min_value_usd` (default $1) drops priced dust/spam tokens |
 

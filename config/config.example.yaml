@@ -57,9 +57,10 @@ exchanges:
     max_retries: 3
 
 # Keyless on-chain wallet read (ADR-012 D1). MCP live path only — not scheduled
-# ingest. Host needs ETHERSCAN_API_KEY (Etherscan API v2, multichain).
+# ingest. Host env: ALCHEMY_API_KEY (default provider) or ETHERSCAN_API_KEY.
 wallet:
   enabled: true
+  provider: alchemy
   chain_ids: [1, 42161, 8453, 10, 137]
   min_value_usd: 1.0
   timeout_seconds: 20
