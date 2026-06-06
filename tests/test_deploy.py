@@ -26,6 +26,7 @@ def test_core_deploy_installs_ingest_and_mcp_http() -> None:
     install_block = text.split("for unit in")[1].split("done")[0]
     assert "alloc-context-ingest.service" in install_block
     assert "alloc-context-mcp-http.service" in install_block
+    assert "alloc-context-mcp-internal.service" in install_block
     assert "alloc-context-backup.timer" in install_block
     assert "daily-brief" not in install_block
     assert "alerts.timer" not in install_block
@@ -57,6 +58,7 @@ def test_mcp_internal_systemd_unit() -> None:
     assert "--port 8001" in text
     assert "--x402" not in text
     assert "ALLOC_CONTEXT_ALLOW_UNPAID_HTTP=1" in text
+    assert "UnsetEnvironment=X402_ENABLED" in text
 
 
 def test_remote_install_substitutes_environment_file() -> None:

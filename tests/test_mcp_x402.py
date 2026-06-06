@@ -197,11 +197,39 @@ def test_x402_enabled_from_env_without_cli_flag(
 ) -> None:
     from alloccontext.mcp.http import resolve_x402_enabled
 
+    monkeypatch.delenv("ALLOC_CONTEXT_ALLOW_UNPAID_HTTP", raising=False)
     monkeypatch.setenv("X402_ENABLED", "true")
     assert resolve_x402_enabled(cli_x402=False) is True
     assert resolve_x402_enabled(cli_x402=True) is True
     monkeypatch.delenv("X402_ENABLED", raising=False)
     assert resolve_x402_enabled(cli_x402=False) is False
+
+
+def test_resolve_x402_disabled_when_allow_unpaid_despite_x402_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from alloccontext.mcp.http import build_http_app, resolve_x402_enabled
+
+    monkeypatch.setenv("X402_ENABLED", "true")
+    monkeypatch.setenv("X402_PAY_TO", "0xSeller")
+    monkeypatch.setenv("X402_FACILITATOR_URL", CDP_FACILITATOR_URL)
+    monkeypatch.setenv("ALLOC_CONTEXT_ALLOW_UNPAID_HTTP", "1")
+
+    assert resolve_x402_enabled(cli_x402=False) is False
+
+    app = build_http_app(x402=False, config_path="config/config.example.yaml")
+    from starlette.testclient import TestClient
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "initialize", "params": {}, "id": 1},
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+        )
+    assert response.status_code != 402
 
 
 def test_cdp_facilitator_client_requires_keys(monkeypatch: pytest.MonkeyPatch) -> None:
