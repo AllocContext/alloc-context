@@ -19,29 +19,19 @@ def test_etherscan_native_balance_parses_wei() -> None:
         assert client.native_balance_eth(1, "0xabc") == 1.5
 
 
-def test_etherscan_token_balances_parses_rows() -> None:
+def test_etherscan_token_balance_parses_wei() -> None:
+    from alloccontext.ingest.wallet.curated_tokens import CuratedToken
+
     client = EtherscanClient("test-key", max_retries=0)
-    payload = {
-        "status": "1",
-        "message": "OK",
-        "result": [
-            {
-                "TokenSymbol": "USDC",
-                "TokenQuantity": "1000000",
-                "TokenDivisor": "6",
-            }
-        ],
-    }
+    token = CuratedToken("0xabc", "USDC", 6)
+    payload = {"status": "1", "message": "OK", "result": "2500000"}
     with patch("alloccontext.ingest.wallet.etherscan.requests.get") as get:
         get.return_value = MagicMock(
             status_code=200,
             json=lambda: payload,
             raise_for_status=lambda: None,
         )
-        rows = client.token_balances(1, "0xabc")
-    assert len(rows) == 1
-    assert rows[0].symbol == "USDC"
-    assert rows[0].quantity == 1.0
+        assert client.token_balance(1, "0xwallet", token) == 2.5
 
 
 def test_etherscan_raises_on_notok() -> None:

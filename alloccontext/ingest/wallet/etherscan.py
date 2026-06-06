@@ -7,8 +7,11 @@ from typing import Any
 import requests
 
 from alloccontext.ingest.exchange_http import should_retry_exchange_attempt
+from alloccontext.ingest.wallet.curated_tokens import CuratedToken, curated_tokens_for_chain
 
 ETHERSCAN_V2_BASE = "https://api.etherscan.io/v2/api"
+# Free tier allows ~3 calls/sec; stay under with a fixed gap between requests.
+_MIN_REQUEST_INTERVAL_SECONDS = 0.34
 
 
 class EtherscanError(Exception):
@@ -37,10 +40,11 @@ class EtherscanClient:
         self._timeout = timeout_seconds
         self._max_retries = max_retries
         self._retry_backoff = retry_backoff_seconds
+        self._last_request_at = 0.0
 
     def native_balance_eth(self, chain_id: int, address: str) -> float:
         payload = self._get(
-            chain_id=chain_id,
+            chain_id,
             module="account",
             action="balance",
             address=address,
@@ -49,37 +53,42 @@ class EtherscanClient:
         wei = int(str(payload.get("result") or "0"))
         return wei / 1e18
 
-    def token_balances(self, chain_id: int, address: str) -> list[TokenBalanceRow]:
+    def token_balance(
+        self,
+        chain_id: int,
+        address: str,
+        token: CuratedToken,
+    ) -> float:
         payload = self._get(
-            chain_id=chain_id,
+            chain_id,
             module="account",
-            action="addresstokenbalance",
+            action="tokenbalance",
+            contractaddress=token.contract,
             address=address,
-            page=1,
-            offset=10000,
+            tag="latest",
         )
-        rows = payload.get("result") or []
-        if not isinstance(rows, list):
-            return []
+        raw = int(str(payload.get("result") or "0"))
+        if raw <= 0:
+            return 0.0
+        return raw / (10**token.decimals)
+
+    def curated_token_balances(self, chain_id: int, address: str) -> list[TokenBalanceRow]:
         parsed: list[TokenBalanceRow] = []
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            symbol = str(row.get("TokenSymbol") or "").strip()
-            if not symbol:
-                continue
-            qty = _token_quantity(row)
+        for token in curated_tokens_for_chain(chain_id):
+            qty = self.token_balance(chain_id, address, token)
             if qty <= 0:
                 continue
-            parsed.append(TokenBalanceRow(symbol=symbol, quantity=qty))
+            parsed.append(TokenBalanceRow(symbol=token.symbol, quantity=qty))
         return parsed
 
-    def _get(self, **params: Any) -> dict[str, Any]:
-        query = {key: value for key, value in params.items() if value is not None}
+    def _get(self, chain_id: int, **params: Any) -> dict[str, Any]:
+        query: dict[str, Any] = {"chainid": chain_id}
+        query.update({key: value for key, value in params.items() if value is not None})
         query["apikey"] = self._api_key
         last_exc: Exception | None = None
         for attempt in range(self._max_retries + 1):
             try:
+                self._throttle()
                 response = requests.get(
                     ETHERSCAN_V2_BASE,
                     params=query,
@@ -98,7 +107,7 @@ class EtherscanClient:
                 return payload
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
-                if attempt >= self._max_retries or not should_retry_exchange_attempt(exc):
+                if attempt >= self._max_retries or not _should_retry_etherscan(exc):
                     break
                 time.sleep(self._retry_backoff * (attempt + 1))
         if isinstance(last_exc, EtherscanError):
@@ -107,15 +116,16 @@ class EtherscanClient:
             raise EtherscanError(str(last_exc)) from last_exc
         raise EtherscanError("etherscan_request_failed")
 
+    def _throttle(self) -> None:
+        elapsed = time.monotonic() - self._last_request_at
+        if elapsed < _MIN_REQUEST_INTERVAL_SECONDS:
+            time.sleep(_MIN_REQUEST_INTERVAL_SECONDS - elapsed)
+        self._last_request_at = time.monotonic()
 
-def _token_quantity(row: dict[str, Any]) -> float:
-    raw_qty = row.get("TokenQuantity")
-    divisor = row.get("TokenDivisor")
-    try:
-        numerator = float(raw_qty)
-        denom = 10 ** int(divisor)
-    except (TypeError, ValueError):
-        return 0.0
-    if denom <= 0:
-        return 0.0
-    return numerator / denom
+
+def _should_retry_etherscan(exc: Exception) -> bool:
+    if isinstance(exc, EtherscanError):
+        detail = str(exc).lower()
+        if "rate limit" in detail or "max calls per sec" in detail:
+            return True
+    return should_retry_exchange_attempt(exc)

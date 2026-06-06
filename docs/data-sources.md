@@ -115,6 +115,8 @@ ingest and no stored wallet addresses.
 | **Chains** | Ethereum, Arbitrum, Base, Optimism, Polygon (`wallet.chain_ids`) |
 | **Upstream** | [Etherscan API v2](https://docs.etherscan.io/) multichain (`chainid` param) |
 | **Host env** | `ETHERSCAN_API_KEY` (server-side; not passed by MCP callers) |
+| **Token scope** | Free tier: native balance + curated major tokens per chain (not full wallet scan) |
+| **Free-tier L2** | Some L2 `chainid`s may be skipped when the API key plan lacks coverage; mainnet still returns |
 | **Valuation** | Existing quote resolver (CoinGecko / CoinMarketCap when configured) |
 | **Dust filter** | `wallet.min_value_usd` (default $1) drops priced dust/spam tokens |
 

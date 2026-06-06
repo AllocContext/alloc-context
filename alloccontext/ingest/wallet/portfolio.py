@@ -22,6 +22,7 @@ _WRAPPED_SYMBOL_MAP: dict[str, str] = {
     "RETH": "ETH",
     "STETH": "ETH",
     "WSTETH": "ETH",
+    "CBETH": "ETH",
     "MATIC": "POL",
 }
 
@@ -103,18 +104,39 @@ def _fetch_raw_balances(
     )
 
     raw_balances: dict[str, float] = {}
+    skipped_chains: list[str] = []
     try:
         for chain in chains:
-            native_qty = etherscan.native_balance_eth(chain.chain_id, address)
-            if native_qty > 0:
-                symbol = chain.native_symbol
-                raw_balances[symbol] = raw_balances.get(symbol, 0.0) + native_qty
-            for token in etherscan.token_balances(chain.chain_id, address):
-                symbol = normalize_wallet_symbol(token.symbol)
-                raw_balances[symbol] = raw_balances.get(symbol, 0.0) + token.quantity
+            try:
+                native_qty = etherscan.native_balance_eth(chain.chain_id, address)
+                if native_qty > 0:
+                    symbol = chain.native_symbol
+                    raw_balances[symbol] = raw_balances.get(symbol, 0.0) + native_qty
+                for token in etherscan.curated_token_balances(chain.chain_id, address):
+                    symbol = normalize_wallet_symbol(token.symbol)
+                    raw_balances[symbol] = raw_balances.get(symbol, 0.0) + token.quantity
+            except EtherscanError as exc:
+                if _is_skippable_chain_error(exc):
+                    skipped_chains.append(chain.label)
+                    continue
+                raise
     except EtherscanError as exc:
         raise WalletPortfolioError(str(exc)) from exc
+    if not raw_balances and skipped_chains:
+        raise WalletPortfolioError(
+            "wallet_read_unsupported_chains: "
+            + ",".join(skipped_chains)
+        )
     return raw_balances
+
+
+def _is_skippable_chain_error(exc: EtherscanError) -> bool:
+    message = str(exc).lower()
+    return (
+        "not supported for this chain" in message
+        or "upgrade your api plan" in message
+        or "full chain coverage" in message
+    )
 
 
 def fetch_wallet_portfolio_snapshot(
