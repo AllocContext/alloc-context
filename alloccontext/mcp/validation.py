@@ -48,6 +48,49 @@ def validate_band(band: Any) -> float:
     return value
 
 
+def validate_theses(raw: Any) -> list[dict[str, Any]]:
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise McpValidationError("theses must be an array")
+    result: list[dict[str, Any]] = []
+    for index, entry in enumerate(raw):
+        if not isinstance(entry, dict):
+            raise McpValidationError(f"theses[{index}] must be an object")
+        thesis_id = str(entry.get("id") or "").strip()
+        if not thesis_id:
+            raise McpValidationError(f"theses[{index}].id is required")
+        recorded_at = str(entry.get("recorded_at") or "").strip()
+        claims_raw = entry.get("claims")
+        if claims_raw is None:
+            claims_raw = []
+        if not isinstance(claims_raw, list):
+            raise McpValidationError(f"theses[{index}].claims must be an array")
+        claims: list[dict[str, Any]] = []
+        for claim_index, claim in enumerate(claims_raw):
+            if not isinstance(claim, dict):
+                raise McpValidationError(
+                    f"theses[{index}].claims[{claim_index}] must be an object"
+                )
+            claim_type = str(claim.get("type") or "").strip().upper()
+            if not claim_type:
+                raise McpValidationError(
+                    f"theses[{index}].claims[{claim_index}].type is required"
+                )
+            claims.append(dict(claim))
+        thesis: dict[str, Any] = {
+            "id": thesis_id,
+            "recorded_at": recorded_at,
+            "claims": claims,
+        }
+        if entry.get("asset") is not None:
+            thesis["asset"] = str(entry.get("asset"))
+        if entry.get("rationale") is not None:
+            thesis["rationale"] = entry.get("rationale")
+        result.append(thesis)
+    return result
+
+
 def validate_nav_usd(nav_usd: Any) -> float:
     try:
         value = float(nav_usd)

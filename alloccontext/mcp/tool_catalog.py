@@ -118,6 +118,63 @@ BAND_SCHEMA: dict[str, Any] = {
     "description": "Drift band width as a fraction (e.g. 0.15 = 15% outside target).",
 }
 
+THESES_SCHEMA: dict[str, Any] = {
+    "type": "array",
+    "description": (
+        "Optional local thesis entries for expectation_review (pass-through; "
+        "nothing stored). Each entry requires id, recorded_at, and claims[]."
+    ),
+    "items": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Stable thesis identifier for claim results.",
+            },
+            "recorded_at": {
+                "type": "string",
+                "description": "Thesis anchor ISO timestamp (baseline snapshot).",
+            },
+            "asset": {
+                "type": "string",
+                "description": "Optional context symbol for the thesis (not scored).",
+            },
+            "claims": {
+                "type": "array",
+                "description": "Structured claim objects scored deterministically.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "description": "Claim type (e.g. RELATIVE_STRENGTH).",
+                        },
+                        "asset": {
+                            "type": "string",
+                            "description": "Held asset symbol for asset-scoped claims.",
+                        },
+                        "benchmark": {
+                            "type": "string",
+                            "description": "Benchmark symbol for RELATIVE_STRENGTH.",
+                        },
+                        "direction": {
+                            "type": "string",
+                            "description": "Expected direction (UP/DOWN, IMPROVING, etc.).",
+                        },
+                    },
+                    "required": ["type"],
+                },
+            },
+            "rationale": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Agent context only — never scored.",
+            },
+        },
+        "required": ["id", "recorded_at", "claims"],
+    },
+}
+
 MATCH_SCHEMA: dict[str, Any] = {
     "type": "string",
     "enum": ["exact", "at_or_before"],
@@ -216,7 +273,9 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "snapshot. Use get_market_context for market-only; use get_context_at "
         "for a historical snapshot; use get_context_delta to compare two times. "
         "Optional target_pct and band attach allocation_analysis (opt-in drift "
-        "math). freshness=cached uses the local ingest DB; freshness=live runs "
+        "math). Optional theses[] attaches expectation_review (deterministic "
+        "claim scoring vs recorded_at baseline; pass-through only). "
+        "freshness=cached uses the local ingest DB; freshness=live runs "
         "ingest first (may add latency; needs ingest API keys on the host)."
     ),
     "get_market_context": (
@@ -313,6 +372,7 @@ MCP_TOOL_SPECS: tuple[dict[str, Any], ...] = (
                 "assets": ASSET_FILTER_SCHEMA,
                 "target_pct": TARGET_PCT_SCHEMA,
                 "band": BAND_SCHEMA,
+                "theses": THESES_SCHEMA,
             },
         },
         "example": {

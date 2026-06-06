@@ -63,6 +63,16 @@ BandOptional = Annotated[
         ),
     ),
 ]
+OptionalTheses = Annotated[
+    list[dict[str, Any]] | None,
+    Field(
+        description=(
+            "Optional local thesis entries (id, recorded_at, claims[]) for "
+            "deterministic expectation_review scoring. Pass-through only — "
+            "nothing stored."
+        ),
+    ),
+]
 BandDefault = Annotated[
     float,
     Field(

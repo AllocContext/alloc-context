@@ -15,6 +15,8 @@ from alloccontext.rollup.portfolio_payload import (
     attach_allocation_analysis_to_payload,
     portfolio_dict_from_snapshot,
 )
+from alloccontext.mcp.validation import validate_band, validate_target_pct, validate_theses
+from alloccontext.rollup.expectation_review import build_expectation_review
 from alloccontext.user_config import UserConfig
 
 AssetsScope = Literal["explicit", "portfolio", "default", "portfolio_unavailable"]
@@ -217,4 +219,54 @@ def strip_upstream_allocation_regime(bundle: dict[str, Any]) -> dict[str, Any]:
     updated["summary"] = " ".join(summary_parts) if summary_parts else regime.get("summary")
     result = dict(bundle)
     result["regime"] = updated
+    return result
+
+
+def attach_bridge_expectation_review(
+    *,
+    user: UserConfig,
+    bundle: dict[str, Any],
+    scope: str,
+    theses: list[dict[str, Any]] | None,
+    target_pct: dict[str, float] | None,
+    band: float | None,
+    fetch_baseline,
+) -> dict[str, Any]:
+    """Score local theses on a merged bridge bundle (baselines via upstream)."""
+    effective_theses = theses if theses is not None else user.theses
+    if not effective_theses:
+        return bundle
+
+    validated = validate_theses(effective_theses)
+    if not validated:
+        return bundle
+
+    baseline_bundles: dict[str, dict[str, Any] | None] = {}
+    for thesis in validated:
+        thesis_id = thesis["id"]
+        recorded_at = thesis.get("recorded_at") or ""
+        if not recorded_at:
+            baseline_bundles[thesis_id] = None
+            continue
+        baseline = fetch_baseline(scope=scope, recorded_at=recorded_at)
+        baseline_bundles[thesis_id] = (
+            baseline if isinstance(baseline, dict) and baseline.get("as_of") else None
+        )
+
+    effective_target = target_pct if target_pct is not None else user.target_allocation
+    if effective_target is not None:
+        effective_target = validate_target_pct(effective_target)
+    effective_band = band if band is not None else user.band
+    if effective_band is not None:
+        effective_band = validate_band(effective_band)
+
+    review = build_expectation_review(
+        baseline_bundles=baseline_bundles,
+        current_bundle=bundle,
+        theses=validated,
+        target_pct=effective_target,
+        band=effective_band,
+    )
+    result = dict(bundle)
+    result["expectation_review"] = review
     return result

@@ -32,7 +32,9 @@ from alloccontext.mcp.validation import (
     validate_band,
     validate_nav_usd,
     validate_target_pct,
+    validate_theses,
 )
+from alloccontext.rollup.expectation_review import build_expectation_review
 from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.regime import build_regime_context
 from alloccontext.rollup.snapshots import (
@@ -114,6 +116,85 @@ def _band_allocation_pct(portfolio: dict[str, Any]) -> dict[str, float]:
     from alloccontext.ingest.portfolio_holdings import band_allocation_pct
 
     return band_allocation_pct(portfolio.get("holdings") or [])
+
+
+def _load_baseline_bundle(
+    conn: sqlite3.Connection,
+    *,
+    scope: Scope,
+    recorded_at: str,
+) -> dict[str, Any] | None:
+    try:
+        resolved = resolve_context_snapshot_as_of(
+            conn,
+            scope=scope,
+            as_of=recorded_at,
+            mode="at_or_before",
+        )
+        return load_context_bundle_snapshot(conn, scope=scope, as_of=resolved)
+    except SnapshotNotFoundError:
+        return None
+
+
+def _effective_allocation_inputs(
+    config,
+    *,
+    target_pct: dict[str, float] | None,
+    band: float | None,
+) -> tuple[dict[str, float] | None, float | None]:
+    effective_target = target_pct
+    if effective_target is None and config.portfolio.target_allocations:
+        effective_target = validate_target_pct(dict(config.portfolio.target_allocations))
+    effective_band = band
+    if effective_band is None and config.portfolio.rebalance_band is not None:
+        effective_band = validate_band(config.portfolio.rebalance_band)
+    return effective_target, effective_band
+
+
+def _attach_expectation_review(
+    conn: sqlite3.Connection,
+    config,
+    bundle: dict[str, Any],
+    *,
+    scope: Scope,
+    theses: list[dict[str, Any]] | None,
+    target_pct: dict[str, float] | None,
+    band: float | None,
+) -> dict[str, Any]:
+    if not theses:
+        return bundle
+    validated = validate_theses(theses)
+    if not validated:
+        return bundle
+
+    baseline_bundles: dict[str, dict[str, Any] | None] = {}
+    for thesis in validated:
+        thesis_id = thesis["id"]
+        recorded_at = thesis.get("recorded_at") or ""
+        if not recorded_at:
+            baseline_bundles[thesis_id] = None
+            continue
+        baseline_bundles[thesis_id] = _load_baseline_bundle(
+            conn,
+            scope=scope,
+            recorded_at=recorded_at,
+        )
+
+    effective_target, effective_band = _effective_allocation_inputs(
+        config,
+        target_pct=target_pct,
+        band=band,
+    )
+    review = build_expectation_review(
+        baseline_bundles=baseline_bundles,
+        current_bundle=bundle,
+        theses=validated,
+        target_pct=effective_target,
+        band=effective_band,
+    )
+    result = dict(bundle)
+    result["expectation_review"] = review
+    return result
 
 
 def _attach_allocation_analysis(
@@ -389,6 +470,7 @@ def get_context_bundle(
     assets: list[str] | None = None,
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
+    theses: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
@@ -435,6 +517,15 @@ def get_context_bundle(
         )
     bundle = apply_assets_filter_to_bundle(bundle, view_assets)
     bundle = _attach_regime(bundle, config)
+    bundle = _attach_expectation_review(
+        conn,
+        config,
+        bundle,
+        scope=scope,
+        theses=theses,
+        target_pct=target_pct,
+        band=band,
+    )
     if target_pct is not None:
         bundle["target_pct"] = validate_target_pct(target_pct)
     if band is not None:

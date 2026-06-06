@@ -5,6 +5,7 @@ from typing import Any
 from alloccontext.mcp import handlers
 from alloccontext.mcp.bridge_portfolio import (
     attach_assets_scope,
+    attach_bridge_expectation_review,
     bridge_upstream_ready,
     build_upstream_context_args,
     default_bridge_app_config,
@@ -44,6 +45,27 @@ def _effective_band(user: UserConfig, band: float | None) -> float | None:
     if band is not None:
         return band
     return user.band
+
+
+def _effective_theses(
+    user: UserConfig,
+    theses: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]] | None:
+    if theses is not None:
+        return theses
+    return user.theses
+
+
+def _fetch_upstream_baseline(user: UserConfig, *, scope: str, recorded_at: str) -> dict[str, Any]:
+    return call_upstream_tool(
+        user,
+        "get_context_at",
+        {
+            "scope": scope,
+            "as_of": recorded_at,
+            "match": "at_or_before",
+        },
+    )
 
 
 def _bridge_tool_meta(tool_name: str) -> dict[str, Any]:
@@ -111,6 +133,7 @@ def create_bridge_server(user: UserConfig):
         assets: list[str] | None = None,
         target_pct: dict[str, float] | None = None,
         band: float | None = None,
+        theses: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
         validated_freshness = handlers.validate_freshness(freshness)
@@ -156,6 +179,19 @@ def create_bridge_server(user: UserConfig):
         merged = merge_portfolio_into_bundle(bundle, portfolio)
         merged = strip_upstream_allocation_regime(merged)
         merged = merge_assets_omitted(merged, portfolio)
+        merged = attach_bridge_expectation_review(
+            user=user,
+            bundle=merged,
+            scope=validated_scope,
+            theses=_effective_theses(user, theses),
+            target_pct=_effective_target_pct(user, target_pct),
+            band=_effective_band(user, band),
+            fetch_baseline=lambda **kwargs: _fetch_upstream_baseline(
+                user,
+                scope=kwargs["scope"],
+                recorded_at=kwargs["recorded_at"],
+            ),
+        )
         return attach_assets_scope(merged, assets_scope)
 
     @mcp.tool(**_bridge_tool_meta("get_portfolio_state"))
