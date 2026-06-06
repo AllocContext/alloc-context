@@ -34,7 +34,10 @@ from alloccontext.mcp.validation import (
     validate_target_pct,
     validate_theses,
 )
-from alloccontext.rollup.expectation_review import build_expectation_review
+from alloccontext.rollup.expectation_review import (
+    build_expectation_review,
+    theses_need_allocation_fit,
+)
 from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.regime import build_regime_context
 from alloccontext.rollup.snapshots import (
@@ -136,6 +139,43 @@ def _load_baseline_bundle(
         return None
 
 
+def _prepare_baseline_bundle(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    scope: Scope,
+    recorded_at: str,
+) -> dict[str, Any] | None:
+    """Load baseline snapshot and rebuild regime for market-wide claim scoring."""
+    raw = _load_baseline_bundle(conn, scope=scope, recorded_at=recorded_at)
+    if raw is None:
+        return None
+    return _attach_regime(dict(raw), config)
+
+
+def _baseline_bundles_for_theses(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    scope: Scope,
+    theses: list[dict[str, Any]],
+) -> dict[str, dict[str, Any] | None]:
+    by_recorded_at: dict[str, dict[str, Any] | None] = {}
+    result: dict[str, dict[str, Any] | None] = {}
+    for thesis in theses:
+        thesis_id = thesis["id"]
+        recorded_at = thesis.get("recorded_at") or ""
+        if recorded_at not in by_recorded_at:
+            by_recorded_at[recorded_at] = _prepare_baseline_bundle(
+                conn,
+                config,
+                scope=scope,
+                recorded_at=recorded_at,
+            )
+        result[thesis_id] = by_recorded_at[recorded_at]
+    return result
+
+
 def _effective_allocation_inputs(
     config,
     *,
@@ -167,18 +207,12 @@ def _attach_expectation_review(
     if not validated:
         return bundle
 
-    baseline_bundles: dict[str, dict[str, Any] | None] = {}
-    for thesis in validated:
-        thesis_id = thesis["id"]
-        recorded_at = thesis.get("recorded_at") or ""
-        if not recorded_at:
-            baseline_bundles[thesis_id] = None
-            continue
-        baseline_bundles[thesis_id] = _load_baseline_bundle(
-            conn,
-            scope=scope,
-            recorded_at=recorded_at,
-        )
+    baseline_bundles = _baseline_bundles_for_theses(
+        conn,
+        config,
+        scope=scope,
+        theses=validated,
+    )
 
     effective_target, effective_band = _effective_allocation_inputs(
         config,
@@ -508,12 +542,26 @@ def get_context_bundle(
         save_snapshot=False,
         alt_symbols=alt_symbols,
     )
+    validated_theses = validate_theses(theses) if theses else []
+    need_allocation = theses_need_allocation_fit(validated_theses)
+    effective_target, effective_band = _effective_allocation_inputs(
+        config,
+        target_pct=target_pct,
+        band=band,
+    )
     if target_pct is not None or band is not None:
         bundle = _attach_allocation_analysis(
             bundle,
             config,
             target_pct=target_pct,
             band=band,
+        )
+    elif need_allocation and effective_target is not None:
+        bundle = _attach_allocation_analysis(
+            bundle,
+            config,
+            target_pct=effective_target,
+            band=effective_band,
         )
     bundle = apply_assets_filter_to_bundle(bundle, view_assets)
     bundle = _attach_regime(bundle, config)

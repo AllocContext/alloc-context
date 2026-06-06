@@ -241,17 +241,19 @@ def attach_bridge_expectation_review(
     if not validated:
         return bundle
 
+    by_recorded_at: dict[str, dict[str, Any] | None] = {}
     baseline_bundles: dict[str, dict[str, Any] | None] = {}
     for thesis in validated:
         thesis_id = thesis["id"]
-        recorded_at = thesis.get("recorded_at") or ""
-        if not recorded_at:
-            baseline_bundles[thesis_id] = None
-            continue
-        baseline = fetch_baseline(scope=scope, recorded_at=recorded_at)
-        baseline_bundles[thesis_id] = (
-            baseline if isinstance(baseline, dict) and baseline.get("as_of") else None
-        )
+        recorded_at = thesis["recorded_at"]
+        if recorded_at not in by_recorded_at:
+            baseline = fetch_baseline(scope=scope, recorded_at=recorded_at)
+            by_recorded_at[recorded_at] = (
+                baseline
+                if isinstance(baseline, dict) and baseline.get("as_of")
+                else None
+            )
+        baseline_bundles[thesis_id] = by_recorded_at[recorded_at]
 
     effective_target = target_pct if target_pct is not None else user.target_allocation
     if effective_target is not None:

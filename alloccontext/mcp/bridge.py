@@ -15,7 +15,7 @@ from alloccontext.mcp.bridge_portfolio import (
     resolve_bridge_assets,
     strip_upstream_allocation_regime,
 )
-from alloccontext.mcp.setup import allocation_not_configured
+from alloccontext.mcp.setup import allocation_not_configured, upstream_payment_required
 from alloccontext.mcp.upstream import call_upstream_tool
 from alloccontext.user_config import (
     UserConfig,
@@ -138,6 +138,8 @@ def create_bridge_server(user: UserConfig):
         validated_scope = handlers.validate_scope(scope)
         validated_freshness = handlers.validate_freshness(freshness)
         if not bridge_upstream_ready(user):
+            if _effective_theses(user, theses):
+                return upstream_payment_required()
             effective_assets, _assets_scope = resolve_bridge_assets(
                 user,
                 bridge_config,

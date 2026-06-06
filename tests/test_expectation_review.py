@@ -269,3 +269,153 @@ def test_empty_theses_unavailable() -> None:
         theses=[],
     )
     assert review["available"] is False
+
+
+def test_price_strength_up_supported() -> None:
+    baseline = _bundle(as_of="2026-06-01T00:00:00Z", btc=100.0, symbols=["ZEC"])
+    current = _bundle(as_of="2026-06-02T00:00:00Z", btc=100.0, symbols=["ZEC"])
+    baseline["market"]["assets"]["zec"]["price_usd"] = 50.0
+    current["market"]["assets"]["zec"]["price_usd"] = 55.0
+
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [
+                    {"type": "PRICE_STRENGTH", "asset": "ZEC", "direction": "UP"}
+                ],
+            }
+        ],
+    )
+    assert review["claims"][0]["status"] == "supported"
+
+
+def test_price_strength_invalid_direction() -> None:
+    baseline = _bundle(as_of="2026-06-01T00:00:00Z", btc=100.0, symbols=["ZEC"])
+    current = _bundle(as_of="2026-06-02T00:00:00Z", btc=110.0, symbols=["ZEC"])
+    baseline["market"]["assets"]["zec"]["price_usd"] = 50.0
+    current["market"]["assets"]["zec"]["price_usd"] = 55.0
+
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [
+                    {"type": "PRICE_STRENGTH", "asset": "ZEC", "direction": "SIDEWAYS"}
+                ],
+            }
+        ],
+    )
+    assert review["claims"][0]["reason"] == "invalid_direction"
+
+
+def test_risk_appetite_conflicting_signals_within_noise() -> None:
+    baseline = _bundle(
+        as_of="2026-06-01T00:00:00Z",
+        btc=100.0,
+        risk_level="high",
+        risk_score=20,
+    )
+    current = _bundle(
+        as_of="2026-06-02T00:00:00Z",
+        btc=100.0,
+        risk_level="low",
+        risk_score=80,
+    )
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "RISK_APPETITE", "direction": "INCREASING"}],
+            }
+        ],
+    )
+    assert review["claims"][0]["reason"] == "within_noise_band"
+
+
+def test_baseline_as_of_omitted_when_multiple_baselines() -> None:
+    baseline_a = _bundle(as_of="2026-06-01T00:00:00Z", btc=100.0)
+    baseline_b = _bundle(as_of="2026-05-30T00:00:00Z", btc=90.0)
+    current = _bundle(as_of="2026-06-02T00:00:00Z", btc=110.0, fg=60)
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline_a, "t2": baseline_b},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "MARKET_SENTIMENT", "direction": "IMPROVING"}],
+            },
+            {
+                "id": "t2",
+                "recorded_at": "2026-05-30T00:00:00Z",
+                "claims": [{"type": "MARKET_SENTIMENT", "direction": "IMPROVING"}],
+            },
+        ],
+    )
+    assert review["baseline_as_of"] is None
+    assert review["claims"][0]["evidence"]["baseline_as_of"] == "2026-06-01T00:00:00Z"
+    assert review["claims"][1]["evidence"]["baseline_as_of"] == "2026-05-30T00:00:00Z"
+
+
+def test_allocation_fit_auto_attached_from_config(conn, config) -> None:
+    import json
+
+    from alloccontext.mcp.handlers import get_context_bundle
+    from alloccontext.rollup.context import build_context_bundle
+
+    conn.execute(
+        """
+        INSERT INTO portfolio_snapshots(ts, nav_usd, cash_usd, allocation_json, raw_json)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            "2026-06-02T12:00:00+00:00",
+            10_000.0,
+            500.0,
+            json.dumps({"BTC": 0.7, "ETH": 0.25, "CASH": 0.05}),
+            "{}",
+        ),
+    )
+    baseline = build_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        rollup=config.rollup,
+        save_snapshot=False,
+    )
+    baseline["as_of"] = "2026-06-01T12:00:00+00:00"
+    conn.execute(
+        """
+        INSERT INTO context_snapshots(scope, as_of, context_json)
+        VALUES (?, ?, ?)
+        """,
+        ("daily", baseline["as_of"], json.dumps(baseline)),
+    )
+    conn.commit()
+
+    payload = get_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        theses=[
+            {
+                "id": "alloc",
+                "recorded_at": baseline["as_of"],
+                "claims": [{"type": "ALLOCATION_FIT", "asset": "BTC"}],
+            }
+        ],
+    )
+    analysis = payload.get("allocation_analysis") or {}
+    assert analysis.get("available") is True
+    claim = (payload.get("expectation_review") or {}).get("claims", [])[0]
+    assert claim["reason"] != "missing_quote"

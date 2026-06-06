@@ -4,6 +4,7 @@ from typing import Any
 
 from alloccontext.constants import ALLOCATION_ASSETS
 from alloccontext.ingest.asset_registry import normalize_canonical_symbol
+from alloccontext.rollup.delta import asset_price_usd, pct_change_since
 
 _PRICE_MOVE_THRESHOLD_PCT = 2.0
 _RELATIVE_MOVE_THRESHOLD_PCT = 2.0
@@ -14,7 +15,7 @@ _ALLOCATION_EXCESS_THRESHOLD = 0.005
 _VOLATILITY_ORDINAL = {"low": 0, "medium": 1, "high": 2}
 _RISK_OFF_ORDINAL = {"low": 0, "moderate": 1, "high": 2}
 
-_V0_CLAIM_TYPES = frozenset(
+V0_CLAIM_TYPES = frozenset(
     {
         "PRICE_STRENGTH",
         "RELATIVE_STRENGTH",
@@ -26,29 +27,16 @@ _V0_CLAIM_TYPES = frozenset(
 )
 
 
-def _market_block(context: dict[str, Any] | None) -> dict[str, Any]:
-    if not context:
-        return {}
-    market = context.get("market")
-    return market if isinstance(market, dict) else {}
-
-
-def _asset_price(context: dict[str, Any] | None, symbol: str) -> float | None:
-    market = _market_block(context)
-    if not market.get("available"):
-        return None
-    assets = market.get("assets") or {}
-    block = assets.get(symbol.lower()) or assets.get(symbol.upper())
-    if not isinstance(block, dict):
-        return None
-    price = block.get("price_usd")
-    return float(price) if price is not None else None
-
-
-def _pct_change(current: float | None, prior: float | None) -> float | None:
-    if current is None or prior is None or prior == 0:
-        return None
-    return round((current - prior) / prior * 100, 2)
+def theses_need_allocation_fit(theses: list[dict[str, Any]]) -> bool:
+    for thesis in theses:
+        if not isinstance(thesis, dict):
+            continue
+        for claim in thesis.get("claims") or []:
+            if not isinstance(claim, dict):
+                continue
+            if str(claim.get("type") or "").strip().upper() == "ALLOCATION_FIT":
+                return True
+    return False
 
 
 def _portfolio_holds_asset(portfolio: dict[str, Any], symbol: str) -> bool:
@@ -69,15 +57,25 @@ def _claim_base(
     thesis_id: str,
     claim_type: str,
     asset: str | None,
+    baseline_as_of: str | None = None,
 ) -> dict[str, Any]:
+    evidence: dict[str, Any] = {}
+    if baseline_as_of:
+        evidence["baseline_as_of"] = baseline_as_of
     return {
         "thesis_id": thesis_id,
         "type": claim_type,
         "asset": asset,
         "status": "unknown",
         "reason": None,
-        "evidence": {},
+        "evidence": evidence,
     }
+
+
+def _baseline_as_of(baseline: dict[str, Any] | None) -> str | None:
+    if baseline and baseline.get("as_of"):
+        return str(baseline["as_of"])
+    return None
 
 
 def _asset_returns(
@@ -90,9 +88,9 @@ def _asset_returns(
     asset = normalize_canonical_symbol(symbol)
     if not _portfolio_holds_asset(current.get("portfolio") or {}, asset):
         return None, None, None, "asset_not_held"
-    prior_price = _asset_price(baseline, asset)
-    current_price = _asset_price(current, asset)
-    asset_return = _pct_change(current_price, prior_price)
+    prior_price = asset_price_usd(baseline, asset)
+    current_price = asset_price_usd(current, asset)
+    asset_return = pct_change_since(current_price, prior_price)
     if asset_return is None:
         return None, None, None, "missing_quote"
     return asset_return, prior_price, current_price, None
@@ -107,7 +105,13 @@ def _score_price_strength(
 ) -> dict[str, Any]:
     asset = normalize_canonical_symbol(str(claim.get("asset") or ""))
     direction = str(claim.get("direction") or "").strip().upper()
-    result = _claim_base(thesis_id=thesis_id, claim_type="PRICE_STRENGTH", asset=asset or None)
+    anchor = _baseline_as_of(baseline)
+    result = _claim_base(
+        thesis_id=thesis_id,
+        claim_type="PRICE_STRENGTH",
+        asset=asset or None,
+        baseline_as_of=anchor,
+    )
     if not asset:
         result["reason"] = "missing_quote"
         return result
@@ -116,23 +120,21 @@ def _score_price_strength(
         result["reason"] = reason
         return result
     assert asset_return is not None
-    result["evidence"] = {"asset_return_pct": asset_return}
+    result["evidence"]["asset_return_pct"] = asset_return
     if direction not in {"UP", "DOWN"}:
-        result["reason"] = "missing_quote"
+        result["reason"] = "invalid_direction"
         return result
     if -_PRICE_MOVE_THRESHOLD_PCT < asset_return < _PRICE_MOVE_THRESHOLD_PCT:
         result["reason"] = "within_noise_band"
         return result
     if direction == "UP":
-        if asset_return >= _PRICE_MOVE_THRESHOLD_PCT:
-            result["status"] = "supported"
-        else:
-            result["status"] = "weakened"
+        result["status"] = (
+            "supported" if asset_return >= _PRICE_MOVE_THRESHOLD_PCT else "weakened"
+        )
     else:
-        if asset_return <= -_PRICE_MOVE_THRESHOLD_PCT:
-            result["status"] = "supported"
-        else:
-            result["status"] = "weakened"
+        result["status"] = (
+            "supported" if asset_return <= -_PRICE_MOVE_THRESHOLD_PCT else "weakened"
+        )
     return result
 
 
@@ -145,7 +147,13 @@ def _score_relative_strength(
 ) -> dict[str, Any]:
     asset = normalize_canonical_symbol(str(claim.get("asset") or ""))
     benchmark = normalize_canonical_symbol(str(claim.get("benchmark") or "BTC"))
-    result = _claim_base(thesis_id=thesis_id, claim_type="RELATIVE_STRENGTH", asset=asset or None)
+    anchor = _baseline_as_of(baseline)
+    result = _claim_base(
+        thesis_id=thesis_id,
+        claim_type="RELATIVE_STRENGTH",
+        asset=asset or None,
+        baseline_as_of=anchor,
+    )
     if not asset:
         result["reason"] = "missing_quote"
         return result
@@ -153,23 +161,22 @@ def _score_relative_strength(
     if reason:
         result["reason"] = reason
         return result
-    if baseline is None or not baseline.get("as_of"):
-        result["reason"] = "missing_baseline"
-        return result
-    benchmark_return = _pct_change(
-        _asset_price(current, benchmark),
-        _asset_price(baseline, benchmark),
+    benchmark_return = pct_change_since(
+        asset_price_usd(current, benchmark),
+        asset_price_usd(baseline, benchmark),
     )
     if benchmark_return is None:
         result["reason"] = "missing_quote"
         return result
     assert asset_return is not None
     relative = round(asset_return - benchmark_return, 2)
-    result["evidence"] = {
-        "relative_return_pct": relative,
-        "asset_return_pct": asset_return,
-        "benchmark_return_pct": benchmark_return,
-    }
+    result["evidence"].update(
+        {
+            "relative_return_pct": relative,
+            "asset_return_pct": asset_return,
+            "benchmark_return_pct": benchmark_return,
+        }
+    )
     if relative >= _RELATIVE_MOVE_THRESHOLD_PCT:
         result["status"] = "supported"
     elif relative <= -_RELATIVE_MOVE_THRESHOLD_PCT:
@@ -207,12 +214,18 @@ def _score_market_sentiment(
     current: dict[str, Any],
 ) -> dict[str, Any]:
     direction = str(claim.get("direction") or "").strip().upper()
-    result = _claim_base(thesis_id=thesis_id, claim_type="MARKET_SENTIMENT", asset=None)
+    anchor = _baseline_as_of(baseline)
+    result = _claim_base(
+        thesis_id=thesis_id,
+        claim_type="MARKET_SENTIMENT",
+        asset=None,
+        baseline_as_of=anchor,
+    )
     if baseline is None or not baseline.get("as_of"):
         result["reason"] = "missing_baseline"
         return result
     if direction not in {"IMPROVING", "WEAKENING"}:
-        result["reason"] = "sentiment_unavailable"
+        result["reason"] = "invalid_direction"
         return result
 
     prior_fg = _fear_greed_value(baseline)
@@ -231,13 +244,12 @@ def _score_market_sentiment(
         result["reason"] = "sentiment_unavailable"
         return result
 
-    evidence: dict[str, Any] = {}
     if fg_change is not None:
-        evidence["fear_greed_change"] = fg_change
+        result["evidence"]["fear_greed_change"] = fg_change
     if frac_delta is not None:
-        evidence["sentiment_up_frac_delta"] = frac_delta
-    result["evidence"] = evidence
+        result["evidence"]["sentiment_up_frac_delta"] = frac_delta
 
+    # F&G uses ±5; Kalshi up_frac uses any directional move vs baseline.
     improving = False
     weakening = False
     if fg_change is not None:
@@ -251,17 +263,20 @@ def _score_market_sentiment(
         if frac_delta < 0:
             weakening = True
 
+    if improving and weakening:
+        result["reason"] = "within_noise_band"
+        return result
     if direction == "IMPROVING":
-        if improving and not weakening:
+        if improving:
             result["status"] = "supported"
-        elif weakening and not improving:
+        elif weakening:
             result["status"] = "weakened"
         else:
             result["reason"] = "within_noise_band"
     else:
-        if weakening and not improving:
+        if weakening:
             result["status"] = "supported"
-        elif improving and not weakening:
+        elif improving:
             result["status"] = "weakened"
         else:
             result["reason"] = "within_noise_band"
@@ -289,12 +304,18 @@ def _score_volatility_regime(
     current: dict[str, Any],
 ) -> dict[str, Any]:
     direction = str(claim.get("direction") or "").strip().upper()
-    result = _claim_base(thesis_id=thesis_id, claim_type="VOLATILITY_REGIME", asset=None)
+    anchor = _baseline_as_of(baseline)
+    result = _claim_base(
+        thesis_id=thesis_id,
+        claim_type="VOLATILITY_REGIME",
+        asset=None,
+        baseline_as_of=anchor,
+    )
     if baseline is None or not baseline.get("as_of"):
         result["reason"] = "missing_baseline"
         return result
     if direction not in {"DECREASING", "INCREASING"}:
-        result["reason"] = "sentiment_unavailable"
+        result["reason"] = "invalid_direction"
         return result
 
     prior_ord = _volatility_ordinal(baseline)
@@ -304,12 +325,14 @@ def _score_volatility_regime(
         return result
 
     labels = ("low", "medium", "high")
-    result["evidence"] = {
-        "baseline_regime": labels[prior_ord],
-        "current_regime": labels[current_ord],
-        "ordinal_delta": current_ord - prior_ord,
-    }
     delta = current_ord - prior_ord
+    result["evidence"].update(
+        {
+            "baseline_regime": labels[prior_ord],
+            "current_regime": labels[current_ord],
+            "ordinal_delta": delta,
+        }
+    )
     if delta == 0:
         result["reason"] = "within_noise_band"
         return result
@@ -334,12 +357,18 @@ def _score_risk_appetite(
     current: dict[str, Any],
 ) -> dict[str, Any]:
     direction = str(claim.get("direction") or "").strip().upper()
-    result = _claim_base(thesis_id=thesis_id, claim_type="RISK_APPETITE", asset=None)
+    anchor = _baseline_as_of(baseline)
+    result = _claim_base(
+        thesis_id=thesis_id,
+        claim_type="RISK_APPETITE",
+        asset=None,
+        baseline_as_of=anchor,
+    )
     if baseline is None or not baseline.get("as_of"):
         result["reason"] = "missing_baseline"
         return result
     if direction not in {"INCREASING", "DECREASING"}:
-        result["reason"] = "sentiment_unavailable"
+        result["reason"] = "invalid_direction"
         return result
 
     prior = _risk_off_block(baseline)
@@ -357,22 +386,27 @@ def _score_risk_appetite(
     score_delta = current_score - prior_score
     level_delta = current_ord - prior_ord
 
-    result["evidence"] = {
-        "baseline_level": prior_level,
-        "current_level": current_level,
-        "level_delta": level_delta,
-        "score_delta": score_delta,
-    }
+    result["evidence"].update(
+        {
+            "baseline_level": prior_level,
+            "current_level": current_level,
+            "level_delta": level_delta,
+            "score_delta": score_delta,
+        }
+    )
 
     increasing = level_delta < 0 or score_delta <= -_RISK_OFF_SCORE_DELTA
     decreasing = level_delta > 0 or score_delta >= _RISK_OFF_SCORE_DELTA
+    if increasing and decreasing:
+        result["reason"] = "within_noise_band"
+        return result
     if not increasing and not decreasing:
         result["reason"] = "within_noise_band"
         return result
     if direction == "INCREASING":
-        result["status"] = "supported" if increasing and not decreasing else "weakened"
+        result["status"] = "supported" if increasing else "weakened"
     else:
-        result["status"] = "supported" if decreasing and not increasing else "weakened"
+        result["status"] = "supported" if decreasing else "weakened"
     return result
 
 
@@ -383,10 +417,16 @@ def _score_allocation_fit(
     current: dict[str, Any],
     target_pct: dict[str, float] | None,
     band: float | None,
+    baseline_as_of: str | None,
 ) -> dict[str, Any]:
     raw_asset = claim.get("asset")
     asset = normalize_canonical_symbol(str(raw_asset)) if raw_asset else None
-    result = _claim_base(thesis_id=thesis_id, claim_type="ALLOCATION_FIT", asset=asset or None)
+    result = _claim_base(
+        thesis_id=thesis_id,
+        claim_type="ALLOCATION_FIT",
+        asset=asset or None,
+        baseline_as_of=baseline_as_of,
+    )
 
     if asset and asset not in ALLOCATION_ASSETS:
         result["reason"] = "unsupported_asset"
@@ -409,15 +449,16 @@ def _score_allocation_fit(
     excess = round(max_drift - band_width, 4) if outside_band else 0.0
     drift = analysis.get("drift") if isinstance(analysis.get("drift"), dict) else {}
 
-    evidence: dict[str, Any] = {
-        "outside_band": outside_band,
-        "max_drift": max_drift,
-        "band": band_width,
-        "excess_drift": excess,
-    }
+    result["evidence"].update(
+        {
+            "outside_band": outside_band,
+            "max_drift": max_drift,
+            "band": band_width,
+            "excess_drift": excess,
+        }
+    )
     if asset:
-        evidence["drift"] = drift.get(asset)
-    result["evidence"] = evidence
+        result["evidence"]["drift"] = drift.get(asset)
 
     if not outside_band:
         result["status"] = "supported"
@@ -439,9 +480,15 @@ def _score_claim(
     band: float | None,
 ) -> dict[str, Any]:
     claim_type = str(claim.get("type") or "").strip().upper()
-    if claim_type not in _V0_CLAIM_TYPES:
-        result = _claim_base(thesis_id=thesis_id, claim_type=claim_type or "UNKNOWN", asset=None)
-        result["reason"] = "missing_quote"
+    anchor = _baseline_as_of(baseline)
+    if claim_type not in V0_CLAIM_TYPES:
+        result = _claim_base(
+            thesis_id=thesis_id,
+            claim_type=claim_type or "UNKNOWN",
+            asset=None,
+            baseline_as_of=anchor,
+        )
+        result["reason"] = "unsupported_claim"
         return result
 
     if claim_type == "PRICE_STRENGTH":
@@ -470,6 +517,7 @@ def _score_claim(
         current=current,
         target_pct=target_pct,
         band=band,
+        baseline_as_of=anchor,
     )
 
 
@@ -486,7 +534,7 @@ def build_expectation_review(
         return {"available": False, "reason": "no_theses_supplied"}
 
     claims_out: list[dict[str, Any]] = []
-    baseline_as_ofs: list[str] = []
+    baseline_as_ofs: set[str] = set()
 
     for thesis in theses:
         if not isinstance(thesis, dict):
@@ -509,8 +557,9 @@ def build_expectation_review(
             continue
 
         baseline = baseline_bundles.get(thesis_id)
-        if baseline and baseline.get("as_of"):
-            baseline_as_ofs.append(str(baseline["as_of"]))
+        anchor = _baseline_as_of(baseline)
+        if anchor:
+            baseline_as_ofs.add(anchor)
 
         for claim in thesis.get("claims") or []:
             if not isinstance(claim, dict):
@@ -533,10 +582,10 @@ def build_expectation_review(
     weakened = sum(1 for row in claims_out if row["status"] == "weakened")
     unknown = sum(1 for row in claims_out if row["status"] == "unknown")
 
-    baseline_as_of = max(baseline_as_ofs) if baseline_as_ofs else None
+    top_baseline_as_of = next(iter(baseline_as_ofs)) if len(baseline_as_ofs) == 1 else None
     return {
         "available": True,
-        "baseline_as_of": baseline_as_of,
+        "baseline_as_of": top_baseline_as_of,
         "current_as_of": current_bundle.get("as_of"),
         "supported": supported,
         "weakened": weakened,

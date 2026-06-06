@@ -195,6 +195,31 @@ def test_get_context_bundle_skips_portfolio_fetch_without_payer(bridge_user: Use
     assert result["reason"] == "upstream_payment_required"
 
 
+def test_get_context_bundle_theses_without_payer_fails_closed(
+    bridge_user: UserConfig,
+) -> None:
+    pytest.importorskip("mcp")
+    server = create_bridge_server(bridge_user)
+    with patch("alloccontext.mcp.bridge.call_upstream_tool") as upstream_mock:
+        with patch("alloccontext.mcp.bridge.fetch_user_portfolio") as fetch_mock:
+            tool_fn = server._tool_manager._tools["get_context_bundle"].fn  # type: ignore[attr-defined]
+            result = tool_fn(
+                scope="daily",
+                theses=[
+                    {
+                        "id": "t1",
+                        "recorded_at": "2026-06-01T00:00:00Z",
+                        "claims": [
+                            {"type": "MARKET_SENTIMENT", "direction": "IMPROVING"}
+                        ],
+                    }
+                ],
+            )
+    upstream_mock.assert_not_called()
+    fetch_mock.assert_not_called()
+    assert result["reason"] == "upstream_payment_required"
+
+
 def test_get_market_context_skips_portfolio_fetch_without_payer(bridge_user: UserConfig) -> None:
     pytest.importorskip("mcp")
     server = create_bridge_server(bridge_user)

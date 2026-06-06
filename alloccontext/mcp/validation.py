@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from alloccontext.constants import ALLOCATION_ASSETS as _ASSETS
+from alloccontext.rollup.expectation_review import V0_CLAIM_TYPES
 
 _PCT_SUM_TOLERANCE = 0.02
 MAX_ALLOCATION_BAND_SCENARIOS = 32
@@ -61,6 +62,8 @@ def validate_theses(raw: Any) -> list[dict[str, Any]]:
         if not thesis_id:
             raise McpValidationError(f"theses[{index}].id is required")
         recorded_at = str(entry.get("recorded_at") or "").strip()
+        if not recorded_at:
+            raise McpValidationError(f"theses[{index}].recorded_at is required")
         claims_raw = entry.get("claims")
         if claims_raw is None:
             claims_raw = []
@@ -76,6 +79,11 @@ def validate_theses(raw: Any) -> list[dict[str, Any]]:
             if not claim_type:
                 raise McpValidationError(
                     f"theses[{index}].claims[{claim_index}].type is required"
+                )
+            if claim_type not in V0_CLAIM_TYPES:
+                raise McpValidationError(
+                    f"theses[{index}].claims[{claim_index}].type "
+                    f"unsupported: {claim_type!r}"
                 )
             claims.append(dict(claim))
         thesis: dict[str, Any] = {

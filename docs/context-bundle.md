@@ -76,6 +76,26 @@ Separate block when drift math is requested. Same semantics as legacy portfolio
 drift fields. `regime.allocation` is populated only when this block (or legacy
 compat fields) is present.
 
+When `theses[]` includes an `ALLOCATION_FIT` claim, the server may attach
+`allocation_analysis` automatically using configured `target_allocations` and
+`rebalance_band` even if the tool call omits `target_pct` / `band`.
+
+## expectation_review (opt-in)
+
+Present when `theses[]` is supplied on `get_context_bundle` (tool argument or
+bridge `user.yaml`). Pass-through beliefs only — nothing is stored server-side.
+
+| Field | Meaning |
+|-------|---------|
+| `baseline_as_of` | Set only when every scored claim shares one baseline snapshot |
+| `current_as_of` | `as_of` of the current bundle |
+| `supported` / `weakened` / `unknown` | Claim outcome counts |
+| `claims[]` | Per-claim `{thesis_id, type, asset?, status, reason?, evidence}` |
+
+Claim types (v0): `PRICE_STRENGTH`, `RELATIVE_STRENGTH`, `MARKET_SENTIMENT`,
+`VOLATILITY_REGIME`, `RISK_APPETITE`, `ALLOCATION_FIT`. Each claim's
+`evidence.baseline_as_of` identifies the snapshot used for that thesis.
+
 ## regime
 
 Deterministic agent-facing hints synthesized from optional allocation analysis,

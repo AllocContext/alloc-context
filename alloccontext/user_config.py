@@ -172,6 +172,15 @@ def load_user_config(path: Path | None) -> UserConfig:
     band_raw = data.get("band")
     band = float(band_raw) if band_raw is not None else None
 
+    theses = _parse_theses(data.get("theses"))
+    if theses:
+        from alloccontext.mcp.validation import McpValidationError, validate_theses
+
+        try:
+            validate_theses(theses)
+        except McpValidationError as exc:
+            raise ValueError(str(exc)) from exc
+
     return UserConfig(
         path=path,
         upstream=upstream,
@@ -181,7 +190,7 @@ def load_user_config(path: Path | None) -> UserConfig:
         exchanges=exchanges,
         target_allocation=_parse_target_allocation(data.get("target_allocation")),
         band=band,
-        theses=_parse_theses(data.get("theses")),
+        theses=theses,
         x402=X402PayerConfig(
             payer_private_key_env=payer_env or DEFAULT_PAYER_ENV,
             payer_private_key_file=payer_file_path,

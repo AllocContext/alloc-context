@@ -186,3 +186,13 @@ def build_delta_context(
             delta["available"] = False
 
     return delta
+
+
+def asset_price_usd(context: dict[str, Any] | None, symbol: str) -> float | None:
+    """USD mark for a symbol from a context bundle market block."""
+    return _asset_price(context, symbol)
+
+
+def pct_change_since(current: float | None, prior: float | None) -> float | None:
+    """Percent change from prior to current (None when not computable)."""
+    return _pct_change(current, prior)
