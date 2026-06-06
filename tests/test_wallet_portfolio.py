@@ -28,7 +28,7 @@ class _FakeEtherscan(EtherscanClient):
             return 0.25
         return 0.0
 
-    def token_balances(self, chain_id: int, address: str) -> list[TokenBalanceRow]:
+    def curated_token_balances(self, chain_id: int, address: str) -> list[TokenBalanceRow]:
         if chain_id == 1:
             return [
                 TokenBalanceRow(symbol="USDC", quantity=1000.0),
