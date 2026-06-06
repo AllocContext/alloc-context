@@ -24,13 +24,14 @@ as a starting point.
 
 | Mode | user.yaml | Behavior |
 |------|-----------|----------|
-| **Bridge (default)** | exchange keys + x402 payer | Portfolio local; context via hosted upstream |
+| **Bridge (default)** | CEX keys + x402 payer | Portfolio local (CEX); context via hosted upstream |
 | **Self-host** | `self_host: true` + `config:` | Full local ingest + MCP (no upstream paywall) |
 | **Legacy** | omit `--user-config`; no default file | Local server `config.yaml` only |
 
 ## Portfolio response
 
-When exchange keys are configured, portfolio tools return `holdings[]` with
+When CEX keys are configured in user config, bridge portfolio tools return
+`holdings[]` with
 every recognized balance (qty, USD mark, weight). Assets like HYPE are included
 when a USD price is available; unpriced symbols appear in `holdings[]` with
 null marks and in `unrecognized[]`.
@@ -41,7 +42,7 @@ user config or `target_pct` on the tool call. When enabled, results appear in
 
 ## Bridge market auto-scoping (Path A)
 
-When exchange keys and an x402 payer are configured, omitting `assets` on
+When CEX keys and an x402 payer are configured, omitting `assets` on
 `get_market_context` or `get_context_bundle` derives upstream symbol scope from
 local holdings (excluding stables/cash). Only **symbol strings** are sent to the
 hosted server — never quantities, NAV, or credentials.
@@ -52,7 +53,7 @@ Responses include `assets_scope`:
 |-------|---------|
 | `portfolio` | Symbols derived from live holdings |
 | `explicit` | You passed `assets` on the tool call |
-| `default` | Hosted default (`BTC`/`ETH`) — no keys or empty holdings |
+| `default` | Hosted default (`BTC`/`ETH`) — no CEX keys or empty holdings |
 | `portfolio_unavailable` | Exchange fetch failed; fell back to hosted default |
 
 If portfolio fetch fails, market context may not include your alts even though
@@ -66,6 +67,12 @@ when you need alt filters on historical reads.
 
 Tools return `available: false` with a `setup` block explaining how to enable
 portfolio, x402 payment, or allocation analysis.
+
+## Hosted wallet portfolio (no user.yaml)
+
+On the hosted MCP, call `get_portfolio_state` with `exchange=wallet` and a
+public EVM `wallet_address` (keyless for the caller). The server uses its own
+on-chain provider credentials — not your keys. See [mcp.md](mcp.md).
 
 ## Related
 

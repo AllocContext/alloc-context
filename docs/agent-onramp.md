@@ -4,7 +4,7 @@ Give your Cursor or Claude agent **portfolio-aware crypto context** — holdings
 holdings-scoped market, sentiment, macro, and regime — without ad-hoc scraping.
 
 > **Privacy:** nothing stored · one-time read-only · pass-through only — your
-> keys and portfolio never persist on our servers. See [USE.md](USE.md).
+> keys, wallet address, and portfolio never persist on our servers. See [USE.md](USE.md).
 
 > **Not financial advice.** Deterministic JSON facts only; no trade execution.
 
@@ -15,9 +15,10 @@ Deep docs: [cursor-mcp.md](cursor-mcp.md) · [agent-integration.md](agent-integr
 
 ## Track A — stdio bridge (default, local)
 
-Fastest path: local MCP stdio server; portfolio reads use your read-only exchange
-keys (optional, e.g. Coinbase, Kraken); market context uses the hosted upstream
-(x402 payer required for bridge mode).
+Fastest path: local MCP stdio server; portfolio reads use read-only CEX keys in
+user config (optional, e.g. Coinbase, Kraken) or hosted `get_portfolio_state`
+with `exchange=wallet` and a public EVM address; market context uses the hosted
+upstream (x402 payer required for bridge mode).
 
 ### 1. Install
 
@@ -36,13 +37,14 @@ cp /path/to/alloc-context/config/user.example.yaml ~/.config/alloc-context/user.
 
 Edit `user.yaml`:
 
-- **Portfolio (optional):** read-only exchange keys under `exchanges:`.
+- **Portfolio (optional):** read-only CEX keys under `exchanges:` (bridge), or
+  call hosted `get_portfolio_state` with `exchange=wallet` + `wallet_address`.
 - **Hosted market context (required for bridge):** x402 payer — set
   `EVM_PRIVATE_KEY` in your environment or use `payer_private_key_file` in
   `x402:` (see [user-config.md](user-config.md)).
 
-Market tools work without exchange keys; portfolio tools need keys when
-configured.
+Market tools work without portfolio credentials; bridge portfolio tools need CEX
+keys in user config when you use that path.
 
 ### 3. Wire into your agent
 
@@ -74,8 +76,8 @@ Example agent prompt:
 > Optional: check drift vs a 60/30/10 BTC/ETH/cash target.
 
 Call `get_context_bundle` (add `target_pct` in tool args for allocation
-analysis). With exchange keys configured, omitting `assets` auto-scopes market
-data to your holdings.
+analysis). With CEX keys configured in the bridge, omitting `assets` auto-scopes
+market data to your holdings.
 
 ### 5. What you get
 
@@ -149,7 +151,7 @@ LangChain tools: [langchain-integration.md](langchain-integration.md).
 | | Track A (bridge) | Track B (hosted) |
 |--|------------------|------------------|
 | Install | `pipx` / local venv | None (HTTP + x402) |
-| Portfolio keys | Your machine only | Pass-through per call |
+| Portfolio source | CEX keys in user.yaml (bridge) | CEX keys or wallet address per call |
 | Cost | x402 for market context | Per-call x402 |
 | Best for | Cursor / Claude daily use | Agents, wallets, serverless |
 

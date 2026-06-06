@@ -138,8 +138,9 @@ Self-host: [self-hosting.md](self-hosting.md), [docker-self-host.md](docker-self
 - [langchain-integration.md](langchain-integration.md) — LangChain StructuredTools + x402
 - [agent-integration.md](agent-integration.md) — programmatic x402 client
 
-**Scope today:** crypto; Coinbase + Kraken read-only for portfolio
-([data-sources.md](data-sources.md)). Broader asset classes are demand-pulled
+**Scope today:** crypto; portfolio from CEX read-only keys (Coinbase, Kraken)
+or a public EVM wallet address on hosted MCP ([data-sources.md](data-sources.md)).
+Broader asset classes are demand-pulled
 only — no speculative expansion in the reference implementation.
 
 ---

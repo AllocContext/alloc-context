@@ -238,9 +238,10 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "get_portfolio_state": (
         "Fetch live read-only portfolio NAV, holdings[], and band weights from "
-        "a supported source: Kraken or Coinbase (read-only API keys in this call, "
-        "never stored) or wallet (public EVM address — keyless, no keys). "
-        "exchange=wallet requires wallet_address; CEX paths require api_key and "
+        "a supported source: CEX (Kraken or Coinbase read-only API keys in this "
+        "call, never stored) or wallet (public EVM address — keyless for the "
+        "caller). exchange=wallet requires wallet_address; CEX paths require "
+        "api_key and "
         "api_secret. Use get_context_bundle for cached market without keys. "
         "Optional target_pct attaches allocation_analysis; optional band sets drift "
         "width when target_pct is supplied. Fail-closed on errors — no side effects."

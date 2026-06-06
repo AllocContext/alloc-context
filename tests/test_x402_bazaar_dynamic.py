@@ -27,7 +27,14 @@ def test_bazaar_index_tags_within_cdp_limit() -> None:
 
 def test_listing_description_includes_search_phrases() -> None:
     lowered = LISTING_DESCRIPTION.lower()
-    for phrase in ("holdings", "allocation analysis", "rebalance", "fear & greed", "etf flows"):
+    for phrase in (
+        "holdings",
+        "allocation analysis",
+        "rebalance",
+        "fear & greed",
+        "etf flows",
+        "wallet",
+    ):
         assert phrase in lowered
 
 
