@@ -105,6 +105,7 @@ class ExchangesConfig:
 @dataclass(frozen=True)
 class WalletConfig:
     enabled: bool
+    provider: str
     chain_ids: tuple[int, ...]
     min_value_usd: float
     timeout_seconds: float
@@ -259,8 +260,12 @@ def _load_wallet_config(raw: dict[str, Any]) -> WalletConfig:
         chain_ids = tuple(int(chain_id) for chain_id in chain_ids_raw)
     else:
         chain_ids = DEFAULT_WALLET_CHAIN_IDS
+    provider = str(wallet_raw.get("provider") or "alchemy").strip().lower()
+    if provider not in {"alchemy", "etherscan"}:
+        raise ValueError(f"unsupported wallet.provider: {provider}")
     return WalletConfig(
         enabled=bool(wallet_raw.get("enabled", True)),
+        provider=provider,
         chain_ids=chain_ids,
         min_value_usd=float(wallet_raw.get("min_value_usd") or 1.0),
         timeout_seconds=float(wallet_raw.get("timeout_seconds") or 20.0),

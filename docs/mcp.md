@@ -82,7 +82,7 @@ keep ingest `ok` and still return a bundle.
 
 CEX credentials are **pass-through only** — never stored server-side. Supported
 sources: **Kraken**, **Coinbase** Advanced Trade (read-only), and **wallet**
-(public EVM address — keyless for the caller; host needs `ETHERSCAN_API_KEY`).
+(public EVM address — keyless for the caller; host needs `ALCHEMY_API_KEY` by default).
 See [data-sources.md](data-sources.md#on-chain-wallet-evm-keyless).
 
 ## MCP resources

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from alloccontext.config import load_config
 from alloccontext.ingest.wallet.chains import DEFAULT_WALLET_CHAIN_IDS
 from alloccontext.ingest.wallet.etherscan import EtherscanClient, TokenBalanceRow
 from alloccontext.ingest.wallet.portfolio import (
@@ -40,6 +42,19 @@ class _FakeEtherscan(EtherscanClient):
         return []
 
 
+def _etherscan_config(tmp_path: Path):
+    db = tmp_path / "test.db"
+    cfg_path = tmp_path / "config.yaml"
+    example = Path("config/config.example.yaml").read_text()
+    cfg_path.write_text(
+        example.replace("state/alloccontext.db", str(db)).replace(
+            "provider: alchemy",
+            "provider: etherscan",
+        )
+    )
+    return load_config(cfg_path)
+
+
 def test_validate_wallet_address_rejects_invalid() -> None:
     with pytest.raises(ValueError, match="invalid_wallet_address"):
         validate_wallet_address("not-an-address")
@@ -50,7 +65,10 @@ def test_normalize_wallet_symbol_maps_wrapped_assets() -> None:
     assert normalize_wallet_symbol("WBTC") == "BTC"
 
 
-def test_fetch_wallet_portfolio_snapshot_aggregates_multichain(config, monkeypatch) -> None:
+def test_fetch_wallet_portfolio_snapshot_aggregates_multichain(
+    tmp_path, monkeypatch
+) -> None:
+    config = _etherscan_config(tmp_path)
     monkeypatch.setenv("ETHERSCAN_API_KEY", "test-key")
     with patch(
         "alloccontext.ingest.wallet.portfolio.resolve_balance_prices",
@@ -59,7 +77,7 @@ def test_fetch_wallet_portfolio_snapshot_aggregates_multichain(config, monkeypat
         snap = fetch_wallet_portfolio_snapshot(
             VITALIK,
             config,
-            client=_FakeEtherscan(),
+            etherscan_client=_FakeEtherscan(),
         )
     assert snap.nav_usd > 0
     symbols = {row["symbol"] for row in snap.holdings}
@@ -73,7 +91,7 @@ def test_fetch_wallet_portfolio_snapshot_aggregates_multichain(config, monkeypat
 def test_get_portfolio_state_wallet_live(config, monkeypatch) -> None:
     from alloccontext.ingest.kraken_portfolio import PortfolioSnapshot
 
-    monkeypatch.setenv("ETHERSCAN_API_KEY", "test-key")
+    monkeypatch.setenv("ALCHEMY_API_KEY", "test-key")
     snap = PortfolioSnapshot(
         ts="2026-06-06T12:00:00+00:00",
         nav_usd=5000.0,
@@ -108,13 +126,14 @@ def test_get_portfolio_state_wallet_requires_address(config) -> None:
 
 def test_wallet_config_defaults(config) -> None:
     assert config.wallet.enabled is True
+    assert config.wallet.provider == "alchemy"
     assert config.wallet.chain_ids == DEFAULT_WALLET_CHAIN_IDS
     assert config.wallet.min_value_usd == 1.0
 
 
-def test_fetch_wallet_missing_api_key(config, monkeypatch) -> None:
+def test_fetch_wallet_missing_alchemy_key(config, monkeypatch) -> None:
     from alloccontext.ingest.wallet.portfolio import WalletPortfolioError
 
-    monkeypatch.delenv("ETHERSCAN_API_KEY", raising=False)
-    with pytest.raises(WalletPortfolioError, match="missing_etherscan_api_key"):
-        fetch_wallet_portfolio_snapshot(VITALIK, config, client=MagicMock())
+    monkeypatch.delenv("ALCHEMY_API_KEY", raising=False)
+    with pytest.raises(WalletPortfolioError, match="missing_alchemy_api_key"):
+        fetch_wallet_portfolio_snapshot(VITALIK, config, alchemy_client=MagicMock())

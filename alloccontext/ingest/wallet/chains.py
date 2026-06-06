@@ -22,8 +22,25 @@ EVM_CHAINS: dict[int, EvmChain] = {
 }
 
 
+# Alchemy Portfolio API network slugs (see dashboard.alchemy.com/chains).
+ALCHEMY_NETWORK_BY_CHAIN_ID: dict[int, str] = {
+    1: "eth-mainnet",
+    42161: "arb-mainnet",
+    8453: "base-mainnet",
+    10: "opt-mainnet",
+    137: "polygon-mainnet",
+}
+
+
 def resolve_wallet_chains(chain_ids: tuple[int, ...]) -> tuple[EvmChain, ...]:
     unknown = [chain_id for chain_id in chain_ids if chain_id not in EVM_CHAINS]
     if unknown:
         raise ValueError(f"unsupported wallet chain_ids: {unknown}")
     return tuple(EVM_CHAINS[chain_id] for chain_id in chain_ids)
+
+
+def alchemy_networks_for_chain_ids(chain_ids: tuple[int, ...]) -> tuple[str, ...]:
+    unknown = [chain_id for chain_id in chain_ids if chain_id not in ALCHEMY_NETWORK_BY_CHAIN_ID]
+    if unknown:
+        raise ValueError(f"unsupported wallet chain_ids for alchemy: {unknown}")
+    return tuple(ALCHEMY_NETWORK_BY_CHAIN_ID[chain_id] for chain_id in chain_ids)

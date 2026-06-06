@@ -1,18 +1,31 @@
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from alloccontext.ingest.asset_registry import is_stable, normalize_canonical_symbol
 from alloccontext.ingest.env_keys import optional_env_key
 from alloccontext.ingest.kraken_portfolio import PortfolioSnapshot, portfolio_from_balances
 from alloccontext.ingest.quote_resolver import QuoteResolverConfig, resolve_balance_prices
+from alloccontext.ingest.wallet.alchemy import AlchemyClient, AlchemyError
 from alloccontext.ingest.wallet.chains import DEFAULT_WALLET_CHAIN_IDS, resolve_wallet_chains
+from alloccontext.ingest.wallet.curated_tokens import curated_tokens_for_chain
 from alloccontext.ingest.wallet.etherscan import EtherscanClient, EtherscanError
 from alloccontext.timeutil import utc_now_iso
+
+WalletProvider = Literal["alchemy", "etherscan"]
 
 _WALLET_ADDRESS_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
 # Wrapped / bridged assets mapped to band symbols for allocation math.
+_MAX_TOKEN_VALUE_USD = 10_000_000.0
+_MAX_WALLET_SYMBOLS = 40
+_MAX_QUANTITY_BY_SYMBOL: dict[str, float] = {
+    "ETH": 10_000.0,
+    "BTC": 1_000.0,
+    "POL": 50_000_000.0,
+}
+
 _WRAPPED_SYMBOL_MAP: dict[str, str] = {
     "WETH": "ETH",
     "WBTC": "BTC",
@@ -41,6 +54,34 @@ def validate_wallet_address(address: str) -> str:
 def normalize_wallet_symbol(symbol: str) -> str:
     upper = normalize_canonical_symbol(symbol)
     return _WRAPPED_SYMBOL_MAP.get(upper, upper)
+
+
+def _trusted_band_contracts() -> frozenset[str]:
+    contracts: set[str] = set()
+    for chain_id in DEFAULT_WALLET_CHAIN_IDS:
+        for token in curated_tokens_for_chain(chain_id):
+            mapped = _WRAPPED_SYMBOL_MAP.get(token.symbol.upper(), token.symbol.upper())
+            if mapped in {"BTC", "ETH"}:
+                contracts.add(token.contract.lower())
+    return frozenset(contracts)
+
+
+_TRUSTED_BAND_CONTRACTS = _trusted_band_contracts()
+
+
+def _holding_symbol_for_row(row) -> str | None:
+    if row.is_native:
+        return normalize_wallet_symbol(row.symbol)
+    upper = normalize_canonical_symbol(row.symbol)
+    if upper in {"BTC", "ETH"}:
+        address = (row.token_address or "").lower()
+        if upper in _WRAPPED_SYMBOL_MAP:
+            mapped = _WRAPPED_SYMBOL_MAP[upper]
+            if address and address in _TRUSTED_BAND_CONTRACTS:
+                return mapped
+            return None
+        return None
+    return normalize_wallet_symbol(row.symbol)
 
 
 def _apply_stable_balances(
@@ -85,12 +126,94 @@ def _fetch_raw_balances(
     address: str,
     config,
     *,
-    client: EtherscanClient | None = None,
-) -> dict[str, float]:
+    etherscan_client: EtherscanClient | None = None,
+    alchemy_client: AlchemyClient | None = None,
+) -> tuple[dict[str, float], dict[str, float]]:
     wallet_cfg = config.wallet
     if not wallet_cfg.enabled:
         raise WalletPortfolioError("wallet_read_disabled")
 
+    provider = wallet_cfg.provider
+    if provider == "alchemy":
+        return _fetch_raw_balances_alchemy(
+            address,
+            config,
+            client=alchemy_client,
+        )
+    return _fetch_raw_balances_etherscan(
+        address,
+        config,
+        client=etherscan_client,
+    )
+
+
+def _fetch_raw_balances_alchemy(
+    address: str,
+    config,
+    *,
+    client: AlchemyClient | None = None,
+) -> tuple[dict[str, float], dict[str, float]]:
+    wallet_cfg = config.wallet
+    api_key = optional_env_key("ALCHEMY_API_KEY")
+    if not api_key:
+        raise WalletPortfolioError("missing_alchemy_api_key")
+
+    alchemy = client or AlchemyClient(
+        api_key,
+        timeout_seconds=wallet_cfg.timeout_seconds,
+        max_retries=wallet_cfg.max_retries,
+        retry_backoff_seconds=wallet_cfg.retry_backoff_seconds,
+    )
+    aggregated: dict[str, dict[str, float | None]] = {}
+    min_value = wallet_cfg.min_value_usd
+    try:
+        for row in alchemy.token_balances(address, wallet_cfg.chain_ids):
+            symbol = _holding_symbol_for_row(row)
+            if not symbol:
+                continue
+            max_qty = _MAX_QUANTITY_BY_SYMBOL.get(symbol)
+            if max_qty is not None and row.quantity > max_qty:
+                continue
+            if row.price_usd is not None and row.price_usd > 0:
+                value_usd = row.quantity * row.price_usd
+                if value_usd < min_value or value_usd > _MAX_TOKEN_VALUE_USD:
+                    continue
+            elif symbol not in {"ETH", "BTC", "POL"}:
+                continue
+            entry = aggregated.setdefault(symbol, {"qty": 0.0, "price": None})
+            entry["qty"] = float(entry["qty"]) + row.quantity
+            if row.price_usd is not None and row.price_usd > 0:
+                entry["price"] = float(row.price_usd)
+    except AlchemyError as exc:
+        raise WalletPortfolioError(str(exc)) from exc
+
+    ranked: list[tuple[str, float, float | None, float]] = []
+    for symbol, entry in aggregated.items():
+        qty = float(entry["qty"])
+        price = entry.get("price")
+        price_f = float(price) if price is not None else None
+        value = qty * price_f if price_f is not None else 0.0
+        ranked.append((symbol, qty, price_f, value))
+    ranked.sort(key=lambda row: row[3], reverse=True)
+
+    raw_balances: dict[str, float] = {}
+    spot_prices: dict[str, float] = {}
+    for symbol, qty, price, _value in ranked[:_MAX_WALLET_SYMBOLS]:
+        raw_balances[symbol] = qty
+        if price is not None:
+            spot_prices[symbol] = price
+    if not raw_balances:
+        raise WalletPortfolioError("wallet_empty")
+    return raw_balances, spot_prices
+
+
+def _fetch_raw_balances_etherscan(
+    address: str,
+    config,
+    *,
+    client: EtherscanClient | None = None,
+) -> tuple[dict[str, float], dict[str, float]]:
+    wallet_cfg = config.wallet
     api_key = optional_env_key("ETHERSCAN_API_KEY")
     if not api_key:
         raise WalletPortfolioError("missing_etherscan_api_key")
@@ -127,7 +250,7 @@ def _fetch_raw_balances(
             "wallet_read_unsupported_chains: "
             + ",".join(skipped_chains)
         )
-    return raw_balances
+    return raw_balances, {}
 
 
 def _is_skippable_chain_error(exc: EtherscanError) -> bool:
@@ -143,12 +266,18 @@ def fetch_wallet_portfolio_snapshot(
     address: str,
     config,
     *,
-    client: EtherscanClient | None = None,
+    etherscan_client: EtherscanClient | None = None,
+    alchemy_client: AlchemyClient | None = None,
     resolver_config: QuoteResolverConfig | None = None,
 ) -> PortfolioSnapshot:
     wallet_cfg = config.wallet
     normalized = validate_wallet_address(address)
-    raw_balances = _fetch_raw_balances(normalized, config, client=client)
+    raw_balances, provider_prices = _fetch_raw_balances(
+        normalized,
+        config,
+        etherscan_client=etherscan_client,
+        alchemy_client=alchemy_client,
+    )
     balances, cash_breakdown = _apply_stable_balances(raw_balances)
 
     from alloccontext.ingest.quote_resolver import quote_resolver_config_from_app
@@ -156,7 +285,7 @@ def fetch_wallet_portfolio_snapshot(
     resolver = resolver_config or quote_resolver_config_from_app(config)
     prices = resolve_balance_prices(
         balances,
-        {},
+        provider_prices,
         exchange_price=lambda _symbol: None,
         resolver_config=resolver,
     )
