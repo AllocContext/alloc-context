@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Bump version files
+      - name: Resolve release version
         id: bump
         env:
           EXACT_VERSION: ${{ inputs.exact_version }}
@@ -46,9 +46,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "$EXACT_VERSION" ]; then
-            VERSION=$(python3 scripts/bump_version.py "$EXACT_VERSION" --write --print)
+            VERSION=$(python3 scripts/bump_version.py "$EXACT_VERSION" --print)
           else
-            VERSION=$(python3 scripts/bump_version.py --bump "$BUMP" --write --print)
+            VERSION=$(python3 scripts/bump_version.py --bump "$BUMP" --print)
           fi
           if git ls-remote --tags origin "refs/tags/v${VERSION}" | grep -q .; then
             echo "Tag v${VERSION} already exists on remote"
@@ -56,23 +56,59 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Open release PR
+      - name: Push release branch
         env:
-          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.bump.outputs.version }}
         run: |
           set -euo pipefail
           BRANCH="release/v${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "${BRANCH}"
-          git add pyproject.toml server.json alloccontext/__init__.py
-          if git diff --staged --quiet; then
-            echo "No version changes to commit"
+
+          if git ls-remote --heads origin "${BRANCH}" | grep -q .; then
+            echo "Remote branch ${BRANCH} already exists — reusing it"
+            git fetch origin "${BRANCH}"
+            git checkout -B "${BRANCH}" "origin/${BRANCH}"
+            BRANCH_VER=$(python3 scripts/bump_version.py --current)
+            if [ "${BRANCH_VER}" != "${VERSION}" ]; then
+              echo "Branch ${BRANCH} is v${BRANCH_VER}, expected v${VERSION}"
+              exit 1
+            fi
+          else
+            git checkout -b "${BRANCH}"
+            python3 scripts/bump_version.py "${VERSION}" --write
+            git add pyproject.toml server.json alloccontext/__init__.py
+            git commit -m "Bump version to ${VERSION}."
+          fi
+          git push -u origin "${BRANCH}"
+
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN || github.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          BRANCH="release/v${VERSION}"
+
+          EXISTING_URL=$(gh pr list --repo "${GITHUB_REPOSITORY}" \
+            --base main --head "${BRANCH}" --state open \
+            --json url --jq '.[0].url // empty')
+          if [ -n "${EXISTING_URL}" ]; then
+            echo "Release PR already open: ${EXISTING_URL}"
+            exit 0
+          fi
+
+          PR_OUTPUT=""
+          if ! PR_OUTPUT=$(gh pr create --repo "${GITHUB_REPOSITORY}" \
+            --base main --head "${BRANCH}" \
+            --title "Release v${VERSION}" \
+            --body "Automated version bump to ${VERSION}. Merging this PR to \`main\` tags \`v${VERSION}\` and runs the release (PyPI, MCP Registry, VPS deploy)." \
+            2>&1); then
+            if echo "${PR_OUTPUT}" | grep -q createPullRequest; then
+              echo "::error title=Actions cannot open release PRs::Enable **Allow GitHub Actions to create and approve pull requests** in repo Settings → Actions → General (https://github.com/${GITHUB_REPOSITORY}/settings/actions). For org repos, enable it on the org first: https://github.com/organizations/AllocContext/settings/actions. Alternative: add a \`RELEASE_PR_TOKEN\` repo secret (PAT with \`repo\` scope). Branch ${BRANCH} was pushed — open the PR manually if needed."
+            else
+              echo "::error::${PR_OUTPUT}"
+            fi
             exit 1
           fi
-          git commit -m "Bump version to ${VERSION}."
-          git push -u origin "${BRANCH}"
-          gh pr create --base main --head "${BRANCH}" \
-            --title "Release v${VERSION}" \
-            --body "Automated version bump to ${VERSION}. Merging this PR to \`main\` tags \`v${VERSION}\` and runs the release (PyPI, MCP Registry, VPS deploy)."
+          echo "Opened release PR: ${PR_OUTPUT}"

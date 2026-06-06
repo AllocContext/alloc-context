@@ -41,7 +41,8 @@ One-time setup:
 | **PyPI trusted publisher** | Owner `AllocContext`, repo `alloc-context`, workflow `release.yml`, environment *(blank)* |
 | **VPS secrets** | `VPS_SSH_KEY`, `VPS_HOST` — see [self-hosting.md](self-hosting.md) |
 | **Workflow permissions** | Repo Settings → Actions → General → **Read and write** for `GITHUB_TOKEN` |
-| **Actions can open PRs** | Repo Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests** (required for **release-pr**) |
+| **Actions can open PRs** | Org **and** repo: Settings → Actions → General → **Read and write permissions** + **Allow GitHub Actions to create and approve pull requests** (required for **release-pr**). Org first: [AllocContext Actions settings](https://github.com/organizations/AllocContext/settings/actions); then [repo Actions settings](https://github.com/AllocContext/alloc-context/settings/actions). |
+| **RELEASE_PR_TOKEN** *(optional)* | Repo secret — PAT with `repo` scope used when `GITHUB_TOKEN` cannot open PRs. Workflow falls back to `github.token` when unset. |
 
 Version files updated by the bump script:
 
@@ -69,6 +70,16 @@ Concurrency: one **release** run at a time per repository.
 The release PR is the human gate. The **release** workflow never pushes commits
 to `main` — it only pushes the `vX.Y.Z` tag after a successful publish and
 deploy, so no branch-protection bypass is required.
+
+## Troubleshooting **release-pr**
+
+| Symptom | Fix |
+|---------|-----|
+| `GitHub Actions is not permitted to create or approve pull requests` | Enable **Allow GitHub Actions to create and approve pull requests** on the **org** and **repo** (see prerequisites). Re-run **release-pr** — it reuses `release/vX.Y.Z` if the branch was already pushed. |
+| Branch pushed, no PR | Open PR manually from the branch, or add `RELEASE_PR_TOKEN` and re-run. |
+| `Tag vX.Y.Z already exists` | Version already released; bump again only after shipping the prior tag. |
+
+Current repo check (needs `admin:repo` PAT): `gh api repos/AllocContext/alloc-context/actions/permissions/workflow` — `can_approve_pull_request_reviews` must be `true`.
 
 ## Re-running a failed release
 
