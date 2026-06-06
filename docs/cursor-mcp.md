@@ -21,8 +21,9 @@ pip install -e ".[hosted]"
 ## Default: bridge + user config (Path A)
 
 Copy [config/user.example.yaml](../config/user.example.yaml) to
-`~/.config/alloc-context/user.yaml` and add exchange keys (optional) and x402
-payer config. See [user-config.md](user-config.md).
+`~/.config/alloc-context/user.yaml` and add CEX keys for bridge portfolio
+(optional) and x402 payer config. For wallet holdings, use hosted
+`get_portfolio_state` (`exchange=wallet`). See [user-config.md](user-config.md).
 
 ```json
 {
@@ -39,7 +40,8 @@ payer config. See [user-config.md](user-config.md).
 }
 ```
 
-Portfolio requires exchange credentials in user config. Market context calls
+Bridge portfolio requires CEX credentials in user config (or hosted wallet
+args). Market context calls
 the hosted upstream (x402 payer required). When both are configured, omitting
 `assets` on `get_market_context` / `get_context_bundle` auto-scopes market
 data to your holdings (symbols only upstream). See [user-config.md](user-config.md).
@@ -75,9 +77,9 @@ Alternative entry point: `alloc-context-mcp` (same stdio server).
 
 | Tool | Keys required |
 |------|----------------|
-| `get_context_bundle` | Bridge: x402 payer; portfolio: exchange keys in user.yaml. Self-host: local DB. |
+| `get_context_bundle` | Bridge: x402 payer; portfolio: CEX keys in user.yaml. Self-host: local DB. |
 | `get_market_context` | Bridge: x402 payer. Self-host: local DB. |
-| `get_portfolio_state` | Bridge: exchange keys in user.yaml (or tool args). |
+| `get_portfolio_state` | Bridge: CEX keys in user.yaml; hosted: CEX keys or `wallet_address` in tool args. |
 | `get_rebalance_plan` | None (pure math) |
 | `check_allocation_band` | None (pure math) |
 

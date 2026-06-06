@@ -25,7 +25,7 @@ USE_DOCS_PATH = "docs/USE.md"
 
 PRIVACY_COMPACT_COPY = (
     "Privacy: nothing stored. One-time read-only fetch. Pass-through only — "
-    "your keys and portfolio never persist on our servers."
+    "your keys, wallet address, and portfolio never persist on our servers."
 )
 
 PRIVACY_PILLAR_MARKERS = (
@@ -93,6 +93,8 @@ DISCOVERY_KEYWORD_MARKERS = (
     "holdings-scoped",
     "coinbase",
     "kraken",
+    "wallet",
+    "on-chain",
     "market context",
     "sentiment",
 )
@@ -101,7 +103,8 @@ LISTING_DESCRIPTION = (
     "Portfolio-aware crypto context for AI agents: discover holdings and "
     "holdings-scoped market, sentiment, macro, and regime; optional allocation "
     "analysis and rebalance math. Fused backdrop (Fear & Greed, Kalshi, ETF "
-    "flows), optional live portfolio reads (e.g. Coinbase, Kraken). Structured "
+    "flows), optional live portfolio reads (CEX keys or public EVM wallet). "
+    "Structured "
     "JSON only — no LLM. "
     f"{PRIVACY_COMPACT_COPY} "
     "Source-available (Elastic License 2.0); self-host friendly; official hosted "
@@ -232,8 +235,8 @@ def build_llms_txt(
 
 ## Privacy
 
-Nothing stored. One-time read-only fetch. Pass-through only — your keys and
-portfolio never persist on our servers.
+Nothing stored. One-time read-only fetch. Pass-through only — your keys, wallet
+address, and portfolio never persist on our servers.
 
 ## License
 
@@ -256,7 +259,7 @@ portfolio never persist on our servers.
 
 bitcoin, ethereum, btc, eth, crypto, cryptocurrency, digital assets, altcoin,
 stablecoin, crypto portfolio, portfolio allocation, portfolio context, holdings,
-holdings-scoped, coinbase, kraken, market context, market data, sentiment,
+holdings-scoped, coinbase, kraken, wallet, on-chain, market context, market data, sentiment,
 macro calendar, etf flows, allocation drift, allocation bands, rebalance plan,
 fear and greed, fear greed index, nav, agent tools, ai agents, mcp, x402,
 model context protocol, context bundle

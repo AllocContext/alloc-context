@@ -19,6 +19,10 @@ without running ingest locally. Payment is per-call x402 on Base mainnet.
 Pricing: **$0.02** for cached context and math tools; **$0.05** for
 `freshness=live` or `get_portfolio_state`. See [mcp.md](mcp.md).
 
+Portfolio on hosted MCP: pass read-only CEX keys in `get_portfolio_state`, or
+`exchange=wallet` with a public EVM `wallet_address` (keyless for the caller).
+Nothing is stored server-side.
+
 ## Cursor: Bazaar discovery + local MCP
 
 **Default (bridge):** see [cursor-mcp.md](cursor-mcp.md) — `alloc-context mcp

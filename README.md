@@ -28,9 +28,10 @@ pip install "alloc-context[mcp,hosted]"
 **2. User config**
 
 Copy [config/user.example.yaml](config/user.example.yaml) to
-`~/.config/alloc-context/user.yaml`. Add read-only exchange keys for portfolio
-discovery (optional) and an x402 payer for hosted market context. See
-[user-config.md](docs/user-config.md).
+`~/.config/alloc-context/user.yaml`. For portfolio discovery (optional): read-only
+CEX keys (e.g. Coinbase, Kraken) in user config, or call hosted
+`get_portfolio_state` with `exchange=wallet` and a public EVM address. Add an x402
+payer for hosted market context. See [user-config.md](docs/user-config.md).
 
 **3. MCP config**
 
@@ -56,9 +57,9 @@ Use an absolute path for `--user-config`. Example:
 
 **4. Ask your agent**
 
-Call `get_context_bundle` for a full snapshot (holdings when keys are set,
-market/sentiment/macro via hosted upstream). Pure math tools
-(`check_allocation_band`, `get_rebalance_plan`) work without exchange keys.
+Call `get_context_bundle` for a full snapshot (holdings when a portfolio source
+is configured, market/sentiment/macro via hosted upstream). Pure math tools
+(`check_allocation_band`, `get_rebalance_plan`) work without portfolio credentials.
 
 Full setup guide: [cursor-mcp.md](docs/cursor-mcp.md). Sample responses:
 [examples.md](docs/examples.md).
@@ -90,7 +91,7 @@ combines local portfolio reads with this upstream for market context.
 | `get_rebalance_plan` | USD rebalance moves from allocation, target, and NAV |
 | `check_allocation_band` | Drift vs target and whether allocation is outside the band |
 | `check_allocation_bands` | Batch band checks for multiple target scenarios |
-| `get_portfolio_state` | Live NAV and holdings (e.g. Coinbase, Kraken read-only keys) |
+| `get_portfolio_state` | Live NAV and holdings (CEX keys or public EVM wallet address) |
 
 Market context is **holdings-scoped**: band assets (BTC/ETH) use OHLC bars; alt
 holdings (e.g. HYPE) use quote snapshots when cached. The bridge auto-scopes
