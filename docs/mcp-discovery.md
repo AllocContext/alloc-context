@@ -27,7 +27,6 @@ may show localhost.
 | `GET /llms.txt` | Agent-readable service summary |
 | `GET /.well-known/x402.json` | Machine-readable tool manifest |
 | `GET /.well-known/mcp/server-card.json` | Smithery static server card (tools without paying) |
-| `GET /.well-known/glama.json` | Glama connector claim metadata (maintainer email) |
 
 Paid MCP remains `POST /mcp` behind x402 when `--x402` is enabled.
 
@@ -37,13 +36,6 @@ Smithery scans `POST /mcp` by default; x402 servers return **402** on unpaid
 probes. Publish using the static server card at
 `/.well-known/mcp/server-card.json` (same tool list as Bazaar). Retry at
 [smithery.ai/new](https://smithery.ai/new) after deploy.
-
-## Glama directory
-
-Glama verifies connector ownership via `GET /.well-known/glama.json` on your
-hosted domain (`connector.json` schema with maintainer email matching your Glama
-account). Repo-root `glama.json` uses the same format. Optional override:
-`GLAMA_MAINTAINER_EMAIL` on the host.
 
 ## Bazaar metadata
 

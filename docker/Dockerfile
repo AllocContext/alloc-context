@@ -7,7 +7,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml README.md glama.json server.json ./
+COPY pyproject.toml README.md server.json ./
 COPY alloccontext ./alloccontext
 COPY config ./config
 COPY schemas ./schemas

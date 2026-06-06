@@ -77,11 +77,11 @@ def test_check_discovery_paths_requires_public(monkeypatch) -> None:
         fake_fetch,
     )
     messages = check_discovery_paths(config)
-    assert len(messages) == 10
+    assert len(messages) == 8
     public_messages = [message for message in messages if "mcp.example.com" in message]
     local_messages = [message for message in messages if "127.0.0.1:8000" in message]
-    assert len(public_messages) == 5
-    assert len(local_messages) == 5
+    assert len(public_messages) == 4
+    assert len(local_messages) == 4
 
 
 def test_check_manifest_pay_to_mismatch(monkeypatch) -> None:
