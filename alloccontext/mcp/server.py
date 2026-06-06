@@ -30,6 +30,7 @@ from alloccontext.mcp.tool_fields import (
     Scenarios,
     Scope,
     TargetPct,
+    WalletAddress,
 )
 from alloccontext.store.db import connect
 
@@ -190,17 +191,19 @@ def create_server(
     )
     def get_portfolio_state(
         exchange: Exchange,
-        api_key: ApiKey,
-        api_secret: ApiSecret,
+        api_key: ApiKey = "",
+        api_secret: ApiSecret = "",
+        wallet_address: WalletAddress = None,
         target_pct: OptionalTargetPct = None,
         band: BandOptional = None,
     ) -> dict[str, Any]:
-        """Fetch live portfolio state using caller-supplied read-only API keys."""
+        """Fetch live portfolio from exchange keys or a public EVM wallet address."""
         return handlers.get_portfolio_state(
             config,
             exchange=exchange,
             api_key=api_key,
             api_secret=api_secret,
+            wallet_address=wallet_address,
             target_pct=target_pct,
             band=band,
         )

@@ -10,6 +10,7 @@ from alloccontext.ingest.exchange.live import (
     LivePortfolioError,
     fetch_live_portfolio_snapshot,
     portfolio_state_from_snapshot,
+    validate_cex_exchange_id,
     validate_exchange_id,
 )
 from alloccontext.rollup.context import Scope
@@ -541,7 +542,7 @@ def get_rebalance_plan(
     as_of: datetime | None = None,
 ) -> dict[str, Any]:
     now = (as_of or utc_now()).replace(microsecond=0)
-    exchange_id = validate_exchange_id(exchange)
+    exchange_id = validate_cex_exchange_id(exchange)
     normalized_allocation = _normalize_pct(allocation_pct)
     normalized_target = validate_target_pct(target_pct)
     nav = validate_nav_usd(nav_usd)
@@ -569,8 +570,9 @@ def get_portfolio_state(
     config,
     *,
     exchange: str,
-    api_key: str,
-    api_secret: str,
+    api_key: str = "",
+    api_secret: str = "",
+    wallet_address: str | None = None,
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
     as_of: datetime | None = None,
@@ -582,17 +584,18 @@ def get_portfolio_state(
             api_key,
             api_secret,
             config,
+            wallet_address=wallet_address,
         )
     except LivePortfolioError as exc:
-        return with_staleness(
-            {
-                "available": False,
-                "exchange": exchange_id,
-                "source": "live",
-                "reason": str(exc),
-            },
-            as_of=as_of or utc_now(),
-        )
+        unavailable: dict[str, Any] = {
+            "available": False,
+            "exchange": exchange_id,
+            "source": "live",
+            "reason": str(exc),
+        }
+        if exchange_id == "wallet" and wallet_address:
+            unavailable["wallet_address"] = wallet_address.strip()
+        return with_staleness(unavailable, as_of=as_of or utc_now())
 
     payload = portfolio_state_from_snapshot(
         snap,
@@ -600,6 +603,8 @@ def get_portfolio_state(
         target_pct=target_pct,
         band=band,
     )
+    if exchange_id == "wallet" and wallet_address:
+        payload["wallet_address"] = wallet_address.strip()
     snapshot_ts = payload.pop("snapshot_ts", None)
     as_of_dt = as_of
     if as_of_dt is None and snapshot_ts:

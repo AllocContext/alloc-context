@@ -13,6 +13,8 @@ COINGECKO_ID_BY_SYMBOL: dict[str, str] = {
     "BTC": "bitcoin",
     "ETH": "ethereum",
     "HYPE": "hyperliquid",
+    "POL": "polygon-ecosystem-token",
+    "MATIC": "polygon-ecosystem-token",
 }
 
 KRAKEN_ASSET_TO_SYMBOL = {

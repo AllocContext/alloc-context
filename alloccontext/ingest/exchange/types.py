@@ -2,4 +2,4 @@ from __future__ import annotations
 
 from typing import Literal
 
-ExchangeId = Literal["kraken", "coinbase"]
+ExchangeId = Literal["kraken", "coinbase", "wallet"]
