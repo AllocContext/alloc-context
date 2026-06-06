@@ -74,15 +74,16 @@ response is `{ "available": false, "reason": "live_ingest_failed", ... }`
 rather than a stale bundle presented as live. Optional-source-only failures
 keep ingest `ok` and still return a bundle.
 
-### Live portfolio (credentials in request)
+### Live portfolio (CEX keys or wallet address in request)
 
 | Tool | Input | Output |
 |------|-------|--------|
-| `get_portfolio_state` | `exchange`, read-only credentials, optional `target_pct`, optional `band` | NAV, `holdings[]`, optional `allocation_analysis` |
+| `get_portfolio_state` | `exchange`, CEX read-only credentials **or** `wallet_address`, optional `target_pct`, optional `band` | NAV, `holdings[]`, optional `allocation_analysis` |
 
-Credentials are **pass-through only** — never stored server-side. Supported
-exchanges: **Kraken** and **Coinbase** Advanced Trade (read-only). Disable
-Coinbase in `ingest.sources` and `exchanges.coinbase.enabled` when unused.
+CEX credentials are **pass-through only** — never stored server-side. Supported
+sources: **Kraken**, **Coinbase** Advanced Trade (read-only), and **wallet**
+(public EVM address — keyless for the caller; host needs `ETHERSCAN_API_KEY`).
+See [data-sources.md](data-sources.md#on-chain-wallet-evm-keyless).
 
 ## MCP resources
 

@@ -183,8 +183,13 @@ EXCHANGE_KRAKEN_COINBASE_SCHEMA: dict[str, Any] = {
 
 EXCHANGE_REQUIRED_SCHEMA: dict[str, Any] = {
     "type": "string",
-    "enum": ["kraken", "coinbase"],
-    "description": "Spot exchange to query: kraken or coinbase.",
+    "enum": ["kraken", "coinbase", "wallet"],
+    "description": "Portfolio source: kraken, coinbase, or wallet (EVM address).",
+}
+
+WALLET_ADDRESS_SCHEMA: dict[str, Any] = {
+    "type": "string",
+    "description": "EVM wallet address (0x + 40 hex). Required when exchange=wallet.",
 }
 
 API_KEY_SCHEMA: dict[str, Any] = {
@@ -233,13 +238,12 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "get_portfolio_state": (
         "Fetch live read-only portfolio NAV, holdings[], and band weights from "
-        "a supported spot exchange (e.g. Kraken, Coinbase) using credentials "
-        "passed in this call (never stored). "
-        "Requires exchange, api_key, and api_secret. Use get_context_bundle "
-        "for cached market and history without exchange keys. Optional "
-        "target_pct attaches allocation_analysis; optional band sets drift "
-        "width when target_pct is supplied. Returns an error payload on invalid "
-        "credentials or unsupported exchange — no side effects."
+        "a supported source: Kraken or Coinbase (read-only API keys in this call, "
+        "never stored) or wallet (public EVM address — keyless, no keys). "
+        "exchange=wallet requires wallet_address; CEX paths require api_key and "
+        "api_secret. Use get_context_bundle for cached market without keys. "
+        "Optional target_pct attaches allocation_analysis; optional band sets drift "
+        "width when target_pct is supplied. Fail-closed on errors — no side effects."
     ),
     "check_allocation_band": (
         "Read-only drift check: are BTC/ETH/CASH band weights outside the "
@@ -373,15 +377,15 @@ MCP_TOOL_SPECS: tuple[dict[str, Any], ...] = (
                 "exchange": EXCHANGE_REQUIRED_SCHEMA,
                 "api_key": API_KEY_SCHEMA,
                 "api_secret": API_SECRET_SCHEMA,
+                "wallet_address": WALLET_ADDRESS_SCHEMA,
                 "target_pct": OPTIONAL_TARGET_PCT_SCHEMA,
                 "band": BAND_SCHEMA,
             },
-            "required": ["exchange", "api_key", "api_secret"],
+            "required": ["exchange"],
         },
         "example": {
-            "exchange": "kraken",
-            "api_key": "YOUR_READ_ONLY_KEY",
-            "api_secret": "YOUR_READ_ONLY_SECRET",
+            "exchange": "wallet",
+            "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
         },
         "output_example": {
             "available": True,

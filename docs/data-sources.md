@@ -104,6 +104,23 @@ Rollup exposes under `macro.etf.btc` / `macro.etf.eth`:
 - `net_flow_usd_7d` (weekly scope)
 - `by_ticker` — issuer breakdown for latest day
 
+## On-chain wallet (EVM, keyless)
+
+MCP live path only (`get_portfolio_state` with `exchange=wallet`). No scheduled
+ingest and no stored wallet addresses.
+
+| Item | Detail |
+|------|--------|
+| **Input** | Public EVM address (`wallet_address`); `api_key` / `api_secret` omitted |
+| **Chains** | Ethereum, Arbitrum, Base, Optimism, Polygon (`wallet.chain_ids`) |
+| **Upstream** | [Etherscan API v2](https://docs.etherscan.io/) multichain (`chainid` param) |
+| **Host env** | `ETHERSCAN_API_KEY` (server-side; not passed by MCP callers) |
+| **Valuation** | Existing quote resolver (CoinGecko / CoinMarketCap when configured) |
+| **Dust filter** | `wallet.min_value_usd` (default $1) drops priced dust/spam tokens |
+
+Wrapped assets (e.g. WETH, WBTC) map to band symbols for allocation math. Fail-closed
+when the host key is missing, wallet read is disabled, or the explorer errors.
+
 ## Kraken contract
 
 Read endpoints only:

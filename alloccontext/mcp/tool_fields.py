@@ -75,7 +75,16 @@ NavUsd = Annotated[
 ]
 Exchange = Annotated[
     str,
-    Field(description="Spot exchange: kraken or coinbase."),
+    Field(description="Portfolio source: kraken, coinbase, or wallet."),
+]
+WalletAddress = Annotated[
+    str | None,
+    Field(
+        description=(
+            "EVM wallet address (0x + 40 hex). Required when exchange=wallet; "
+            "keyless read — no API keys stored."
+        ),
+    ),
 ]
 ExchangeKrakenDefault = Annotated[
     str,
@@ -83,14 +92,19 @@ ExchangeKrakenDefault = Annotated[
 ]
 ApiKey = Annotated[
     str,
-    Field(description="Read-only exchange API key (never stored by AllocContext)."),
+    Field(
+        description=(
+            "Read-only exchange API key (never stored). Omit or pass empty when "
+            "exchange=wallet."
+        ),
+    ),
 ]
 ApiSecret = Annotated[
     str,
     Field(
         description=(
             "Read-only exchange API secret or Coinbase CDP private key "
-            "(never stored)."
+            "(never stored). Omit or pass empty when exchange=wallet."
         ),
     ),
 ]

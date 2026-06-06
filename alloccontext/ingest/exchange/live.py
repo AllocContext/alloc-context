@@ -15,7 +15,8 @@ from alloccontext.mcp.validation import validate_band, validate_target_pct
 from alloccontext.rollup.allocation_analysis import build_allocation_analysis
 from alloccontext.rollup.portfolio_payload import portfolio_dict_from_snapshot
 
-SUPPORTED_EXCHANGES = frozenset({"kraken", "coinbase"})
+SUPPORTED_EXCHANGES = frozenset({"kraken", "coinbase", "wallet"})
+CEX_EXCHANGES = frozenset({"kraken", "coinbase"})
 
 
 class LivePortfolioError(Exception):
@@ -25,6 +26,13 @@ class LivePortfolioError(Exception):
 def validate_exchange_id(exchange: str) -> ExchangeId:
     key = exchange.strip().lower()
     if key not in SUPPORTED_EXCHANGES:
+        raise ValueError(f"unsupported exchange: {exchange}")
+    return key  # type: ignore[return-value]
+
+
+def validate_cex_exchange_id(exchange: str) -> ExchangeId:
+    key = exchange.strip().lower()
+    if key not in CEX_EXCHANGES:
         raise ValueError(f"unsupported exchange: {exchange}")
     return key  # type: ignore[return-value]
 
@@ -40,7 +48,24 @@ def fetch_live_portfolio_snapshot(
     api_key: str,
     api_secret: str,
     config,
+    *,
+    wallet_address: str | None = None,
 ) -> PortfolioSnapshot:
+    if exchange_id == "wallet":
+        from alloccontext.ingest.wallet.portfolio import (
+            WalletPortfolioError,
+            fetch_wallet_portfolio_snapshot,
+        )
+
+        if not wallet_address or not wallet_address.strip():
+            raise LivePortfolioError("wallet_address is required")
+        try:
+            return fetch_wallet_portfolio_snapshot(wallet_address, config)
+        except WalletPortfolioError as exc:
+            raise LivePortfolioError(str(exc)) from exc
+        except ValueError as exc:
+            raise LivePortfolioError(str(exc)) from exc
+
     spot = _spot_config(config, exchange_id)
     resolver_config = quote_resolver_config_from_app(config)
     key = api_key.strip()

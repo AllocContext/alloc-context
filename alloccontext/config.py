@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import yaml
 
+from alloccontext.ingest.wallet.chains import DEFAULT_WALLET_CHAIN_IDS
 from alloccontext.rollup.cluster_config import RollupConfig, load_rollup_config
 
 
@@ -102,6 +103,16 @@ class ExchangesConfig:
 
 
 @dataclass(frozen=True)
+class WalletConfig:
+    enabled: bool
+    chain_ids: tuple[int, ...]
+    min_value_usd: float
+    timeout_seconds: float
+    max_retries: int
+    retry_backoff_seconds: float
+
+
+@dataclass(frozen=True)
 class KalshiSeriesConfig:
     asset: str
     series: str
@@ -175,6 +186,7 @@ class AppConfig:
     ingest: IngestConfig
     kraken: KrakenConfig
     exchanges: ExchangesConfig
+    wallet: WalletConfig
     kalshi: KalshiConfig
     rollup: RollupConfig
     macro: MacroConfig
@@ -237,6 +249,23 @@ def _kraken_config_from_spot(spot: SpotExchangeConfig) -> KrakenConfig:
         pairs=list(spot.pairs),
         retry_backoff_seconds=spot.retry_backoff_seconds,
         max_retries=spot.max_retries,
+    )
+
+
+def _load_wallet_config(raw: dict[str, Any]) -> WalletConfig:
+    wallet_raw = raw.get("wallet") or {}
+    chain_ids_raw = wallet_raw.get("chain_ids")
+    if chain_ids_raw:
+        chain_ids = tuple(int(chain_id) for chain_id in chain_ids_raw)
+    else:
+        chain_ids = DEFAULT_WALLET_CHAIN_IDS
+    return WalletConfig(
+        enabled=bool(wallet_raw.get("enabled", True)),
+        chain_ids=chain_ids,
+        min_value_usd=float(wallet_raw.get("min_value_usd") or 1.0),
+        timeout_seconds=float(wallet_raw.get("timeout_seconds") or 20.0),
+        max_retries=int(wallet_raw.get("max_retries") or 3),
+        retry_backoff_seconds=float(wallet_raw.get("retry_backoff_seconds") or 2.0),
     )
 
 
@@ -319,6 +348,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         ingest_sources=ingest_sources,
     )
     kraken = _kraken_config_from_spot(exchanges.kraken)
+    wallet = _load_wallet_config(raw)
 
     return AppConfig(
         paths=PathsConfig(
@@ -340,6 +370,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         ),
         kraken=kraken,
         exchanges=exchanges,
+        wallet=wallet,
         kalshi=KalshiConfig(
             use_api=bool(kalshi_raw.get("use_api", True)),
             base_url=_validate_kalshi_base_url(
