@@ -8,7 +8,7 @@ VERSION="${PYPI_VERSION:-$(python3 "${ROOT}/scripts/bump_version.py" --current)}
 URL="https://pypi.org/pypi/${PACKAGE}/${VERSION}/json"
 TIMEOUT="${PYPI_WAIT_TIMEOUT_SECONDS:-600}"
 INTERVAL="${PYPI_WAIT_INTERVAL_SECONDS:-15}"
-INITIAL="${PYPI_WAIT_INITIAL_SECONDS:-30}"
+INITIAL="${PYPI_WAIT_INITIAL_SECONDS:-60}"
 STABLE_POLLS="${PYPI_WAIT_STABLE_POLLS:-2}"
 CHECKER="${ROOT}/scripts/check_pypi_release_json.py"
 

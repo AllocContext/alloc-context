@@ -23,7 +23,7 @@ run that the merge triggered — there is no reliance on tag-push events (which 
 Pipeline order: **check** (untagged version?) → **test** → **publish-pypi** →
 **publish-mcp-registry** + **deploy** (parallel) → **finalize** (tag + release).
 
-**publish-mcp-registry** waits for PyPI to index the new release (30s initial
+**publish-mcp-registry** waits for PyPI to index the new release (60s initial
 delay, then polls until wheel + sdist artifacts appear for the version twice
 in a row) before calling `mcp-publisher`. Re-run the **release** job if registry
 publish still races PyPI propagation.
