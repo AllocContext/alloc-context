@@ -68,6 +68,19 @@ def test_check_version_fails_when_out_of_sync(tmp_path: Path):
         check_version("9.9.9", root=tmp_path)
 
 
+def test_print_flag_emits_single_version_line(capsys) -> None:
+    from scripts.bump_version import main
+
+    assert main(["--bump", "patch", "--print"]) == 0
+    out = capsys.readouterr().out
+    assert out.count("\n") == 1
+    assert out.strip() == resolve_target_version(
+        current=read_current_version(),
+        bump="patch",
+        exact=None,
+    )
+
+
 def test_apply_version_updates_all_files(tmp_path: Path):
     for rel in ("pyproject.toml", "server.json", "alloccontext/__init__.py"):
         src = REPO_ROOT / rel
