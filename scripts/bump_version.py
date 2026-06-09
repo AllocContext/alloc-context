@@ -205,9 +205,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if not args.write:
-        print(f"current={current} target={target} (dry-run; pass --write to apply)")
         if args.print:
             print(target)
+            return 0
+        print(f"current={current} target={target} (dry-run; pass --write to apply)")
         return 0
 
     if target == current:
