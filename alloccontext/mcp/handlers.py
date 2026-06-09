@@ -40,6 +40,7 @@ from alloccontext.rollup.expectation_review import (
 )
 from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.regime import build_regime_context
+from alloccontext.rollup.regime_history import attach_regime_history
 from alloccontext.rollup.snapshots import (
     SnapshotNotFoundError,
     load_context_bundle_snapshot,
@@ -150,7 +151,7 @@ def _prepare_baseline_bundle(
     raw = _load_baseline_bundle(conn, scope=scope, recorded_at=recorded_at)
     if raw is None:
         return None
-    return _attach_regime(dict(raw), config)
+    return _attach_regime(dict(raw), config, conn=conn, scope=scope)
 
 
 def _baseline_bundles_for_theses(
@@ -331,7 +332,13 @@ def _attach_alt_quote_ingest(payload: dict[str, Any], refresh_result: dict[str, 
     payload["ingest"] = ingest
 
 
-def _attach_regime(bundle: dict[str, Any], config) -> dict[str, Any]:
+def _attach_regime(
+    bundle: dict[str, Any],
+    config,
+    *,
+    conn: sqlite3.Connection | None = None,
+    scope: Scope = "daily",
+) -> dict[str, Any]:
     portfolio = bundle.get("portfolio") or {}
     analysis = bundle.get("allocation_analysis")
     regime_portfolio = portfolio
@@ -352,6 +359,8 @@ def _attach_regime(bundle: dict[str, Any], config) -> dict[str, Any]:
         prior_as_of=bundle.get("prior_as_of"),
         max_cash_risk_off=config.portfolio.max_cash_risk_off,
     )
+    if conn is not None:
+        bundle = attach_regime_history(conn, scope=scope, bundle=bundle)
     return bundle
 
 
@@ -391,7 +400,7 @@ def get_context_at(
             band=band,
         )
     bundle = apply_assets_filter_to_bundle(bundle, view_assets)
-    bundle = _attach_regime(bundle, config)
+    bundle = _attach_regime(bundle, config, conn=conn, scope=scope)
     if target_pct is not None:
         bundle["target_pct"] = validate_target_pct(target_pct)
     if band is not None:
@@ -564,7 +573,7 @@ def get_context_bundle(
             band=effective_band,
         )
     bundle = apply_assets_filter_to_bundle(bundle, view_assets)
-    bundle = _attach_regime(bundle, config)
+    bundle = _attach_regime(bundle, config, conn=conn, scope=scope)
     bundle = _attach_expectation_review(
         conn,
         config,

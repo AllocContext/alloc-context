@@ -13,6 +13,7 @@ from alloccontext.rollup.delta import build_delta_context
 from alloccontext.rollup.macro import build_macro_context
 from alloccontext.rollup.portfolio import build_market_context, build_portfolio_context
 from alloccontext.rollup.regime import build_regime_context
+from alloccontext.rollup.regime_history import attach_regime_history
 from alloccontext.rollup.sentiment import build_sentiment_context
 
 Scope = Literal["daily", "weekly"]
@@ -122,4 +123,4 @@ def build_context_bundle(
     }
     if save_snapshot:
         _save_context_snapshot(conn, scope=scope, as_of=bundle["as_of"], context=bundle)
-    return bundle
+    return attach_regime_history(conn, scope=scope, bundle=bundle)

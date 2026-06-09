@@ -108,7 +108,8 @@ sentiment, and delta. No LLM.
 | `allocation` | Present when analysis ran (`hint`, `outside_band`, `max_drift`, `band`) |
 | `volatility` | Kalshi short-horizon volatility regime when available |
 | `sentiment` | Fear & Greed and Kalshi tape fields |
-| `comparison` | `prior_as_of`, `notable_shifts` when a prior snapshot exists |
+| `comparison` | `prior_as_of`, `notable_shifts` (adjacent snapshot); `history[]` and
+  `posture` (7d/30d lookbacks vs saved snapshots) |
 | `hints[].kind=holding_move` | Large alt weight (≥10% NAV) + move (≥5% 24h or since prior) |
 
 Alt holding hints use `market.assets.{symbol}.change_pct.24h` or delta
