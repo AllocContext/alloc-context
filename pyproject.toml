@@ -1,6 +1,6 @@
 [project]
 name = "alloc-context"
-version = "0.2.10"
+version = "0.2.11"
 description = "Portfolio-aware crypto context — CEX or wallet holdings, holdings-scoped market, optional allocation analysis"
 readme = "README.md"
 license = { text = "Elastic-2.0" }
