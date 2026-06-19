@@ -23,6 +23,9 @@ Portfolio on hosted MCP: pass read-only CEX keys in `get_portfolio_state`, or
 `exchange=wallet` with a public EVM `wallet_address` (keyless for the caller).
 Nothing is stored server-side.
 
+Optional `theses[]` on `get_context_bundle` uses the same pass-through privacy
+model — see [mcp.md](mcp.md#privacy-theses-hosted-and-bridge).
+
 ## Cursor: Bazaar discovery + local MCP
 
 **Default (bridge):** see [cursor-mcp.md](cursor-mcp.md) — `alloc-context mcp

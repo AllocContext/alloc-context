@@ -76,6 +76,11 @@ never stores beliefs — pass-through only. Each thesis requires `id`,
 `recorded_at`, and `claims[]`. See
 [context-bundle.md](context-bundle.md) and `config/user.example.yaml`.
 
+**Hosted / bridge:** thesis payloads are not written to shared infrastructure;
+they exist only for the request that scores them. Bridge forwards `theses` on
+paid upstream `get_context_bundle` calls. Hosted privacy copy:
+[mcp.md](mcp.md#privacy-theses-hosted-and-bridge).
+
 `ALLOCATION_FIT` claims need `target_allocation` / `band` (here or on the tool
 call). Bridge mode loads baselines via hosted `get_context_at` per `recorded_at`.
 
