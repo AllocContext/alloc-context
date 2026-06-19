@@ -9,6 +9,7 @@ from alloccontext.ingest.exchange.live import (
     LivePortfolioError,
     fetch_live_portfolio_snapshot,
 )
+from alloccontext.mcp.expectation_review_tool import envelope_expectation_review
 from alloccontext.mcp.payer import PayerKeyError, resolve_payer_private_key
 from alloccontext.mcp.setup import portfolio_not_configured
 from alloccontext.rollup.portfolio_payload import (
@@ -321,3 +322,46 @@ def attach_bridge_expectation_review(
     result = dict(bundle)
     result["expectation_review"] = review
     return result
+
+
+def build_bridge_expectation_review_payload(
+    *,
+    user: UserConfig,
+    bundle: dict[str, Any],
+    scope: str,
+    freshness: str,
+    theses: list[dict[str, Any]] | None,
+    target_pct: dict[str, float] | None,
+    band: float | None,
+    fetch_baseline,
+    expectation_replay: bool = False,
+    fetch_checkpoint=None,
+) -> dict[str, Any]:
+    """Return expectation_review fields for bridge / dedicated MCP tool."""
+    merged = attach_bridge_expectation_review(
+        user=user,
+        bundle=bundle,
+        scope=scope,
+        theses=theses,
+        target_pct=target_pct,
+        band=band,
+        fetch_baseline=fetch_baseline,
+        expectation_replay=expectation_replay,
+        fetch_checkpoint=fetch_checkpoint,
+    )
+    review = merged.get("expectation_review")
+    if not isinstance(review, dict):
+        return envelope_expectation_review(
+            {"available": False, "reason": "no_valid_theses"},
+            scope=scope,
+            freshness=freshness,
+            source=merged,
+        )
+    payload = dict(review)
+    payload["scope"] = scope
+    payload["freshness"] = freshness
+    if merged.get("as_of"):
+        payload["as_of"] = merged["as_of"]
+    if merged.get("age_seconds") is not None:
+        payload["age_seconds"] = merged["age_seconds"]
+    return payload

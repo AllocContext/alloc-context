@@ -23,6 +23,7 @@ DEFAULT_PAYER_KEY_FILE = os.path.expanduser("~/.config/alloc-context/x402-payer.
 TOOLS = (
     "get_market_context",
     "get_context_bundle",
+    "get_expectation_review",
     "get_portfolio_state",
     "get_rebalance_plan",
     "check_allocation_band",

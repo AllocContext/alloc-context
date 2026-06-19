@@ -39,6 +39,7 @@ Pass `theses[]` to score local thesis claims deterministically — see
 |------|-------|--------|
 | `get_market_context` | `scope`, optional `freshness`, optional `assets` | Sentiment, macro, ETF, breadth, `market`, `as_of`, `age_seconds` |
 | `get_context_bundle` | `scope`, optional `freshness`, optional `assets`, optional `target_pct`, optional `band`, optional `theses[]` | Full ContextBundle; optional `allocation_analysis` when targets supplied; optional `expectation_review` when `theses[]` supplied |
+| `get_expectation_review` | `theses[]`, optional `scope`, optional `freshness`, optional `target_pct`, optional `band`, optional `expectation_replay` | Thesis scoring only (same fields as `expectation_review` block) |
 | `get_context_at` | `as_of`, optional `scope`, `match`, optional `assets` | Saved snapshot from ingest history |
 | `get_context_delta` | `prior_as_of`, optional `scope`, optional `current_as_of`, optional `assets` | `notable_shifts` between two bundles |
 | `get_rebalance_plan` | `allocation_pct`, `target_pct`, `nav_usd`, optional `band` | USD deltas, move lines, optional `band_check` |

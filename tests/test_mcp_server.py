@@ -35,7 +35,7 @@ def test_mcp_tool_input_schemas_have_descriptions() -> None:
     async def _check() -> None:
         server = create_server()
         tools = await server.list_tools()
-        assert len(tools) == 8
+        assert len(tools) == 9
         for tool in tools:
             props = (tool.inputSchema or {}).get("properties") or {}
             assert props, f"{tool.name} has no input properties"

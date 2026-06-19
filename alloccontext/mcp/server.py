@@ -142,6 +142,38 @@ def create_server(
             conn.close()
 
     @mcp.tool(
+        name="get_expectation_review",
+        title=tool_title("get_expectation_review"),
+        annotations=_tool_hints("get_expectation_review"),
+        description=tool_description("get_expectation_review"),
+    )
+    def get_expectation_review(
+        scope: Scope = "daily",
+        freshness: Freshness = "cached",
+        theses: OptionalTheses = None,
+        target_pct: OptionalTargetPct = None,
+        band: BandOptional = None,
+        expectation_replay: ExpectationReplay = False,
+    ) -> dict[str, Any]:
+        """Score local theses without returning the full ContextBundle."""
+        validated_scope = handlers.validate_scope(scope)
+        validated_freshness = handlers.validate_freshness(freshness)
+        conn = connect(config.paths.db)
+        try:
+            return handlers.get_expectation_review(
+                conn,
+                config,
+                scope=validated_scope,
+                freshness=validated_freshness,
+                theses=theses,
+                target_pct=target_pct,
+                band=band,
+                expectation_replay=expectation_replay,
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool(
         name="get_market_context",
         title=tool_title("get_market_context"),
         annotations=_tool_hints("get_market_context"),
