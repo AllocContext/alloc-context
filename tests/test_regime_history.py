@@ -61,6 +61,19 @@ def test_derive_regime_posture_trajectory_deteriorating() -> None:
     assert posture["basis_days"] == 7
 
 
+def test_derive_regime_posture_trajectory_from_fear_greed_when_no_score_delta() -> None:
+    current = _bundle(as_of="2026-06-09T12:00:00+00:00", fg=55, risk_score=20, risk_level="low")
+    horizon = {
+        "days": 7,
+        "available": True,
+        "fear_greed": {"then": 68, "now": 52, "change": -16},
+        "risk_off": {"score_then": None, "score_now": 20},
+    }
+    posture = derive_regime_posture(current, horizon_7d=horizon)
+    assert posture["trajectory"] == "DETERIORATING"
+    assert posture["basis_days"] == 7
+
+
 def test_build_regime_history_comparison_with_snapshots(conn, config) -> None:
     baseline = _bundle(
         as_of="2026-06-02T12:00:00+00:00",

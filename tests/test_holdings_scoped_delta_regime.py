@@ -10,6 +10,7 @@ from alloccontext.mcp.assets import filter_delta_market
 from alloccontext.mcp.handlers import get_context_at, get_context_bundle
 from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.delta import build_delta_context
+from alloccontext.rollup.material_moves import build_portfolio_material_moves
 from alloccontext.rollup.regime import build_regime_context
 
 
@@ -122,51 +123,49 @@ def test_build_delta_context_btc_current_price_from_market_block() -> None:
     assert delta["market"]["btc_change_pct_since_prior"] == pytest.approx(2.86)
 
 
-def test_build_regime_context_alt_holding_move_hint() -> None:
-    regime = build_regime_context(
+def test_build_portfolio_material_moves() -> None:
+    moves = build_portfolio_material_moves(
         portfolio=_portfolio_with_hype(),
-        sentiment={"available": False},
-        delta={"available": False},
         market=_market_with_hype(price=30.0, change_24h=6.5),
-        prior_as_of="2026-05-30T12:00:00+00:00",
+        delta={"available": False},
     )
-    holding_hints = [hint for hint in regime["hints"] if hint["kind"] == "holding_move"]
-    assert len(holding_hints) == 1
-    assert "HYPE" in holding_hints[0]["text"]
-    assert "15.0% weight" in holding_hints[0]["text"]
+    assert len(moves) == 1
+    assert moves[0]["symbol"] == "HYPE"
+    assert "15.0% weight" in moves[0]["text"]
 
 
-def test_build_regime_context_uses_delta_move_for_alt_hint() -> None:
+def test_build_portfolio_material_moves_uses_delta_market() -> None:
+    moves = build_portfolio_material_moves(
+        portfolio={"available": True, "holdings": [{"symbol": "HYPE", "weight_pct": 0.20}]},
+        market=_market_with_hype(price=30.0),
+        delta={
+            "available": True,
+            "market": {"hype_change_pct_since_prior": -6.0},
+        },
+    )
+    assert len(moves) == 1
+    assert moves[0]["move_pct"] == pytest.approx(-6.0)
+
+
+def test_build_regime_context_excludes_sleeve_shifts_from_hints() -> None:
     regime = build_regime_context(
         portfolio={"available": True, "holdings": [{"symbol": "HYPE", "weight_pct": 0.20}]},
         sentiment={"available": False},
         delta={
             "available": True,
-            "market": {"hype_change_pct_since_prior": -6.0},
-            "notable_shifts": ["HYPE -6.00% since prior snapshot"],
+            "notable_shifts": [
+                "HYPE -6.00% since prior snapshot",
+                "BTC allocation +2.0 pp",
+                "Portfolio Δ $+500.00 since prior snapshot",
+            ],
         },
         market=_market_with_hype(price=30.0),
         prior_as_of="2026-05-30T12:00:00+00:00",
     )
-    assert any(hint["kind"] == "holding_move" for hint in regime["hints"])
-
-
-def test_build_regime_context_dedupes_delta_hint_when_holding_move_present() -> None:
-    regime = build_regime_context(
-        portfolio={"available": True, "holdings": [{"symbol": "HYPE", "weight_pct": 0.20}]},
-        sentiment={"available": False},
-        delta={
-            "available": True,
-            "market": {"hype_change_pct_since_prior": -6.0},
-            "notable_shifts": ["HYPE -6.00% since prior snapshot"],
-        },
-        market=_market_with_hype(price=30.0, change_24h=-6.0),
-        prior_as_of="2026-05-30T12:00:00+00:00",
-    )
-    delta_hints = [hint for hint in regime["hints"] if hint["kind"] == "delta"]
-    holding_hints = [hint for hint in regime["hints"] if hint["kind"] == "holding_move"]
-    assert len(holding_hints) == 1
-    assert len(delta_hints) == 0
+    assert regime["comparison"]["market_shifts"] == ["HYPE -6.00% since prior snapshot"]
+    assert "BTC allocation +2.0 pp" in regime["comparison"]["sleeve_shifts"]
+    assert not any(hint["kind"] == "holding_move" for hint in regime["hints"])
+    assert len([hint for hint in regime["hints"] if hint["kind"] == "delta"]) == 1
 
 
 def test_filter_delta_market_keeps_hype_shift() -> None:
@@ -277,9 +276,10 @@ def test_get_context_bundle_delta_regime_reference_hype(conn, config) -> None:
     shifts = bundle["delta"].get("notable_shifts") or []
     assert any("HYPE" in line for line in shifts)
     assert not any("SOL" in line for line in shifts)
-    assert any(
-        hint.get("kind") == "holding_move" and "HYPE" in hint.get("text", "")
-        for hint in bundle["regime"].get("hints") or []
+    material = bundle["portfolio"].get("material_moves") or []
+    assert any(row.get("symbol") == "HYPE" for row in material)
+    assert not any(
+        hint.get("kind") == "holding_move" for hint in bundle["regime"].get("hints") or []
     )
 
 
@@ -326,9 +326,8 @@ def test_get_context_at_rebuilds_regime_for_filtered_hype(conn, config) -> None:
         assets=["HYPE"],
     )
     assert payload["assets"] == ["HYPE"]
-    assert any(
-        hint.get("kind") == "holding_move" and "HYPE" in hint.get("text", "")
-        for hint in payload["regime"].get("hints") or []
+    assert not any(
+        hint.get("kind") == "holding_move" for hint in payload["regime"].get("hints") or []
     )
 
 
