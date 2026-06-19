@@ -27,6 +27,7 @@ OPEN_WORLD_READ_ANNOTATIONS: dict[str, bool] = {
 _TOOL_TITLES: dict[str, str] = {
     "get_market_context": "Get Market Context",
     "get_context_bundle": "Get Context Bundle",
+    "get_expectation_review": "Get Expectation Review",
     "get_rebalance_plan": "Get Rebalance Plan",
     "get_portfolio_state": "Get Portfolio State",
     "check_allocation_band": "Check Allocation Band",
@@ -338,6 +339,13 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "is supplied. freshness=cached uses the local ingest DB; freshness=live runs "
         "ingest first (may add latency; needs ingest API keys on the host)."
     ),
+    "get_expectation_review": (
+        "Score local theses deterministically against saved snapshots — same "
+        "rules as expectation_review on get_context_bundle, without returning "
+        "the full ContextBundle. Requires theses[] (pass-through only; nothing "
+        "stored). Optional target_pct and band for ALLOCATION_FIT claims; "
+        "expectation_replay=true adds a counterfactual timeline."
+    ),
     "get_market_context": (
         "Return read-only fused market backdrop: sentiment (Fear & Greed, "
         "Kalshi), macro events, FRED indicators, ETF flows, and market breadth "
@@ -461,6 +469,52 @@ MCP_TOOL_SPECS: tuple[dict[str, Any], ...] = (
                 "summary": "Fear & Greed index: 52 (Neutral).",
             },
             "delta": {"available": True},
+        },
+    },
+    {
+        "tool_name": "get_expectation_review",
+        "description": TOOL_DESCRIPTIONS["get_expectation_review"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "scope": SCOPE_SCHEMA,
+                "freshness": FRESHNESS_SCHEMA,
+                "theses": THESES_SCHEMA,
+                "target_pct": TARGET_PCT_SCHEMA,
+                "band": BAND_SCHEMA,
+                "expectation_replay": EXPECTATION_REPLAY_SCHEMA,
+            },
+            "required": ["theses"],
+        },
+        "example": {
+            "scope": "daily",
+            "freshness": "cached",
+            "theses": [
+                {
+                    "id": "btc-thesis",
+                    "recorded_at": "2026-06-01T00:00:00Z",
+                    "claims": [
+                        {
+                            "type": "PRICE_STRENGTH",
+                            "asset": "BTC",
+                            "direction": "UP",
+                        }
+                    ],
+                }
+            ],
+        },
+        "output_example": {
+            "scope": "daily",
+            "freshness": "cached",
+            "as_of": "2026-06-10T12:00:00+00:00",
+            "age_seconds": 3600,
+            "available": True,
+            "baseline_as_of": "2026-06-01T00:00:00Z",
+            "current_as_of": "2026-06-10T12:00:00+00:00",
+            "supported": 1,
+            "weakened": 0,
+            "unknown": 0,
+            "claims": [],
         },
     },
     {

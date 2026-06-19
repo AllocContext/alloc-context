@@ -24,7 +24,7 @@ def test_bazaar_tool_input_schemas_have_descriptions() -> None:
 
 def test_server_card_tools_include_smithery_metadata() -> None:
     card = build_mcp_server_card(version="0.2.1")
-    assert len(card["tools"]) == 8
+    assert len(card["tools"]) == 9
     for tool in card["tools"]:
         assert tool.get("title")
         assert tool.get("description")
@@ -57,7 +57,7 @@ def test_mcp_server_tools_expose_titles_and_annotations() -> None:
     async def _check() -> None:
         server = create_server()
         tools = await server.list_tools()
-        assert len(tools) == 8
+        assert len(tools) == 9
         for tool in tools:
             assert tool.title == tool_title(tool.name)
             assert tool.description == tool_description(tool.name)
@@ -86,7 +86,7 @@ def test_bridge_tools_use_catalog_descriptions(
     async def _check() -> None:
         server = create_bridge_server(user)
         tools = await server.list_tools()
-        assert len(tools) == 8
+        assert len(tools) == 9
         for tool in tools:
             assert tool.description == tool_description(tool.name)
 

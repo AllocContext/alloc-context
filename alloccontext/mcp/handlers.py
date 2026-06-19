@@ -242,22 +242,20 @@ def _effective_allocation_inputs(
     return effective_target, effective_band
 
 
-def _attach_expectation_review(
+def _compute_expectation_review(
     conn: sqlite3.Connection,
     config,
     bundle: dict[str, Any],
     *,
     scope: Scope,
-    theses: list[dict[str, Any]] | None,
+    theses: list[dict[str, Any]],
     target_pct: dict[str, float] | None,
     band: float | None,
     expectation_replay: bool = False,
 ) -> dict[str, Any]:
-    if not theses:
-        return bundle
     validated = validate_theses(theses)
     if not validated:
-        return bundle
+        return {"available": False, "reason": "no_valid_theses"}
 
     baseline_bundles, baseline_resolutions = _baseline_bundles_for_theses(
         conn,
@@ -304,6 +302,32 @@ def _attach_expectation_review(
             target_pct=effective_target,
             band=effective_band,
         )
+    return review
+
+
+def _attach_expectation_review(
+    conn: sqlite3.Connection,
+    config,
+    bundle: dict[str, Any],
+    *,
+    scope: Scope,
+    theses: list[dict[str, Any]] | None,
+    target_pct: dict[str, float] | None,
+    band: float | None,
+    expectation_replay: bool = False,
+) -> dict[str, Any]:
+    if not theses:
+        return bundle
+    review = _compute_expectation_review(
+        conn,
+        config,
+        bundle,
+        scope=scope,
+        theses=theses,
+        target_pct=target_pct,
+        band=band,
+        expectation_replay=expectation_replay,
+    )
     result = dict(bundle)
     result["expectation_review"] = review
     return result
@@ -685,6 +709,59 @@ def get_context_bundle(
         payload["ingest"] = _ingest_summary(ingest_result)
     _attach_alt_quote_ingest(payload, refresh_result)
     return attach_assets_omitted(payload, assets_omitted)
+
+
+def get_expectation_review(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    scope: Scope = "daily",
+    freshness: Freshness = "cached",
+    theses: list[dict[str, Any]] | None = None,
+    target_pct: dict[str, float] | None = None,
+    band: float | None = None,
+    expectation_replay: bool = False,
+) -> dict[str, Any]:
+    """Score local theses without returning the full ContextBundle."""
+    if not theses:
+        now = utc_now().replace(microsecond=0)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        return with_staleness(
+            {
+                "available": False,
+                "reason": "no_theses_supplied",
+                "scope": scope,
+                "freshness": freshness,
+            },
+            as_of=now,
+        )
+
+    bundle = get_context_bundle(
+        conn,
+        config,
+        scope=scope,
+        freshness=freshness,
+        target_pct=target_pct,
+        band=band,
+        theses=theses,
+        expectation_replay=expectation_replay,
+    )
+    if bundle.get("available") is False:
+        return bundle
+
+    review = bundle.get("expectation_review")
+    if not isinstance(review, dict):
+        review = {"available": False, "reason": "no_valid_theses"}
+
+    payload = dict(review)
+    payload["scope"] = scope
+    payload["freshness"] = freshness
+    if bundle.get("as_of"):
+        payload["as_of"] = bundle["as_of"]
+    if bundle.get("age_seconds") is not None:
+        payload["age_seconds"] = bundle["age_seconds"]
+    return payload
 
 
 def get_market_context(

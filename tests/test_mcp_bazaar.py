@@ -18,6 +18,7 @@ from alloccontext.mcp.x402_config import MCP_HTTP_PATH, build_x402_routes, X402S
 _EXPECTED_TOOLS = {
     "get_market_context",
     "get_context_bundle",
+    "get_expectation_review",
     "get_rebalance_plan",
     "get_portfolio_state",
     "check_allocation_band",

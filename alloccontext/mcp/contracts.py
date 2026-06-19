@@ -318,8 +318,37 @@ def validate_portfolio_state(payload: dict[str, Any]) -> None:
         )
 
 
+def validate_expectation_review(payload: dict[str, Any]) -> None:
+    assert_has_keys(
+        payload,
+        ("scope", "freshness", *STALENESS_KEYS),
+        label="get_expectation_review",
+    )
+    if payload.get("available") is False:
+        assert payload.get("reason"), "get_expectation_review unavailable requires reason"
+        return
+    assert_available_block(
+        payload,
+        label="get_expectation_review",
+        when_available=EXPECTATION_REVIEW_KEYS,
+    )
+    for index, claim in enumerate(payload.get("claims") or []):
+        if not isinstance(claim, dict):
+            raise AssertionError(f"get_expectation_review.claims[{index}] must be object")
+        assert_has_keys(
+            claim,
+            EXPECTATION_CLAIM_KEYS,
+            label=f"get_expectation_review.claims[{index}]",
+        )
+        if claim.get("status") == "unknown" and not claim.get("reason"):
+            raise AssertionError(
+                f"get_expectation_review.claims[{index}] unknown requires reason"
+            )
+
+
 _VALIDATORS = {
     "get_context_bundle": validate_context_bundle,
+    "get_expectation_review": validate_expectation_review,
     "get_market_context": validate_market_context,
     "get_rebalance_plan": validate_rebalance_plan,
     "check_allocation_band": validate_check_allocation_band,

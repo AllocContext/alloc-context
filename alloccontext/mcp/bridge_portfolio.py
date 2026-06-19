@@ -321,3 +321,39 @@ def attach_bridge_expectation_review(
     result = dict(bundle)
     result["expectation_review"] = review
     return result
+
+
+def build_bridge_expectation_review_payload(
+    *,
+    user: UserConfig,
+    bundle: dict[str, Any],
+    scope: str,
+    theses: list[dict[str, Any]] | None,
+    target_pct: dict[str, float] | None,
+    band: float | None,
+    fetch_baseline,
+    expectation_replay: bool = False,
+    fetch_checkpoint=None,
+) -> dict[str, Any]:
+    """Return expectation_review fields for bridge / dedicated MCP tool."""
+    merged = attach_bridge_expectation_review(
+        user=user,
+        bundle=bundle,
+        scope=scope,
+        theses=theses,
+        target_pct=target_pct,
+        band=band,
+        fetch_baseline=fetch_baseline,
+        expectation_replay=expectation_replay,
+        fetch_checkpoint=fetch_checkpoint,
+    )
+    review = merged.get("expectation_review")
+    if not isinstance(review, dict):
+        return {"available": False, "reason": "no_valid_theses"}
+    payload = dict(review)
+    payload["scope"] = scope
+    if merged.get("as_of"):
+        payload["as_of"] = merged["as_of"]
+    if merged.get("age_seconds") is not None:
+        payload["age_seconds"] = merged["age_seconds"]
+    return payload

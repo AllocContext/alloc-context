@@ -12,6 +12,7 @@ from alloccontext.mcp.handlers import (
     get_context_at,
     get_context_bundle,
     get_context_delta,
+    get_expectation_review,
     get_market_context,
     get_rebalance_plan,
 )
@@ -56,6 +57,43 @@ def test_get_context_bundle_contract(conn, config) -> None:
     conn.commit()
     payload = get_context_bundle(conn, config, scope="daily", freshness="cached")
     validate_tool_response("get_context_bundle", payload)
+
+
+def test_get_expectation_review_contract(conn, config) -> None:
+    import json
+
+    from alloccontext.rollup.context import build_context_bundle
+
+    baseline = build_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        rollup=config.rollup,
+        save_snapshot=True,
+    )
+    conn.execute(
+        """
+        INSERT INTO context_snapshots(scope, as_of, context_json)
+        VALUES (?, ?, ?)
+        ON CONFLICT DO NOTHING
+        """,
+        ("daily", baseline["as_of"], json.dumps(baseline)),
+    )
+    conn.commit()
+    payload = get_expectation_review(
+        conn,
+        config,
+        scope="daily",
+        freshness="cached",
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": baseline["as_of"],
+                "claims": [{"type": "MARKET_SENTIMENT", "direction": "IMPROVING"}],
+            }
+        ],
+    )
+    validate_tool_response("get_expectation_review", payload)
 
 
 def test_get_market_context_contract(conn, config) -> None:

@@ -7,6 +7,7 @@ from alloccontext.mcp.bridge_portfolio import (
     attach_assets_scope,
     attach_bridge_expectation_review,
     bridge_upstream_ready,
+    build_bridge_expectation_review_payload,
     build_upstream_context_args,
     default_bridge_app_config,
     fetch_user_portfolio,
@@ -214,6 +215,67 @@ def create_bridge_server(user: UserConfig):
             ),
         )
         return attach_assets_scope(merged, assets_scope)
+
+    @mcp.tool(**_bridge_tool_meta("get_expectation_review"))
+    def get_expectation_review(
+        scope: str = "daily",
+        freshness: str = "cached",
+        theses: list[dict[str, Any]] | None = None,
+        target_pct: dict[str, float] | None = None,
+        band: float | None = None,
+        expectation_replay: bool = False,
+    ) -> dict[str, Any]:
+        validated_scope = handlers.validate_scope(scope)
+        validated_freshness = handlers.validate_freshness(freshness)
+        effective_theses = _effective_theses(user, theses)
+        if not effective_theses:
+            return {"available": False, "reason": "no_theses_supplied"}
+        if not bridge_upstream_ready(user):
+            return upstream_payment_required()
+        portfolio = fetch_user_portfolio(
+            user,
+            bridge_config,
+            target_pct=_effective_target_pct(user, target_pct),
+            band=_effective_band(user, band),
+        )
+        effective_assets, _assets_scope = resolve_bridge_assets(
+            user,
+            bridge_config,
+            None,
+            portfolio=portfolio,
+        )
+        bundle = call_upstream_tool(
+            user,
+            "get_context_bundle",
+            build_upstream_context_args(
+                scope=validated_scope,
+                freshness=validated_freshness,
+                assets=effective_assets,
+            ),
+        )
+        if bundle.get("available") is False:
+            return bundle
+        merged = merge_portfolio_into_bundle(bundle, portfolio)
+        merged = strip_upstream_allocation_regime(merged)
+        return build_bridge_expectation_review_payload(
+            user=user,
+            bundle=merged,
+            scope=validated_scope,
+            theses=effective_theses,
+            target_pct=_effective_target_pct(user, target_pct),
+            band=_effective_band(user, band),
+            fetch_baseline=lambda **kwargs: _fetch_upstream_baseline(
+                user,
+                scope=kwargs["scope"],
+                recorded_at=kwargs["recorded_at"],
+            ),
+            expectation_replay=expectation_replay,
+            fetch_checkpoint=lambda **kwargs: _fetch_upstream_checkpoint(
+                user,
+                scope=kwargs["scope"],
+                as_of=kwargs["as_of"],
+            ),
+        )
 
     @mcp.tool(**_bridge_tool_meta("get_portfolio_state"))
     def get_portfolio_state(
