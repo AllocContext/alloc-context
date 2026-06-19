@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from alloccontext.rollup.shift_classification import split_notable_shifts
+
 
 def _allocation_drift_lines(
     prior: dict[str, Any],
@@ -54,10 +56,14 @@ def compare_context_bundles(
         if abs(nav_change) >= 100 and not any("Portfolio Δ" in line for line in notable):
             notable.append(f"Portfolio Δ ${nav_change:+.2f} since prior snapshot")
 
+    market_shifts, sleeve_shifts = split_notable_shifts(notable)
+
     return {
         "prior_as_of": prior_as_of,
         "current_as_of": current_as_of,
         "notable_shifts": notable,
+        "market_shifts": market_shifts,
+        "sleeve_shifts": sleeve_shifts,
         "portfolio_nav_change_usd": nav_change,
         "fear_greed_change": (
             int(current_fg) - int(prior_fg)

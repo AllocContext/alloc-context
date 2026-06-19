@@ -96,6 +96,8 @@ def test_compare_context_bundles_fear_greed_shift() -> None:
     }
     diff = compare_context_bundles(prior, current)
     assert any("F&G" in line for line in diff["notable_shifts"])
+    assert any("BTC allocation" in line for line in diff["sleeve_shifts"])
+    assert not any("allocation" in line for line in diff["market_shifts"])
     assert diff["fear_greed_change"] == -10
 
 

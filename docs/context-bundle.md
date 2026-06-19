@@ -111,24 +111,24 @@ current labels.
 
 ## regime
 
-Deterministic agent-facing hints synthesized from optional allocation analysis,
-sentiment, and delta. No LLM.
+Deterministic agent-facing hints from **external** sentiment, volatility,
+and market-wide delta shifts. Sleeve allocation drift and held-alt moves live
+on `allocation_analysis` / `portfolio.material_moves` — not regime hints.
 
 | Field | Meaning |
 |-------|---------|
-| `summary` | Short combined hint line |
-| `hints[]` | Structured `{kind, code, text}` entries |
-| `allocation` | Present when analysis ran (`hint`, `outside_band`, `max_drift`, `band`) |
+| `summary` | Short combined hint line (external signals only) |
+| `hints[]` | Structured `{kind, code, text}` — sentiment, volatility, spot_prediction, delta (market shifts only) |
+| `allocation` | Deprecated sleeve mirror when analysis ran; use `allocation_analysis` |
 | `volatility` | Kalshi short-horizon volatility regime when available |
 | `sentiment` | Fear & Greed and Kalshi tape fields |
-| `comparison` | `prior_as_of`, `notable_shifts` (adjacent snapshot); `history[]` and
-  `posture` (7d/30d lookbacks vs saved snapshots) |
+| `comparison` | `prior_as_of`; `market_shifts` / `sleeve_shifts` (adjacent snapshot);
+  `notable_shifts` mirrors `market_shifts`; `history[]` and `posture` (7d/30d) |
 | `risk_off` | External-only market risk score (Fear & Greed in v1); not portfolio
   cash or rebalance hints |
-| `hints[].kind=holding_move` | Large alt weight (≥10% NAV) + move (≥5% 24h or since prior) |
 
-Alt holding hints use `market.assets.{symbol}.change_pct.24h` or delta
-`market.{symbol}_change_pct_since_prior` when both snapshots had marks.
+Held-alt material moves: `portfolio.material_moves[]` when weight ≥10% and
+move ≥5% (24h or since prior).
 
 ## market
 

@@ -10,11 +10,11 @@ from alloccontext.rollup.regime_history import derive_regime_posture
 _PRICE_MOVE_THRESHOLD_PCT = 2.0
 _RELATIVE_MOVE_THRESHOLD_PCT = 2.0
 _FEAR_GREED_SENTIMENT_THRESHOLD = 5
-_RISK_OFF_SCORE_DELTA = 15
+_RISK_APPETITE_FG_THRESHOLD = 5
+_RISK_APPETITE_ETF_FLOW_THRESHOLD_USD = 50_000_000.0
 _ALLOCATION_EXCESS_THRESHOLD = 0.005
 
 _VOLATILITY_ORDINAL = {"low": 0, "medium": 1, "high": 2}
-_RISK_OFF_ORDINAL = {"low": 0, "moderate": 1, "high": 2}
 
 _VALID_REGIME_POSTURES = frozenset({"RISK_ON", "NEUTRAL", "RISK_OFF"})
 _VALID_REGIME_TRAJECTORIES = frozenset({"IMPROVING", "STABLE", "DETERIORATING"})
@@ -354,12 +354,6 @@ def _score_volatility_regime(
     return result
 
 
-def _risk_off_block(context: dict[str, Any]) -> dict[str, Any]:
-    regime = context.get("regime") or {}
-    risk_off = regime.get("risk_off")
-    return risk_off if isinstance(risk_off, dict) else {}
-
-
 def _posture_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
     regime = bundle.get("regime") if isinstance(bundle.get("regime"), dict) else {}
     comparison = (
@@ -481,6 +475,22 @@ def _score_regime_expectation(
     return result
 
 
+def _etf_combined_flow_7d(context: dict[str, Any]) -> float | None:
+    macro = context.get("macro") if isinstance(context.get("macro"), dict) else {}
+    if not macro.get("available"):
+        return None
+    etf = macro.get("etf") if isinstance(macro.get("etf"), dict) else {}
+    total = 0.0
+    found = False
+    for key in ("btc", "eth"):
+        block = etf.get(key) if isinstance(etf.get(key), dict) else {}
+        raw = block.get("net_flow_usd_7d")
+        if raw is not None:
+            total += float(raw)
+            found = True
+    return total if found else None
+
+
 def _score_risk_appetite(
     *,
     thesis_id: str,
@@ -503,32 +513,58 @@ def _score_risk_appetite(
         result["reason"] = "invalid_direction"
         return result
 
-    prior = _risk_off_block(baseline)
-    current_block = _risk_off_block(current)
-    if not prior.get("available") and not current_block.get("available"):
+    prior_fg = _fear_greed_value(baseline)
+    current_fg = _fear_greed_value(current)
+    fg_change = (
+        current_fg - prior_fg if prior_fg is not None and current_fg is not None else None
+    )
+
+    prior_vol = _volatility_ordinal(baseline)
+    current_vol = _volatility_ordinal(current)
+    vol_delta = (
+        current_vol - prior_vol
+        if prior_vol is not None and current_vol is not None
+        else None
+    )
+
+    prior_etf = _etf_combined_flow_7d(baseline)
+    current_etf = _etf_combined_flow_7d(current)
+    etf_delta = (
+        current_etf - prior_etf if prior_etf is not None and current_etf is not None else None
+    )
+
+    if fg_change is None and vol_delta is None and etf_delta is None:
         result["reason"] = "sentiment_unavailable"
         return result
 
-    prior_level = str(prior.get("level") or "low")
-    current_level = str(current_block.get("level") or "low")
-    prior_ord = _RISK_OFF_ORDINAL.get(prior_level, 0)
-    current_ord = _RISK_OFF_ORDINAL.get(current_level, 0)
-    prior_score = int(prior.get("score") or 0)
-    current_score = int(current_block.get("score") or 0)
-    score_delta = current_score - prior_score
-    level_delta = current_ord - prior_ord
+    if fg_change is not None:
+        result["evidence"]["fear_greed_change"] = fg_change
+    if vol_delta is not None:
+        labels = ("low", "medium", "high")
+        result["evidence"]["baseline_volatility"] = labels[prior_vol]
+        result["evidence"]["current_volatility"] = labels[current_vol]
+        result["evidence"]["volatility_ordinal_delta"] = vol_delta
+    if etf_delta is not None:
+        result["evidence"]["etf_combined_flow_7d_delta_usd"] = round(etf_delta, 2)
 
-    result["evidence"].update(
-        {
-            "baseline_level": prior_level,
-            "current_level": current_level,
-            "level_delta": level_delta,
-            "score_delta": score_delta,
-        }
-    )
+    increasing = False
+    decreasing = False
+    if fg_change is not None:
+        if fg_change >= _RISK_APPETITE_FG_THRESHOLD:
+            increasing = True
+        if fg_change <= -_RISK_APPETITE_FG_THRESHOLD:
+            decreasing = True
+    if vol_delta is not None:
+        if vol_delta < 0:
+            increasing = True
+        if vol_delta > 0:
+            decreasing = True
+    if etf_delta is not None:
+        if etf_delta >= _RISK_APPETITE_ETF_FLOW_THRESHOLD_USD:
+            increasing = True
+        if etf_delta <= -_RISK_APPETITE_ETF_FLOW_THRESHOLD_USD:
+            decreasing = True
 
-    increasing = level_delta < 0 or score_delta <= -_RISK_OFF_SCORE_DELTA
-    decreasing = level_delta > 0 or score_delta >= _RISK_OFF_SCORE_DELTA
     if increasing and decreasing:
         result["reason"] = "within_noise_band"
         return result

@@ -239,8 +239,8 @@ def test_volatility_regime_decreasing_supported() -> None:
 
 
 def test_risk_appetite_increasing_supported() -> None:
-    baseline = _bundle(as_of="2026-06-01T00:00:00Z", btc=100.0, risk_level="high", risk_score=80)
-    current = _bundle(as_of="2026-06-02T00:00:00Z", btc=100.0, risk_level="low", risk_score=20)
+    baseline = _bundle(as_of="2026-06-01T00:00:00Z", btc=100.0, fg=30, vol="high")
+    current = _bundle(as_of="2026-06-02T00:00:00Z", btc=100.0, fg=55, vol="low")
     review = build_expectation_review(
         baseline_bundles={"t1": baseline},
         current_bundle=current,
@@ -512,14 +512,14 @@ def test_risk_appetite_conflicting_signals_within_noise() -> None:
     baseline = _bundle(
         as_of="2026-06-01T00:00:00Z",
         btc=100.0,
-        risk_level="high",
-        risk_score=20,
+        fg=40,
+        vol="low",
     )
     current = _bundle(
         as_of="2026-06-02T00:00:00Z",
         btc=100.0,
-        risk_level="low",
-        risk_score=80,
+        fg=55,
+        vol="high",
     )
     review = build_expectation_review(
         baseline_bundles={"t1": baseline},

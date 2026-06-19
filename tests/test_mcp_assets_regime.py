@@ -57,7 +57,7 @@ def test_filter_market_assets_subset() -> None:
     assert filtered["assets"]["btc"]["price_usd"] == 100.0
 
 
-def test_build_regime_context_includes_allocation_hint() -> None:
+def test_build_regime_context_allocation_not_in_hints() -> None:
     regime = build_regime_context(
         portfolio={
             "available": True,
@@ -76,7 +76,7 @@ def test_build_regime_context_includes_allocation_hint() -> None:
     )
     assert regime["available"] is False
     assert regime["allocation"]["hint"] == "within_band"
-    assert any(hint["kind"] == "allocation" for hint in regime["hints"])
+    assert not any(hint["kind"] == "allocation" for hint in regime["hints"])
 
 
 def test_build_regime_context_risk_off_ignores_portfolio_cash() -> None:

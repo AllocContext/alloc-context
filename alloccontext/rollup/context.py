@@ -11,6 +11,7 @@ from alloccontext.rollup.cluster_config import RollupConfig, load_rollup_config
 from alloccontext.ingest.alt_quote_registry import market_alt_symbols
 from alloccontext.rollup.delta import build_delta_context
 from alloccontext.rollup.macro import build_macro_context
+from alloccontext.rollup.material_moves import build_portfolio_material_moves
 from alloccontext.rollup.portfolio import build_market_context, build_portfolio_context
 from alloccontext.rollup.regime import build_regime_context
 from alloccontext.rollup.regime_history import attach_regime_history
@@ -100,6 +101,13 @@ def build_context_bundle(
         market=market,
         prior_context=prior_context,
     )
+    material_moves = build_portfolio_material_moves(
+        portfolio=portfolio,
+        market=market,
+        delta=delta,
+    )
+    if material_moves:
+        portfolio = {**portfolio, "material_moves": material_moves}
 
     bundle = {
         "bundle_id": f"{scope}:{now.isoformat()}",

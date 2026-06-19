@@ -109,6 +109,8 @@ def _horizon_entry(
     fg_then = _fear_greed_value(prior)
     fg_now = _fear_greed_value(current)
     diff = compare_context_bundles(prior, current)
+    market_shifts = list(diff.get("market_shifts") or [])
+    sleeve_shifts = list(diff.get("sleeve_shifts") or [])
 
     entry: dict[str, Any] = {
         "days": days,
@@ -126,7 +128,9 @@ def _horizon_entry(
             "change": (fg_now - fg_then if fg_then is not None and fg_now is not None else None),
         },
         "btc_change_pct": _btc_change_pct(prior, current),
-        "notable_shifts": list(diff.get("notable_shifts") or []),
+        "market_shifts": market_shifts,
+        "sleeve_shifts": sleeve_shifts,
+        "notable_shifts": market_shifts,
     }
     if score_then is not None and score_now is not None:
         entry["risk_off"]["score_delta"] = int(score_now) - int(score_then)
@@ -155,15 +159,24 @@ def derive_regime_posture(
     trajectory: RegimeTrajectory = "UNKNOWN"
     basis_days: int | None = None
     if horizon_7d and horizon_7d.get("available"):
+        basis_days = int(horizon_7d.get("days") or 7)
         score_delta = (horizon_7d.get("risk_off") or {}).get("score_delta")
         if isinstance(score_delta, int):
-            basis_days = int(horizon_7d.get("days") or 7)
             if score_delta >= _RISK_OFF_TRAJECTORY_DELTA:
                 trajectory = "DETERIORATING"
             elif score_delta <= -_RISK_OFF_TRAJECTORY_DELTA:
                 trajectory = "IMPROVING"
             else:
                 trajectory = "STABLE"
+        else:
+            fg_change = (horizon_7d.get("fear_greed") or {}).get("change")
+            if isinstance(fg_change, int):
+                if fg_change >= 5:
+                    trajectory = "IMPROVING"
+                elif fg_change <= -5:
+                    trajectory = "DETERIORATING"
+                else:
+                    trajectory = "STABLE"
 
     return {
         "available": label != "UNKNOWN",
