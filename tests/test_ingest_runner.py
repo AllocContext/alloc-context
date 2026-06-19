@@ -35,6 +35,9 @@ def test_run_ingest_fear_greed_and_kraken(config, conn, monkeypatch) -> None:
     ), patch(
         "alloccontext.ingest.runner.refresh_fred",
         return_value={"ok": True, "rows": 24},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_onchain_cycle",
+        return_value={"ok": True, "rows": 14},
     ):
         result = run_ingest(conn, config)
 
@@ -75,6 +78,9 @@ def test_run_ingest_optional_source_failure_still_ok(config, conn, monkeypatch) 
     ), patch(
         "alloccontext.ingest.runner.refresh_fred",
         return_value={"ok": False, "error": "HTTP 502", "rows": 256},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_onchain_cycle",
+        return_value={"ok": True, "rows": 14},
     ):
         result = run_ingest(conn, config)
 
@@ -110,6 +116,9 @@ def test_run_ingest_skips_snapshots_on_fatal_error(config, conn, monkeypatch) ->
     ), patch(
         "alloccontext.ingest.runner.refresh_fred",
         return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_onchain_cycle",
+        return_value={"ok": True, "rows": 14},
     ), patch(
         "alloccontext.rollup.context.build_context_bundle",
     ) as mock_bundle:
@@ -156,6 +165,9 @@ def test_run_ingest_optional_feed_failure_still_ok(config, conn, monkeypatch) ->
     ), patch(
         "alloccontext.ingest.runner.refresh_fred",
         return_value={"ok": True, "rows": 24},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_onchain_cycle",
+        return_value={"ok": True, "rows": 14},
     ):
         result = run_ingest(conn, config)
 

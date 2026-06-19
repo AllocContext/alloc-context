@@ -164,6 +164,9 @@ def test_run_ingest_saves_snapshots(config, conn, monkeypatch) -> None:
     ), patch(
         "alloccontext.ingest.runner.refresh_fred",
         return_value={"ok": True, "rows": 1},
+    ), patch(
+        "alloccontext.ingest.runner.refresh_onchain_cycle",
+        return_value={"ok": True, "rows": 14},
     ):
         from alloccontext.ingest.runner import run_ingest
 

@@ -31,6 +31,7 @@ ingest:
     coingecko: true
     coinmarketcap: true
     fred: true
+    onchain_cycle: true
   optional_sources:
     - fred
     - finnhub
@@ -38,6 +39,7 @@ ingest:
     - coingecko
     - coinmarketcap
     - sosovalue
+    - onchain_cycle
 
 # Primary spot exchange for portfolio + OHLC ingest.
 # Top-level `kraken:` block is still accepted when `exchanges` is omitted.
@@ -136,3 +138,26 @@ fred:
   series_catalog: config/fred-series.yaml
   lookback_days: 120
   timeout_seconds: 20
+
+# BTC supply profit/loss cycle (ADR-021). Default provider Bitview (no API key).
+onchain:
+  cycle:
+    provider: bitview
+    bitview_base_url: https://bitview.space
+    brk_base_url: null
+    brk_allowed_hosts: []
+    backfill_days: 3650
+    max_staleness_days: 3
+    timeout_seconds: 30
+
+regime:
+  cycle:
+    convergence_spread_pct: 5
+    capitulation_loss_floor_pct: 40
+    euphoria_profit_pct: 90
+    distribution_profit_pct: 80
+    distribution_profit_drop_pct: 3
+    recovery_loss_pct: 25
+    recovery_spread_widen_pct: 2
+    history_7d_min_days: 7
+    history_7d_max_days: 14

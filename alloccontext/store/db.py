@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -155,6 +155,20 @@ CREATE TABLE IF NOT EXISTS alt_quote_scope (
   symbol TEXT PRIMARY KEY,
   last_requested_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS onchain_cycle_daily (
+  as_of_date TEXT PRIMARY KEY,
+  supply_profit_pct REAL NOT NULL,
+  supply_loss_pct REAL NOT NULL,
+  supply_profit_btc REAL,
+  supply_loss_btc REAL,
+  btc_price_usd REAL,
+  source TEXT NOT NULL,
+  ingested_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_onchain_cycle_daily_date
+  ON onchain_cycle_daily(as_of_date DESC);
 """
 
 
@@ -221,6 +235,23 @@ def migrate(conn: sqlite3.Connection) -> None:
                   symbol TEXT PRIMARY KEY,
                   last_requested_at TEXT NOT NULL
                 );
+                """
+            )
+        if int(row["value"]) < 10:
+            conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS onchain_cycle_daily (
+                  as_of_date TEXT PRIMARY KEY,
+                  supply_profit_pct REAL NOT NULL,
+                  supply_loss_pct REAL NOT NULL,
+                  supply_profit_btc REAL,
+                  supply_loss_btc REAL,
+                  btc_price_usd REAL,
+                  source TEXT NOT NULL,
+                  ingested_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_onchain_cycle_daily_date
+                  ON onchain_cycle_daily(as_of_date DESC);
                 """
             )
         conn.execute(

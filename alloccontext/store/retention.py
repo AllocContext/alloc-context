@@ -59,6 +59,10 @@ def prune_to_horizon(conn: sqlite3.Connection, config) -> dict[str, int]:
         "DELETE FROM fred_observations WHERE obs_date < ?",
         (ts_cutoff[:10],),
     ).rowcount
+    deleted["onchain_cycle_daily"] = conn.execute(
+        "DELETE FROM onchain_cycle_daily WHERE as_of_date < ?",
+        (ts_cutoff[:10],),
+    ).rowcount
     deleted["ingest_runs"] = conn.execute(
         "DELETE FROM ingest_runs WHERE finished_at < ?",
         (ts_cutoff,),

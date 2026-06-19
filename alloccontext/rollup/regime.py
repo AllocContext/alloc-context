@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import sqlite3
+from datetime import datetime
 from typing import Any
 
+from alloccontext.rollup.cycle import build_cycle_context
 from alloccontext.rollup.shift_classification import split_notable_shifts
 
 
@@ -48,6 +51,9 @@ def build_regime_context(
     delta: dict[str, Any],
     market: dict[str, Any] | None = None,
     prior_as_of: str | None,
+    conn: sqlite3.Connection | None = None,
+    config=None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     hints: list[dict[str, str]] = []
     allocation = _allocation_block(portfolio)
@@ -127,6 +133,10 @@ def build_regime_context(
     summary_parts = [hint["text"] for hint in hints[:3]]
     summary = " ".join(summary_parts) if summary_parts else None
     risk_off = _build_risk_off(sentiment=sentiment)
+    if conn is not None and config is not None:
+        cycle = build_cycle_context(conn, config, now=now)
+    else:
+        cycle = {"available": False, "reason": "insufficient_history"}
 
     return {
         "available": available,
@@ -137,6 +147,7 @@ def build_regime_context(
         "hints": hints,
         "summary": summary,
         "risk_off": risk_off,
+        "cycle": cycle,
     }
 
 
