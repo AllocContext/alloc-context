@@ -90,14 +90,23 @@ def parse_bitview_bulk(payload: list[dict[str, Any]]) -> list[dict[str, Any]]:
     loss_values = list(loss_share.get("data") or [])
     profit_btc_values = list(profit_btc.get("data") or [])
     loss_btc_values = list(loss_btc.get("data") or [])
-    length = end - start + 1
-    if not all(len(values) == length for values in (
-        profit_values,
-        loss_values,
-        profit_btc_values,
-        loss_btc_values,
-    )):
+    lengths = [
+        len(profit_values),
+        len(loss_values),
+        len(profit_btc_values),
+        len(loss_btc_values),
+    ]
+    if not lengths or min(lengths) == 0:
+        raise ValueError("empty bitview bulk series")
+    length = min(lengths)
+    if len(set(lengths)) != 1:
         raise ValueError("bitview bulk series length mismatch")
+    expected = end - start + 1
+    if length not in {expected, expected - 1}:
+        raise ValueError(
+            f"bitview bulk row count {length} outside expected range for "
+            f"start={start} end={end}"
+        )
 
     rows: list[dict[str, Any]] = []
     for offset in range(length):
