@@ -8,13 +8,13 @@
     "url": "https://github.com/AllocContext/alloc-context",
     "source": "github"
   },
-  "version": "0.2.14",
+  "version": "0.2.15",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "alloc-context",
-      "version": "0.2.14",
+      "version": "0.2.15",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
