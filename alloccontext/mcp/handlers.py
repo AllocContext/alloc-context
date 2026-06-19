@@ -459,7 +459,6 @@ def _attach_regime(
         delta=bundle.get("delta") or {},
         market=bundle.get("market") or {},
         prior_as_of=bundle.get("prior_as_of"),
-        max_cash_risk_off=config.portfolio.max_cash_risk_off,
     )
     if conn is not None:
         bundle = attach_regime_history(conn, scope=scope, bundle=bundle)

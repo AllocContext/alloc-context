@@ -123,6 +123,8 @@ sentiment, and delta. No LLM.
 | `sentiment` | Fear & Greed and Kalshi tape fields |
 | `comparison` | `prior_as_of`, `notable_shifts` (adjacent snapshot); `history[]` and
   `posture` (7d/30d lookbacks vs saved snapshots) |
+| `risk_off` | External-only market risk score (Fear & Greed in v1); not portfolio
+  cash or rebalance hints |
 | `hints[].kind=holding_move` | Large alt weight (≥10% NAV) + move (≥5% 24h or since prior) |
 
 Alt holding hints use `market.assets.{symbol}.change_pct.24h` or delta
