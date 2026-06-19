@@ -68,8 +68,9 @@ OptionalTheses = Annotated[
     Field(
         description=(
             "Optional local thesis entries (id, recorded_at, claims[]) for "
-            "deterministic expectation_review scoring. Pass-through only — "
-            "nothing stored."
+            "deterministic expectation_review scoring. Claim types include "
+            "REGIME_EXPECTATION (posture + optional trajectory). Pass-through "
+            "only — nothing stored."
         ),
     ),
 ]

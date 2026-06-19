@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from alloccontext.rollup.expectation_review import (
+    REGIME_POSTURE_VALUES,
+    REGIME_TRAJECTORY_VALUES,
+    V0_CLAIM_TYPES,
+)
+
 READ_ONLY_ANNOTATIONS: dict[str, bool] = {
     "readOnlyHint": True,
     "destructiveHint": False,
@@ -122,7 +128,8 @@ THESES_SCHEMA: dict[str, Any] = {
     "type": "array",
     "description": (
         "Optional local thesis entries for expectation_review (pass-through; "
-        "nothing stored). Each entry requires id, recorded_at, and claims[]."
+        "nothing stored). Each entry requires id, recorded_at, and claims[]. "
+        f"Supported claim types: {', '.join(sorted(V0_CLAIM_TYPES))}."
     ),
     "items": {
         "type": "object",
@@ -147,19 +154,49 @@ THESES_SCHEMA: dict[str, Any] = {
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "Claim type (e.g. RELATIVE_STRENGTH).",
+                            "enum": sorted(V0_CLAIM_TYPES),
+                            "description": (
+                                "Claim type. Asset-scoped: PRICE_STRENGTH, "
+                                "RELATIVE_STRENGTH, ALLOCATION_FIT (BTC/ETH/CASH). "
+                                "Market-wide: MARKET_SENTIMENT, VOLATILITY_REGIME, "
+                                "RISK_APPETITE, REGIME_EXPECTATION."
+                            ),
                         },
                         "asset": {
                             "type": "string",
-                            "description": "Held asset symbol for asset-scoped claims.",
+                            "description": (
+                                "Held asset symbol for PRICE_STRENGTH, "
+                                "RELATIVE_STRENGTH, or ALLOCATION_FIT."
+                            ),
                         },
                         "benchmark": {
                             "type": "string",
-                            "description": "Benchmark symbol for RELATIVE_STRENGTH.",
+                            "description": "Benchmark symbol for RELATIVE_STRENGTH (default BTC).",
                         },
                         "direction": {
                             "type": "string",
-                            "description": "Expected direction (UP/DOWN, IMPROVING, etc.).",
+                            "description": (
+                                "Expected direction: PRICE_STRENGTH (UP/DOWN); "
+                                "MARKET_SENTIMENT (IMPROVING/WEAKENING); "
+                                "VOLATILITY_REGIME (DECREASING/INCREASING); "
+                                "RISK_APPETITE (INCREASING/DECREASING)."
+                            ),
+                        },
+                        "posture": {
+                            "type": "string",
+                            "enum": list(REGIME_POSTURE_VALUES),
+                            "description": (
+                                "Required for REGIME_EXPECTATION — expected "
+                                "ADR-015 posture label (regime.comparison.posture)."
+                            ),
+                        },
+                        "trajectory": {
+                            "type": "string",
+                            "enum": list(REGIME_TRAJECTORY_VALUES),
+                            "description": (
+                                "Optional for REGIME_EXPECTATION — expected 7d "
+                                "posture trajectory (IMPROVING/STABLE/DETERIORATING)."
+                            ),
                         },
                     },
                     "required": ["type"],
