@@ -30,6 +30,9 @@ def test_run_ingest_fatal_when_kraken_primary_missing_credentials(
         "alloccontext.ingest.runner.refresh_fred",
         return_value={"ok": True, "rows": 1},
     ), patch(
+        "alloccontext.ingest.runner.refresh_onchain_cycle",
+        return_value={"ok": True, "rows": 14},
+    ), patch(
         "alloccontext.ingest.runner.refresh_coinbase",
         return_value={"ok": True, "rows": 0, "skipped": True, "reason": "exchange_disabled"},
     ):

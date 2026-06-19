@@ -126,6 +126,9 @@ def build_context_bundle(
             delta=delta,
             market=market,
             prior_as_of=prior_as_of,
+            conn=conn,
+            config=config,
+            now=now,
         ),
     }
     if save_snapshot:

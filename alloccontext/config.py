@@ -60,6 +60,7 @@ DEFAULT_OPTIONAL_INGEST_SOURCES = frozenset(
         "coingecko",
         "coinmarketcap",
         "sosovalue",
+        "onchain_cycle",
     }
 )
 
@@ -180,6 +181,37 @@ class CoinmarketcapConfig:
 
 
 @dataclass(frozen=True)
+class OnchainCycleConfig:
+    provider: str
+    bitview_base_url: str
+    brk_base_url: str | None
+    backfill_days: int
+    max_staleness_days: int
+    timeout_seconds: float
+
+
+@dataclass(frozen=True)
+class RegimeCycleConfig:
+    convergence_spread_pct: float
+    capitulation_loss_floor_pct: float
+    euphoria_profit_pct: float
+    distribution_profit_pct: float
+    distribution_profit_drop_pct: float
+    recovery_loss_pct: float
+    recovery_spread_widen_pct: float
+
+
+@dataclass(frozen=True)
+class OnchainConfig:
+    cycle: OnchainCycleConfig
+
+
+@dataclass(frozen=True)
+class RegimeConfig:
+    cycle: RegimeCycleConfig
+
+
+@dataclass(frozen=True)
 class AppConfig:
     paths: PathsConfig
     horizon: HorizonConfig
@@ -195,6 +227,8 @@ class AppConfig:
     coingecko: CoingeckoConfig
     coinmarketcap: CoinmarketcapConfig
     fred: FredConfig
+    onchain: OnchainConfig
+    regime: RegimeConfig
 
 
 def _path(value: str | None, fallback: str) -> Path:
@@ -334,6 +368,8 @@ def load_config(path: str | Path | None = None) -> AppConfig:
     coingecko_raw = raw.get("coingecko") or {}
     coinmarketcap_raw = raw.get("coinmarketcap") or {}
     fred_raw = raw.get("fred") or {}
+    onchain_raw = raw.get("onchain") or {}
+    regime_raw = raw.get("regime") or {}
 
     db_env = os.environ.get("ALLOC_CONTEXT_DB", "").strip()
     db = _path(db_env or None, str(paths_raw.get("db") or "state/alloccontext.db"))
@@ -447,5 +483,50 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             ),
             lookback_days=int(fred_raw.get("lookback_days") or 120),
             timeout_seconds=float(fred_raw.get("timeout_seconds") or 20.0),
+        ),
+        onchain=_load_onchain_config(onchain_raw),
+        regime=_load_regime_config(regime_raw),
+    )
+
+
+def _load_onchain_config(raw: dict[str, Any]) -> OnchainConfig:
+    cycle_raw = raw.get("cycle") or {}
+    brk_base = cycle_raw.get("brk_base_url")
+    provider = str(cycle_raw.get("provider") or "bitview").strip().lower()
+    if provider not in {"bitview", "brk", "glassnode"}:
+        raise ValueError(f"unsupported onchain.cycle.provider: {provider}")
+    return OnchainConfig(
+        cycle=OnchainCycleConfig(
+            provider=provider,
+            bitview_base_url=str(
+                cycle_raw.get("bitview_base_url") or "https://bitview.space"
+            ).rstrip("/"),
+            brk_base_url=str(brk_base).rstrip("/") if brk_base else None,
+            backfill_days=int(cycle_raw.get("backfill_days") or 3650),
+            max_staleness_days=int(cycle_raw.get("max_staleness_days") or 3),
+            timeout_seconds=float(cycle_raw.get("timeout_seconds") or 30.0),
+        ),
+    )
+
+
+def _load_regime_config(raw: dict[str, Any]) -> RegimeConfig:
+    cycle_raw = raw.get("cycle") or {}
+    return RegimeConfig(
+        cycle=RegimeCycleConfig(
+            convergence_spread_pct=float(cycle_raw.get("convergence_spread_pct") or 5),
+            capitulation_loss_floor_pct=float(
+                cycle_raw.get("capitulation_loss_floor_pct") or 40
+            ),
+            euphoria_profit_pct=float(cycle_raw.get("euphoria_profit_pct") or 90),
+            distribution_profit_pct=float(
+                cycle_raw.get("distribution_profit_pct") or 80
+            ),
+            distribution_profit_drop_pct=float(
+                cycle_raw.get("distribution_profit_drop_pct") or 3
+            ),
+            recovery_loss_pct=float(cycle_raw.get("recovery_loss_pct") or 25),
+            recovery_spread_widen_pct=float(
+                cycle_raw.get("recovery_spread_widen_pct") or 2
+            ),
         ),
     )

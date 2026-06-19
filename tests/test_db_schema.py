@@ -96,3 +96,44 @@ def test_schema_v8_adds_alt_quote_tables() -> None:
     assert int(version) == SCHEMA_VERSION
     assert alt_snapshots is not None
     assert alt_scope is not None
+
+
+def _v9_db(path: Path) -> None:
+    conn = sqlite3.connect(path)
+    conn.executescript(
+        """
+        CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        INSERT INTO schema_meta VALUES ('version', '9');
+        CREATE TABLE alt_quote_snapshots (
+          symbol TEXT NOT NULL,
+          snapshot_ts TEXT NOT NULL,
+          price_usd REAL NOT NULL,
+          change_pct_24h REAL,
+          source TEXT NOT NULL,
+          fetched_at TEXT NOT NULL,
+          PRIMARY KEY (symbol, snapshot_ts)
+        );
+        CREATE TABLE alt_quote_scope (
+          symbol TEXT PRIMARY KEY,
+          last_requested_at TEXT NOT NULL
+        );
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_schema_v9_adds_onchain_cycle_daily() -> None:
+    db_path = Path(tempfile.mkdtemp()) / "v9.db"
+    _v9_db(db_path)
+
+    conn = connect(db_path)
+    version = conn.execute(
+        "SELECT value FROM schema_meta WHERE key = 'version'"
+    ).fetchone()[0]
+    cycle = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'onchain_cycle_daily'"
+    ).fetchone()
+
+    assert int(version) == SCHEMA_VERSION
+    assert cycle is not None

@@ -12,6 +12,7 @@ from alloccontext.ingest.outcome import (
 from alloccontext.ingest.coingecko import refresh_coingecko
 from alloccontext.ingest.coinmarketcap import refresh_coinmarketcap
 from alloccontext.ingest.etf_flows import refresh_etf_flows
+from alloccontext.ingest.onchain_cycle import refresh_onchain_cycle
 from alloccontext.ingest.fred import refresh_fred
 from alloccontext.ingest.fear_greed import refresh_fear_greed
 from alloccontext.ingest.kalshi import refresh_kalshi
@@ -47,6 +48,8 @@ def _run_source(
         result = refresh_coinmarketcap(conn, config)
     elif source == "fred":
         result = refresh_fred(conn, config)
+    elif source == "onchain_cycle":
+        result = refresh_onchain_cycle(conn, config)
     else:
         result = {"ok": False, "rows": 0, "error": f"unknown_source:{source}"}
 

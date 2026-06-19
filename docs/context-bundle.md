@@ -126,6 +126,7 @@ on `allocation_analysis` / `portfolio.material_moves` — not regime hints.
   `notable_shifts` mirrors `market_shifts`; `history[]` and `posture` (7d/30d) |
 | `risk_off` | External-only market risk score (Fear & Greed in v1); not portfolio
   cash or rebalance hints |
+| `cycle` | Slow-cycle BTC supply profit/loss phase (`docs/onchain-cycle.md`); optional ingest; does not feed `risk_off` |
 
 Held-alt material moves: `portfolio.material_moves[]` when weight ≥10% and
 move ≥5% (24h or since prior).
