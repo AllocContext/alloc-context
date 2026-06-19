@@ -16,6 +16,7 @@ from alloccontext.mcp.bridge_portfolio import (
     resolve_bridge_assets,
     strip_upstream_allocation_regime,
 )
+from alloccontext.mcp.expectation_review_tool import envelope_expectation_review
 from alloccontext.mcp.setup import allocation_not_configured, upstream_payment_required
 from alloccontext.mcp.upstream import call_upstream_tool
 from alloccontext.user_config import (
@@ -229,7 +230,11 @@ def create_bridge_server(user: UserConfig):
         validated_freshness = handlers.validate_freshness(freshness)
         effective_theses = _effective_theses(user, theses)
         if not effective_theses:
-            return {"available": False, "reason": "no_theses_supplied"}
+            return envelope_expectation_review(
+                {"available": False, "reason": "no_theses_supplied"},
+                scope=validated_scope,
+                freshness=validated_freshness,
+            )
         if not bridge_upstream_ready(user):
             return upstream_payment_required()
         portfolio = fetch_user_portfolio(
@@ -254,13 +259,19 @@ def create_bridge_server(user: UserConfig):
             ),
         )
         if bundle.get("available") is False:
-            return bundle
+            return envelope_expectation_review(
+                bundle,
+                scope=validated_scope,
+                freshness=validated_freshness,
+                source=bundle,
+            )
         merged = merge_portfolio_into_bundle(bundle, portfolio)
         merged = strip_upstream_allocation_regime(merged)
         return build_bridge_expectation_review_payload(
             user=user,
             bundle=merged,
             scope=validated_scope,
+            freshness=validated_freshness,
             theses=effective_theses,
             target_pct=_effective_target_pct(user, target_pct),
             band=_effective_band(user, band),

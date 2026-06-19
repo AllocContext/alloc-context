@@ -761,8 +761,45 @@ def test_get_expectation_review_tool(conn, config) -> None:
 
 
 def test_get_expectation_review_requires_theses(conn, config) -> None:
+    from alloccontext.mcp.contracts import validate_tool_response
     from alloccontext.mcp.handlers import get_expectation_review
 
     payload = get_expectation_review(conn, config, theses=None)
     assert payload["available"] is False
     assert payload["reason"] == "no_theses_supplied"
+    validate_tool_response("get_expectation_review", payload)
+
+
+def test_get_expectation_review_live_fail_closed_envelope(
+    conn, config, monkeypatch
+) -> None:
+    from alloccontext.mcp.contracts import validate_tool_response
+    from alloccontext.mcp.handlers import get_expectation_review
+
+    monkeypatch.setattr(
+        "alloccontext.ingest.runner.run_ingest",
+        lambda _c, _cfg: {
+            "ok": False,
+            "errors": {"kraken": "missing_kraken_credentials"},
+            "counts": {},
+            "fatal_errors": {"kraken": "missing_kraken_credentials"},
+        },
+    )
+    payload = get_expectation_review(
+        conn,
+        config,
+        scope="daily",
+        freshness="live",
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T12:00:00+00:00",
+                "claims": [{"type": "MARKET_SENTIMENT", "direction": "IMPROVING"}],
+            }
+        ],
+    )
+    assert payload["available"] is False
+    assert payload["reason"] == "live_ingest_failed"
+    assert payload["scope"] == "daily"
+    assert payload["freshness"] == "live"
+    validate_tool_response("get_expectation_review", payload)

@@ -25,6 +25,7 @@ from alloccontext.mcp.assets import (
     filter_market_assets,
     resolve_view_assets,
 )
+from alloccontext.mcp.expectation_review_tool import envelope_expectation_review
 from alloccontext.mcp.staleness import with_data_staleness, with_staleness
 from alloccontext.mcp.validation import (
     MAX_ALLOCATION_BAND_SCENARIOS,
@@ -748,7 +749,12 @@ def get_expectation_review(
         expectation_replay=expectation_replay,
     )
     if bundle.get("available") is False:
-        return bundle
+        return envelope_expectation_review(
+            bundle,
+            scope=scope,
+            freshness=freshness,
+            source=bundle,
+        )
 
     review = bundle.get("expectation_review")
     if not isinstance(review, dict):
