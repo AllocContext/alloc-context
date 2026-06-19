@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from alloccontext.constants import ALLOCATION_ASSETS
 from alloccontext.ingest.asset_registry import normalize_canonical_symbol
+from alloccontext.rollup.allocation_analysis import weights_from_holdings
 from alloccontext.rollup.delta import asset_price_usd, pct_change_since
 from alloccontext.rollup.regime_history import derive_regime_posture
 
@@ -542,6 +542,46 @@ def _score_risk_appetite(
     return result
 
 
+def _portfolio_weight_pct(portfolio: dict[str, Any], asset: str) -> float | None:
+    weights = weights_from_holdings(portfolio.get("holdings") or [])
+    if not weights:
+        allocation = portfolio.get("allocation_pct")
+        if isinstance(allocation, dict):
+            weights = {
+                str(key).strip().upper(): float(value)
+                for key, value in allocation.items()
+                if str(key).strip()
+            }
+    if asset not in weights:
+        return None
+    return float(weights[asset])
+
+
+def _resolve_allocation_fit_target_band(
+    claim: dict[str, Any],
+    *,
+    target_pct: dict[str, float] | None,
+    band: float | None,
+    asset: str,
+) -> tuple[float | None, float | None, str | None]:
+    raw_target = claim.get("target_pct")
+    if raw_target is not None:
+        resolved_target = float(raw_target)
+    elif target_pct and asset in target_pct:
+        resolved_target = float(target_pct[asset])
+    else:
+        return None, None, "missing_target"
+
+    raw_band = claim.get("band")
+    if raw_band is not None:
+        resolved_band = float(raw_band)
+    elif band is not None:
+        resolved_band = float(band)
+    else:
+        return None, None, "missing_band"
+    return resolved_target, resolved_band, None
+
+
 def _score_allocation_fit(
     *,
     thesis_id: str,
@@ -560,37 +600,44 @@ def _score_allocation_fit(
         baseline_as_of=baseline_as_of,
     )
 
-    if asset and asset not in ALLOCATION_ASSETS:
-        result["reason"] = "unsupported_asset"
-        return result
-    if target_pct is None:
-        result["reason"] = "missing_target"
-        return result
-    if band is None:
-        result["reason"] = "missing_band"
+    if not asset:
+        result["reason"] = "asset_required"
         return result
 
-    analysis = current.get("allocation_analysis")
-    if not isinstance(analysis, dict) or not analysis.get("available"):
+    resolved_target, resolved_band, reason = _resolve_allocation_fit_target_band(
+        claim,
+        target_pct=target_pct,
+        band=band,
+        asset=asset,
+    )
+    if reason:
+        result["reason"] = reason
+        return result
+
+    portfolio = current.get("portfolio") or {}
+    if not portfolio.get("available"):
         result["reason"] = "missing_quote"
         return result
 
-    outside_band = bool(analysis.get("outside_band"))
-    max_drift = float(analysis.get("max_drift") or 0)
-    band_width = float(analysis.get("band") or band)
-    excess = round(max_drift - band_width, 4) if outside_band else 0.0
-    drift = analysis.get("drift") if isinstance(analysis.get("drift"), dict) else {}
+    current_weight = _portfolio_weight_pct(portfolio, asset)
+    if current_weight is None:
+        result["reason"] = "missing_quote"
+        return result
+
+    drift = round(current_weight - resolved_target, 4)
+    abs_drift = abs(drift)
+    outside_band = abs_drift > resolved_band
+    excess = round(abs_drift - resolved_band, 4) if outside_band else 0.0
 
     result["evidence"].update(
         {
+            "weight_pct": current_weight,
+            "target_pct": resolved_target,
+            "band": resolved_band,
+            "drift": drift,
             "outside_band": outside_band,
-            "max_drift": max_drift,
-            "band": band_width,
-            "excess_drift": excess,
         }
     )
-    if asset:
-        result["evidence"]["drift"] = drift.get(asset)
 
     if not outside_band:
         result["status"] = "supported"

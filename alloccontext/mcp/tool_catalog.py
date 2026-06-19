@@ -65,14 +65,39 @@ def pct_key_properties(*, role: str) -> dict[str, dict[str, Any]]:
     }
 
 
+def symbol_weight_map_schema(*, role: str, required: bool = True) -> dict[str, Any]:
+    schema: dict[str, Any] = {
+        "type": "object",
+        "description": (
+            f"{role} NAV weight fractions (0–1) keyed by symbol; up to 20 symbols; "
+            "values need not sum to 1."
+        ),
+        "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+        },
+        "properties": pct_key_properties(role=role),
+    }
+    if required:
+        schema["minProperties"] = 1
+    schema["maxProperties"] = 20
+    return schema
+
+
 def allocation_pct_schema(*, role: str = "Current") -> dict[str, Any]:
     return {
         "type": "object",
         "description": (
-            f"{role} BTC/ETH/CASH band weights; values typically sum to ~1."
+            f"{role} NAV weight fractions keyed by symbol (0–1); "
+            "cash/stables may use CASH."
         ),
+        "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+        },
         "properties": pct_key_properties(role=role),
-        "required": ["BTC", "ETH", "CASH"],
     }
 
 
@@ -100,24 +125,12 @@ ASSET_FILTER_SCHEMA: dict[str, Any] = {
     ),
 }
 
-TARGET_PCT_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "description": (
-        "Optional target weights; when set, attaches allocation_analysis "
-        "drift math to the response."
-    ),
-    "properties": pct_key_properties(role="Target"),
-    "required": ["BTC", "ETH", "CASH"],
-}
+TARGET_PCT_SCHEMA: dict[str, Any] = symbol_weight_map_schema(role="Target")
 
-OPTIONAL_TARGET_PCT_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "description": (
-        "Optional target weights; when set, attaches allocation_analysis "
-        "to the portfolio response."
-    ),
-    "properties": pct_key_properties(role="Target"),
-}
+OPTIONAL_TARGET_PCT_SCHEMA: dict[str, Any] = symbol_weight_map_schema(
+    role="Target",
+    required=False,
+)
 
 BAND_SCHEMA: dict[str, Any] = {
     "type": "number",
@@ -157,7 +170,7 @@ THESES_SCHEMA: dict[str, Any] = {
                             "enum": sorted(V0_CLAIM_TYPES),
                             "description": (
                                 "Claim type. Asset-scoped: PRICE_STRENGTH, "
-                                "RELATIVE_STRENGTH, ALLOCATION_FIT (BTC/ETH/CASH). "
+                                "RELATIVE_STRENGTH, ALLOCATION_FIT (requires asset). "
                                 "Market-wide: MARKET_SENTIMENT, VOLATILITY_REGIME, "
                                 "RISK_APPETITE, REGIME_EXPECTATION."
                             ),
@@ -343,13 +356,14 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "width when target_pct is supplied. Fail-closed on errors — no side effects."
     ),
     "check_allocation_band": (
-        "Read-only drift check: are BTC/ETH/CASH band weights outside the "
-        "drift band vs target_pct? Returns rebalance_hint (within_band, "
-        "consider_rebalance, etc.). Requires allocation_pct and target_pct; "
-        "band defaults to 0.15. Single-scenario only — use check_allocation_bands "
-        "for multiple targets in one call. Use get_rebalance_plan when you need "
-        "USD move lines, not just a hint. For bundle drift, pass target_pct on "
-        "get_context_bundle to attach allocation_analysis instead."
+        "Read-only drift check: are current symbol weights outside the drift "
+        "band vs target_pct? Evaluates every symbol in the target map. Returns "
+        "hint within_band or consider_rebalance. Requires allocation_pct and "
+        "target_pct; band defaults to 0.15. Single-scenario only — use "
+        "check_allocation_bands for multiple targets in one call. Use "
+        "get_rebalance_plan when you need USD move lines (BTC/ETH/CASH only). "
+        "For bundle drift, pass target_pct on get_context_bundle to attach "
+        "allocation_analysis instead."
     ),
     "get_context_at": (
         "Load a read-only ContextBundle snapshot from ingest history at a "

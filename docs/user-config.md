@@ -37,7 +37,8 @@ when a USD price is available; unpriced symbols appear in `holdings[]` with
 null marks and in `unrecognized[]`.
 
 Allocation drift and rebalance hints are **opt-in** via `target_allocation` in
-user config or `target_pct` on the tool call. When enabled, results appear in
+user config or `target_pct` on the tool call. Targets are a symbol→weight map
+(any held symbol; values need not sum to 1). When enabled, results appear in
 `allocation_analysis`, not mixed into default portfolio fields.
 
 ## Bridge market auto-scoping (Path A)

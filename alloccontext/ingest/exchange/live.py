@@ -12,7 +12,7 @@ from alloccontext.ingest.kraken_portfolio import (
 )
 from alloccontext.ingest.quote_resolver import quote_resolver_config_from_app
 from alloccontext.mcp.validation import validate_band, validate_target_pct
-from alloccontext.rollup.allocation_analysis import build_allocation_analysis
+from alloccontext.rollup.allocation_analysis import build_allocation_analysis_for_portfolio
 from alloccontext.rollup.portfolio_payload import portfolio_dict_from_snapshot
 
 SUPPORTED_EXCHANGES = frozenset({"kraken", "coinbase", "wallet"})
@@ -107,8 +107,8 @@ def portfolio_state_from_snapshot(
     )
     payload["snapshot_ts"] = snap.ts
     if target_pct is not None:
-        payload["allocation_analysis"] = build_allocation_analysis(
-            payload.get("allocation_pct") or {},
+        payload["allocation_analysis"] = build_allocation_analysis_for_portfolio(
+            payload,
             validate_target_pct(target_pct),
             validate_band(band if band is not None else 0.15),
         )

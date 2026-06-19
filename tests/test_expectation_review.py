@@ -147,17 +147,7 @@ def test_relative_strength_missing_baseline() -> None:
 
 
 def test_allocation_fit_within_band_supported() -> None:
-    current = _bundle(
-        as_of="2026-06-02T00:00:00Z",
-        btc=100.0,
-        allocation_analysis={
-            "available": True,
-            "outside_band": False,
-            "max_drift": 0.02,
-            "band": 0.05,
-            "drift": {"BTC": 0.02, "ETH": -0.02, "CASH": 0.0},
-        },
-    )
+    current = _bundle(as_of="2026-06-02T00:00:00Z", btc=100.0)
     review = build_expectation_review(
         baseline_bundles={"t1": current},
         current_bundle=current,
@@ -168,13 +158,14 @@ def test_allocation_fit_within_band_supported() -> None:
                 "claims": [{"type": "ALLOCATION_FIT", "asset": "BTC"}],
             }
         ],
-        target_pct={"BTC": 0.5, "ETH": 0.5, "CASH": 0.0},
+        target_pct={"BTC": 0.5, "ETH": 0.5},
         band=0.05,
     )
     assert review["claims"][0]["status"] == "supported"
+    assert review["claims"][0]["evidence"]["weight_pct"] == 0.5
 
 
-def test_allocation_fit_alt_unsupported() -> None:
+def test_allocation_fit_alt_missing_quote() -> None:
     current = _bundle(as_of="2026-06-02T00:00:00Z", btc=100.0)
     review = build_expectation_review(
         baseline_bundles={"t1": current},
@@ -186,10 +177,31 @@ def test_allocation_fit_alt_unsupported() -> None:
                 "claims": [{"type": "ALLOCATION_FIT", "asset": "ZEC"}],
             }
         ],
-        target_pct={"BTC": 0.5, "ETH": 0.5, "CASH": 0.0},
+        target_pct={"ZEC": 0.10, "BTC": 0.5, "ETH": 0.5},
         band=0.05,
     )
-    assert review["claims"][0]["reason"] == "unsupported_asset"
+    assert review["claims"][0]["reason"] == "missing_quote"
+
+
+def test_allocation_fit_alt_supported() -> None:
+    current = _bundle(
+        as_of="2026-06-02T00:00:00Z",
+        btc=100.0,
+        symbols=["ZEC", "BTC"],
+    )
+    review = build_expectation_review(
+        baseline_bundles={"t1": current},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "ALLOCATION_FIT", "asset": "ZEC", "target_pct": 0.5}],
+            }
+        ],
+        band=0.05,
+    )
+    assert review["claims"][0]["status"] == "supported"
 
 
 def test_market_sentiment_improving_supported() -> None:

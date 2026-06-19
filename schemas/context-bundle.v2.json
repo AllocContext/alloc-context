@@ -47,7 +47,11 @@
         "ETH": { "type": "number", "minimum": 0, "maximum": 1 },
         "CASH": { "type": "number", "minimum": 0, "maximum": 1 }
       },
-      "additionalProperties": false
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
     },
     "holding": {
       "type": "object",
@@ -100,16 +104,15 @@
         "rebalance_hint": {
           "enum": [
             "within_band",
-            "consider_deploy_cash",
-            "consider_trim_to_cash",
             "consider_rebalance"
           ]
         },
         "outside_band": { "type": "boolean" },
         "max_drift": { "type": "number" },
+        "max_drift_symbol": { "type": "string" },
         "band": { "type": "number", "minimum": 0, "maximum": 1 }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "expectationReview": {
       "type": "object",
