@@ -35,6 +35,9 @@ exchanges:
 #       - type: RELATIVE_STRENGTH
 #         asset: ZEC
 #         benchmark: BTC
+#       - type: REGIME_EXPECTATION
+#         posture: RISK_ON
+#         trajectory: STABLE   # optional
 
 # x402 payer — required for bridge → hosted upstream (Path A)
 x402:
