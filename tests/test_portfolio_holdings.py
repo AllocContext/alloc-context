@@ -176,3 +176,32 @@ def test_get_context_bundle_with_targets_attaches_analysis(conn, config) -> None
     )
     assert "allocation_analysis" in bundle
     assert bundle["allocation_analysis"]["rebalance_hint"]
+
+
+def test_get_context_bundle_use_config_allocation_attaches_analysis(conn, config) -> None:
+    import json
+
+    conn.execute(
+        """
+        INSERT INTO portfolio_snapshots(ts, nav_usd, cash_usd, allocation_json, raw_json)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            "2026-05-21T12:00:00+00:00",
+            10_000.0,
+            500.0,
+            json.dumps({"BTC": 0.7, "ETH": 0.25, "CASH": 0.05}),
+            "{}",
+        ),
+    )
+    conn.commit()
+    bundle = get_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        freshness="cached",
+        use_config_allocation=True,
+    )
+    assert "allocation_analysis" in bundle
+    assert bundle["allocation_analysis"]["target_allocation_pct"] == config.portfolio.target_allocations
+    assert bundle["allocation_analysis"]["band"] == config.portfolio.rebalance_band

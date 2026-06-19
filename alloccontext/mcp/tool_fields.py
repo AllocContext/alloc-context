@@ -142,6 +142,16 @@ ExpectationReplay = Annotated[
         ),
     ),
 ]
+UseConfigAllocation = Annotated[
+    bool,
+    Field(
+        description=(
+            "When true and target_pct/band are omitted, attach "
+            "allocation_analysis from host portfolio.target_allocations "
+            "and portfolio.rebalance_band."
+        ),
+    ),
+]
 PriorAsOf = Annotated[
     str,
     Field(description="ISO-8601 timestamp of the earlier snapshot (required)."),
