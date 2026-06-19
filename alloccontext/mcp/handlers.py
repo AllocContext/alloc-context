@@ -641,6 +641,7 @@ def get_context_bundle(
     band: float | None = None,
     theses: list[dict[str, Any]] | None = None,
     expectation_replay: bool = False,
+    use_config_allocation: bool = False,
 ) -> dict[str, Any]:
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
@@ -692,7 +693,7 @@ def get_context_bundle(
             target_pct=target_pct,
             band=band,
         )
-    elif need_allocation and effective_target is not None:
+    elif (need_allocation or use_config_allocation) and effective_target is not None:
         bundle = _attach_allocation_analysis(
             bundle,
             config,

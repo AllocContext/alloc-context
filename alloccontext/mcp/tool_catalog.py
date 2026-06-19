@@ -333,7 +333,9 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "snapshot. Use get_market_context for market-only; use get_context_at "
         "for a historical snapshot; use get_context_delta to compare two times. "
         "Optional target_pct and band attach allocation_analysis (opt-in drift "
-        "math). Optional theses[] attaches expectation_review (deterministic "
+        "math). Omitted target_pct and band with use_config_allocation=true "
+        "uses portfolio.target_allocations and portfolio.rebalance_band from "
+        "host config. Optional theses[] attaches expectation_review (deterministic "
         "claim scoring vs recorded_at baseline; pass-through only). Optional "
         "expectation_replay=true adds a counterfactual timeline when theses[] "
         "is supplied. freshness=cached uses the local ingest DB; freshness=live runs "
@@ -443,6 +445,14 @@ MCP_TOOL_SPECS: tuple[dict[str, Any], ...] = (
                 "assets": ASSET_FILTER_SCHEMA,
                 "target_pct": TARGET_PCT_SCHEMA,
                 "band": BAND_SCHEMA,
+                "use_config_allocation": {
+                    "type": "boolean",
+                    "description": (
+                        "When true and target_pct/band are omitted, attach "
+                        "allocation_analysis from host portfolio.target_allocations "
+                        "and portfolio.rebalance_band."
+                    ),
+                },
                 "theses": THESES_SCHEMA,
                 "expectation_replay": EXPECTATION_REPLAY_SCHEMA,
             },

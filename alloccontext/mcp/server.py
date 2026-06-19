@@ -33,6 +33,7 @@ from alloccontext.mcp.tool_fields import (
     TargetPct,
     WalletAddress,
     ExpectationReplay,
+    UseConfigAllocation,
 )
 from alloccontext.store.db import connect
 
@@ -121,6 +122,7 @@ def create_server(
         band: BandOptional = None,
         theses: OptionalTheses = None,
         expectation_replay: ExpectationReplay = False,
+        use_config_allocation: UseConfigAllocation = False,
     ) -> dict[str, Any]:
         """Return the full deterministic context bundle for daily or weekly scope."""
         validated_scope = handlers.validate_scope(scope)
@@ -137,6 +139,7 @@ def create_server(
                 band=band,
                 theses=theses,
                 expectation_replay=expectation_replay,
+                use_config_allocation=use_config_allocation,
             )
         finally:
             conn.close()
