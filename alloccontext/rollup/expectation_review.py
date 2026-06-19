@@ -5,6 +5,7 @@ from typing import Any
 from alloccontext.constants import ALLOCATION_ASSETS
 from alloccontext.ingest.asset_registry import normalize_canonical_symbol
 from alloccontext.rollup.delta import asset_price_usd, pct_change_since
+from alloccontext.rollup.regime_history import derive_regime_posture
 
 _PRICE_MOVE_THRESHOLD_PCT = 2.0
 _RELATIVE_MOVE_THRESHOLD_PCT = 2.0
@@ -15,6 +16,13 @@ _ALLOCATION_EXCESS_THRESHOLD = 0.005
 _VOLATILITY_ORDINAL = {"low": 0, "medium": 1, "high": 2}
 _RISK_OFF_ORDINAL = {"low": 0, "moderate": 1, "high": 2}
 
+_VALID_REGIME_POSTURES = frozenset({"RISK_ON", "NEUTRAL", "RISK_OFF"})
+_VALID_REGIME_TRAJECTORIES = frozenset({"IMPROVING", "STABLE", "DETERIORATING"})
+_OPPOSITE_REGIME_POSTURES = frozenset({("RISK_ON", "RISK_OFF"), ("RISK_OFF", "RISK_ON")})
+_OPPOSITE_REGIME_TRAJECTORIES = frozenset(
+    {("IMPROVING", "DETERIORATING"), ("DETERIORATING", "IMPROVING")}
+)
+
 V0_CLAIM_TYPES = frozenset(
     {
         "PRICE_STRENGTH",
@@ -22,6 +30,7 @@ V0_CLAIM_TYPES = frozenset(
         "MARKET_SENTIMENT",
         "VOLATILITY_REGIME",
         "RISK_APPETITE",
+        "REGIME_EXPECTATION",
         "ALLOCATION_FIT",
     }
 )
@@ -349,6 +358,127 @@ def _risk_off_block(context: dict[str, Any]) -> dict[str, Any]:
     return risk_off if isinstance(risk_off, dict) else {}
 
 
+def _posture_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
+    regime = bundle.get("regime") if isinstance(bundle.get("regime"), dict) else {}
+    comparison = (
+        regime.get("comparison") if isinstance(regime.get("comparison"), dict) else {}
+    )
+    posture = comparison.get("posture")
+    if isinstance(posture, dict):
+        return posture
+    return derive_regime_posture(bundle, horizon_7d=None)
+
+
+def _combine_claim_statuses(
+    label_status: str,
+    label_reason: str | None,
+    *,
+    trajectory_status: str | None = None,
+    trajectory_reason: str | None = None,
+) -> tuple[str, str | None]:
+    if trajectory_status is None:
+        return label_status, label_reason
+    if label_status == "weakened" or trajectory_status == "weakened":
+        return "weakened", None
+    if label_status == "unknown":
+        return "unknown", label_reason
+    if trajectory_status == "unknown":
+        return "unknown", trajectory_reason
+    return "supported", None
+
+
+def _score_posture_label(*, expected: str, actual: str, available: bool) -> tuple[str, str | None]:
+    if not available or actual == "UNKNOWN":
+        return "unknown", "posture_unavailable"
+    if actual == expected:
+        return "supported", None
+    if (expected, actual) in _OPPOSITE_REGIME_POSTURES:
+        return "weakened", None
+    return "unknown", "within_noise_band"
+
+
+def _score_posture_trajectory(*, expected: str, actual: str) -> tuple[str, str | None]:
+    if actual == "UNKNOWN":
+        return "unknown", "posture_unavailable"
+    if actual == expected:
+        return "supported", None
+    if (expected, actual) in _OPPOSITE_REGIME_TRAJECTORIES:
+        return "weakened", None
+    return "unknown", "within_noise_band"
+
+
+def _score_regime_expectation(
+    *,
+    thesis_id: str,
+    claim: dict[str, Any],
+    baseline: dict[str, Any] | None,
+    current: dict[str, Any],
+) -> dict[str, Any]:
+    expected_posture = str(claim.get("posture") or "").strip().upper()
+    expected_trajectory_raw = claim.get("trajectory")
+    expected_trajectory = (
+        str(expected_trajectory_raw).strip().upper()
+        if expected_trajectory_raw is not None
+        else None
+    )
+    anchor = _baseline_as_of(baseline)
+    result = _claim_base(
+        thesis_id=thesis_id,
+        claim_type="REGIME_EXPECTATION",
+        asset=None,
+        baseline_as_of=anchor,
+    )
+    if baseline is None or not baseline.get("as_of"):
+        result["reason"] = "missing_baseline"
+        return result
+    if expected_posture not in _VALID_REGIME_POSTURES:
+        result["reason"] = "invalid_posture"
+        return result
+    if expected_trajectory is not None and expected_trajectory not in _VALID_REGIME_TRAJECTORIES:
+        result["reason"] = "invalid_posture"
+        return result
+
+    baseline_posture = _posture_from_bundle(baseline)
+    current_posture = _posture_from_bundle(current)
+    baseline_label = str(baseline_posture.get("label") or "UNKNOWN").upper()
+    current_label = str(current_posture.get("label") or "UNKNOWN").upper()
+    current_trajectory = str(current_posture.get("trajectory") or "UNKNOWN").upper()
+    current_available = bool(current_posture.get("available")) or current_label != "UNKNOWN"
+
+    label_status, label_reason = _score_posture_label(
+        expected=expected_posture,
+        actual=current_label,
+        available=current_available,
+    )
+    trajectory_status: str | None = None
+    trajectory_reason: str | None = None
+    if expected_trajectory is not None:
+        trajectory_status, trajectory_reason = _score_posture_trajectory(
+            expected=expected_trajectory,
+            actual=current_trajectory,
+        )
+
+    status, reason = _combine_claim_statuses(
+        label_status,
+        label_reason,
+        trajectory_status=trajectory_status,
+        trajectory_reason=trajectory_reason,
+    )
+    result["status"] = status
+    result["reason"] = reason
+    result["evidence"].update(
+        {
+            "baseline_posture": baseline_label,
+            "current_posture": current_label,
+            "current_trajectory": current_trajectory,
+        }
+    )
+    basis_days = current_posture.get("basis_days")
+    if basis_days is not None:
+        result["evidence"]["basis_days"] = basis_days
+    return result
+
+
 def _score_risk_appetite(
     *,
     thesis_id: str,
@@ -509,6 +639,10 @@ def _score_claim(
         )
     if claim_type == "RISK_APPETITE":
         return _score_risk_appetite(
+            thesis_id=thesis_id, claim=claim, baseline=baseline, current=current
+        )
+    if claim_type == "REGIME_EXPECTATION":
+        return _score_regime_expectation(
             thesis_id=thesis_id, claim=claim, baseline=baseline, current=current
         )
     return _score_allocation_fit(

@@ -35,6 +35,25 @@ def _regime(*, level: str = "low", score: int = 10) -> dict:
     return {"risk_off": {"available": True, "level": level, "score": score}}
 
 
+def _posture(
+    *,
+    label: str,
+    trajectory: str = "UNKNOWN",
+    available: bool = True,
+    basis_days: int | None = None,
+) -> dict:
+    return {
+        "comparison": {
+            "posture": {
+                "available": available,
+                "label": label,
+                "trajectory": trajectory,
+                "basis_days": basis_days,
+            }
+        }
+    }
+
+
 def _bundle(
     *,
     as_of: str,
@@ -46,6 +65,7 @@ def _bundle(
     up_frac: float = 0.55,
     risk_level: str = "low",
     risk_score: int = 10,
+    posture: dict | None = None,
     allocation_analysis: dict | None = None,
 ) -> dict:
     payload = {
@@ -55,6 +75,8 @@ def _bundle(
         "sentiment": _sentiment(fg=fg, up_frac=up_frac, vol=vol),
         "regime": _regime(level=risk_level, score=risk_score),
     }
+    if posture is not None:
+        payload["regime"] = {**payload["regime"], **posture}
     if allocation_analysis is not None:
         payload["allocation_analysis"] = allocation_analysis
     return payload
@@ -219,6 +241,165 @@ def test_risk_appetite_increasing_supported() -> None:
         ],
     )
     assert review["claims"][0]["status"] == "supported"
+
+
+def test_regime_expectation_supported() -> None:
+    baseline = _bundle(
+        as_of="2026-06-01T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="NEUTRAL"),
+    )
+    current = _bundle(
+        as_of="2026-06-02T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="RISK_ON", trajectory="IMPROVING", basis_days=7),
+    )
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "REGIME_EXPECTATION", "posture": "RISK_ON"}],
+            }
+        ],
+    )
+    claim = review["claims"][0]
+    assert claim["status"] == "supported"
+    assert claim["evidence"]["current_posture"] == "RISK_ON"
+    assert claim["evidence"]["baseline_posture"] == "NEUTRAL"
+
+
+def test_regime_expectation_weakened_opposite() -> None:
+    baseline = _bundle(
+        as_of="2026-06-01T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="NEUTRAL"),
+    )
+    current = _bundle(
+        as_of="2026-06-02T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="RISK_OFF"),
+    )
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "REGIME_EXPECTATION", "posture": "RISK_ON"}],
+            }
+        ],
+    )
+    assert review["claims"][0]["status"] == "weakened"
+
+
+def test_regime_expectation_neutral_within_noise_band() -> None:
+    baseline = _bundle(
+        as_of="2026-06-01T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="RISK_OFF"),
+    )
+    current = _bundle(
+        as_of="2026-06-02T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="NEUTRAL"),
+    )
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "REGIME_EXPECTATION", "posture": "RISK_ON"}],
+            }
+        ],
+    )
+    claim = review["claims"][0]
+    assert claim["status"] == "unknown"
+    assert claim["reason"] == "within_noise_band"
+
+
+def test_regime_expectation_invalid_posture() -> None:
+    baseline = _bundle(as_of="2026-06-01T00:00:00Z", btc=100.0)
+    current = _bundle(as_of="2026-06-02T00:00:00Z", btc=100.0)
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "REGIME_EXPECTATION", "posture": "ACCUMULATION"}],
+            }
+        ],
+    )
+    assert review["claims"][0]["reason"] == "invalid_posture"
+
+
+def test_regime_expectation_trajectory_supported() -> None:
+    baseline = _bundle(
+        as_of="2026-06-01T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="NEUTRAL"),
+    )
+    current = _bundle(
+        as_of="2026-06-02T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="NEUTRAL", trajectory="STABLE", basis_days=7),
+    )
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [
+                    {
+                        "type": "REGIME_EXPECTATION",
+                        "posture": "NEUTRAL",
+                        "trajectory": "STABLE",
+                    }
+                ],
+            }
+        ],
+    )
+    assert review["claims"][0]["status"] == "supported"
+
+
+def test_regime_expectation_trajectory_weakened() -> None:
+    baseline = _bundle(
+        as_of="2026-06-01T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="NEUTRAL"),
+    )
+    current = _bundle(
+        as_of="2026-06-02T00:00:00Z",
+        btc=100.0,
+        posture=_posture(label="NEUTRAL", trajectory="DETERIORATING", basis_days=7),
+    )
+    review = build_expectation_review(
+        baseline_bundles={"t1": baseline},
+        current_bundle=current,
+        theses=[
+            {
+                "id": "t1",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [
+                    {
+                        "type": "REGIME_EXPECTATION",
+                        "posture": "NEUTRAL",
+                        "trajectory": "IMPROVING",
+                    }
+                ],
+            }
+        ],
+    )
+    assert review["claims"][0]["status"] == "weakened"
 
 
 def test_get_context_bundle_attaches_expectation_review(conn, config) -> None:

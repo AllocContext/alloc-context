@@ -93,8 +93,15 @@ bridge `user.yaml`). Pass-through beliefs only — nothing is stored server-side
 | `claims[]` | Per-claim `{thesis_id, type, asset?, status, reason?, evidence}` |
 
 Claim types (v0): `PRICE_STRENGTH`, `RELATIVE_STRENGTH`, `MARKET_SENTIMENT`,
-`VOLATILITY_REGIME`, `RISK_APPETITE`, `ALLOCATION_FIT`. Each claim's
+`VOLATILITY_REGIME`, `RISK_APPETITE`, `REGIME_EXPECTATION`, `ALLOCATION_FIT`.
+Each claim's
 `evidence.baseline_as_of` identifies the snapshot used for that thesis.
+
+`REGIME_EXPECTATION` uses ADR-015 posture enums: required `posture`
+(`RISK_ON` | `NEUTRAL` | `RISK_OFF`); optional `trajectory`
+(`IMPROVING` | `STABLE` | `DETERIORATING`). Scores current
+`regime.comparison.posture` against the claim; evidence includes baseline and
+current labels.
 
 ## regime
 
