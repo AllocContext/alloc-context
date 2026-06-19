@@ -74,9 +74,53 @@ def test_build_regime_context_includes_allocation_hint() -> None:
         delta={"available": False},
         prior_as_of=None,
     )
-    assert regime["available"] is True
+    assert regime["available"] is False
     assert regime["allocation"]["hint"] == "within_band"
     assert any(hint["kind"] == "allocation" for hint in regime["hints"])
+
+
+def test_build_regime_context_risk_off_ignores_portfolio_cash() -> None:
+    """ADR-020: cash weight must not inflate market risk_off score."""
+    high_cash = build_regime_context(
+        portfolio={
+            "available": True,
+            "allocation_pct": {"BTC": 0.10, "ETH": 0.10, "CASH": 0.80},
+            "rebalance_hint": "consider_rebalance",
+        },
+        sentiment={"available": False},
+        delta={"available": False},
+        prior_as_of=None,
+    )
+    neutral_fg = build_regime_context(
+        portfolio={"available": True, "allocation_pct": {"CASH": 0.80}},
+        sentiment={
+            "available": True,
+            "fear_greed": {"value": 50, "classification": "Neutral"},
+        },
+        delta={"available": False},
+        prior_as_of=None,
+    )
+    assert high_cash["risk_off"]["score"] == 0
+    assert high_cash["risk_off"]["level"] == "low"
+    assert not high_cash["risk_off"]["signals"]
+    assert neutral_fg["risk_off"]["score"] == 0
+    assert neutral_fg["risk_off"]["level"] == "low"
+
+
+def test_build_regime_context_risk_off_from_fear_greed_only() -> None:
+    regime = build_regime_context(
+        portfolio={"available": False},
+        sentiment={
+            "available": True,
+            "fear_greed": {"value": 20, "classification": "Extreme Fear"},
+        },
+        delta={"available": False},
+        prior_as_of=None,
+    )
+    assert regime["available"] is True
+    assert regime["risk_off"]["score"] == 35
+    assert regime["risk_off"]["level"] == "low"
+    assert any("Fear & Greed" in signal for signal in regime["risk_off"]["signals"])
 
 
 def test_build_context_bundle_includes_regime(conn, config) -> None:

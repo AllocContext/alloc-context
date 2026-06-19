@@ -21,7 +21,7 @@ class PathsConfig:
 class PortfolioConfig:
     target_allocations: dict[str, float]
     rebalance_band: float
-    max_cash_risk_off: float
+    max_cash_risk_off: float  # deprecated ADR-020; ignored by core regime rollup
     notes: str
 
 

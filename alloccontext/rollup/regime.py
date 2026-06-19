@@ -26,7 +26,6 @@ def build_regime_context(
     delta: dict[str, Any],
     market: dict[str, Any] | None = None,
     prior_as_of: str | None,
-    max_cash_risk_off: float = 0.50,
 ) -> dict[str, Any]:
     hints: list[dict[str, str]] = []
     allocation: dict[str, Any] = {"available": False}
@@ -112,7 +111,7 @@ def build_regime_context(
 
     fg = _fear_greed_block(sentiment) if sentiment.get("available") else None
     if fg and fg.get("value") is not None:
-        sentiment_block.setdefault("available", True)
+        sentiment_block["available"] = True
         sentiment_block["fear_greed_value"] = fg.get("value")
         sentiment_block["fear_greed_classification"] = fg.get("classification")
         classification = fg.get("classification")
@@ -139,18 +138,13 @@ def build_regime_context(
             hints.append({"kind": "delta", "code": "notable_shift", "text": str(line)})
 
     available = (
-        allocation.get("available")
-        or volatility.get("available")
+        volatility.get("available")
         or sentiment_block.get("available")
         or comparison["has_prior_snapshot"]
     )
     summary_parts = [hint["text"] for hint in hints[:3]]
     summary = " ".join(summary_parts) if summary_parts else None
-    risk_off = _build_risk_off(
-        portfolio=portfolio,
-        sentiment=sentiment,
-        max_cash_risk_off=max_cash_risk_off,
-    )
+    risk_off = _build_risk_off(sentiment=sentiment)
 
     return {
         "available": available,
@@ -243,27 +237,10 @@ def _allocation_hint_text(code: str) -> str:
     return mapping.get(code, f"Allocation hint: {code}.")
 
 
-def _build_risk_off(
-    *,
-    portfolio: dict[str, Any],
-    sentiment: dict[str, Any],
-    max_cash_risk_off: float,
-) -> dict[str, Any]:
+def _build_risk_off(*, sentiment: dict[str, Any]) -> dict[str, Any]:
+    """Market-wide risk-off score from external sentiment only (ADR-020)."""
     signals: list[str] = []
     score = 0
-
-    if portfolio.get("available"):
-        cash = float((portfolio.get("allocation_pct") or {}).get("CASH") or 0)
-        if cash >= max_cash_risk_off:
-            score += 40
-            signals.append(f"cash {cash * 100:.1f}% at/above risk-off ceiling")
-        elif cash >= max_cash_risk_off * 0.75:
-            score += 20
-            signals.append(f"cash {cash * 100:.1f}% elevated vs risk-off ceiling")
-        hint = str(portfolio.get("rebalance_hint") or "")
-        if hint == "consider_rebalance":
-            score += 10
-            signals.append("rebalance hint favors rebalancing")
 
     fg = _fear_greed_block(sentiment) if sentiment.get("available") else None
     if fg and fg.get("value") is not None:

@@ -118,7 +118,6 @@ def build_context_bundle(
             delta=delta,
             market=market,
             prior_as_of=prior_as_of,
-            max_cash_risk_off=config.portfolio.max_cash_risk_off,
         ),
     }
     if save_snapshot:
