@@ -227,10 +227,19 @@ THESES_SCHEMA: dict[str, Any] = {
 
 MATCH_SCHEMA: dict[str, Any] = {
     "type": "string",
-    "enum": ["exact", "at_or_before"],
+    "enum": ["exact", "at_or_before", "thesis_baseline"],
     "description": (
         "exact: snapshot at as_of only. at_or_before (default): latest "
-        "snapshot on or before as_of."
+        "snapshot on or before as_of. thesis_baseline: earliest snapshot "
+        "when recorded_at predates saved history."
+    ),
+}
+
+EXPECTATION_REPLAY_SCHEMA: dict[str, Any] = {
+    "type": "boolean",
+    "description": (
+        "When true with theses[], attach expectation_review.replay "
+        "(counterfactual claim timeline)."
     ),
 }
 
@@ -324,8 +333,9 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "for a historical snapshot; use get_context_delta to compare two times. "
         "Optional target_pct and band attach allocation_analysis (opt-in drift "
         "math). Optional theses[] attaches expectation_review (deterministic "
-        "claim scoring vs recorded_at baseline; pass-through only). "
-        "freshness=cached uses the local ingest DB; freshness=live runs "
+        "claim scoring vs recorded_at baseline; pass-through only). Optional "
+        "expectation_replay=true adds a counterfactual timeline when theses[] "
+        "is supplied. freshness=cached uses the local ingest DB; freshness=live runs "
         "ingest first (may add latency; needs ingest API keys on the host)."
     ),
     "get_market_context": (
@@ -426,6 +436,7 @@ MCP_TOOL_SPECS: tuple[dict[str, Any], ...] = (
                 "target_pct": TARGET_PCT_SCHEMA,
                 "band": BAND_SCHEMA,
                 "theses": THESES_SCHEMA,
+                "expectation_replay": EXPECTATION_REPLAY_SCHEMA,
             },
         },
         "example": {

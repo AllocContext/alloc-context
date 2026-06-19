@@ -612,3 +612,115 @@ def test_allocation_fit_auto_attached_from_config(conn, config) -> None:
     assert analysis.get("available") is True
     claim = (payload.get("expectation_review") or {}).get("claims", [])[0]
     assert claim["reason"] != "missing_quote"
+
+
+def test_baseline_earliest_available_when_recorded_at_predates_history(
+    conn, config
+) -> None:
+    import json
+
+    from alloccontext.mcp.handlers import get_context_bundle
+
+    baseline = _bundle(as_of="2026-06-10T12:00:00+00:00", btc=100.0, fg=40)
+    conn.execute(
+        """
+        INSERT INTO context_snapshots(scope, as_of, context_json)
+        VALUES (?, ?, ?)
+        """,
+        ("daily", baseline["as_of"], json.dumps(baseline)),
+    )
+    conn.commit()
+
+    payload = get_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        freshness="cached",
+        theses=[
+            {
+                "id": "early-thesis",
+                "recorded_at": "2026-06-01T00:00:00Z",
+                "claims": [{"type": "MARKET_SENTIMENT", "direction": "IMPROVING"}],
+            }
+        ],
+    )
+    review = payload["expectation_review"]
+    assert review["baseline_tolerance"] == "earliest_available"
+    claim = review["claims"][0]
+    assert claim["reason"] != "missing_baseline"
+    assert claim["evidence"]["baseline_requested_as_of"] == "2026-06-01T00:00:00Z"
+    assert claim["evidence"]["baseline_as_of"] == "2026-06-10T12:00:00+00:00"
+
+
+def test_expectation_replay_timeline(conn, config) -> None:
+    import json
+
+    from alloccontext.mcp.handlers import get_context_bundle
+
+    for as_of, fg in (
+        ("2026-06-01T12:00:00+00:00", 40),
+        ("2026-06-05T12:00:00+00:00", 48),
+    ):
+        snap = _bundle(as_of=as_of, btc=100.0, fg=fg)
+        conn.execute(
+            """
+            INSERT INTO context_snapshots(scope, as_of, context_json)
+            VALUES (?, ?, ?)
+            """,
+            ("daily", as_of, json.dumps(snap)),
+        )
+    conn.commit()
+
+    payload = get_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        freshness="cached",
+        theses=[
+            {
+                "id": "sent",
+                "recorded_at": "2026-06-01T12:00:00+00:00",
+                "claims": [{"type": "MARKET_SENTIMENT", "direction": "IMPROVING"}],
+            }
+        ],
+        expectation_replay=True,
+    )
+    replay = payload["expectation_review"]["replay"]
+    assert replay["available"] is True
+    assert replay["checkpoint_count"] >= 1
+    transition = replay["transitions"][0]
+    assert transition["type"] == "MARKET_SENTIMENT"
+
+
+def test_get_context_at_thesis_baseline_match(conn, config) -> None:
+    import json
+
+    from alloccontext.mcp.handlers import get_context_at
+    from alloccontext.rollup.context import build_context_bundle
+
+    snap = build_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        rollup=config.rollup,
+        save_snapshot=False,
+    )
+    snap["as_of"] = "2026-06-10T12:00:00+00:00"
+    conn.execute(
+        """
+        INSERT INTO context_snapshots(scope, as_of, context_json)
+        VALUES (?, ?, ?)
+        """,
+        ("daily", snap["as_of"], json.dumps(snap)),
+    )
+    conn.commit()
+
+    loaded = get_context_at(
+        conn,
+        config,
+        scope="daily",
+        as_of="2026-06-01T00:00:00Z",
+        match="thesis_baseline",
+    )
+    assert loaded["baseline_resolution"] == "earliest_available"
+    assert loaded["snapshot_as_of"] == "2026-06-10T12:00:00+00:00"

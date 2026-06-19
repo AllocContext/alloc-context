@@ -36,6 +36,7 @@ from alloccontext.mcp.validation import (
     normalize_allocation_pct,
 )
 from alloccontext.rollup.expectation_review import (
+    build_expectation_replay,
     build_expectation_review,
     theses_need_allocation_fit,
 )
@@ -44,8 +45,10 @@ from alloccontext.rollup.regime import build_regime_context
 from alloccontext.rollup.regime_history import attach_regime_history
 from alloccontext.rollup.snapshots import (
     SnapshotNotFoundError,
+    list_context_snapshot_as_ofs_between,
     load_context_bundle_snapshot,
     resolve_context_snapshot_as_of,
+    resolve_thesis_baseline_as_of,
 )
 from alloccontext.constants import ALLOCATION_ASSETS as _ASSETS
 from alloccontext.timeutil import utc_now
@@ -134,17 +137,26 @@ def _load_baseline_bundle(
     *,
     scope: Scope,
     recorded_at: str,
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    resolved, mode = resolve_thesis_baseline_as_of(
+        conn,
+        scope=scope,
+        recorded_at=recorded_at,
+    )
+    meta = {
+        "requested_as_of": recorded_at,
+        "resolved_as_of": resolved,
+        "mode": mode,
+    }
+    if resolved is None:
+        return None, meta
     try:
-        resolved = resolve_context_snapshot_as_of(
-            conn,
-            scope=scope,
-            as_of=recorded_at,
-            mode="at_or_before",
-        )
-        return load_context_bundle_snapshot(conn, scope=scope, as_of=resolved)
+        bundle = load_context_bundle_snapshot(conn, scope=scope, as_of=resolved)
     except SnapshotNotFoundError:
-        return None
+        meta["resolved_as_of"] = None
+        meta["mode"] = "missing"
+        return None, meta
+    return bundle, meta
 
 
 def _prepare_baseline_bundle(
@@ -153,12 +165,12 @@ def _prepare_baseline_bundle(
     *,
     scope: Scope,
     recorded_at: str,
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     """Load baseline snapshot and rebuild regime for market-wide claim scoring."""
-    raw = _load_baseline_bundle(conn, scope=scope, recorded_at=recorded_at)
+    raw, meta = _load_baseline_bundle(conn, scope=scope, recorded_at=recorded_at)
     if raw is None:
-        return None
-    return _attach_regime(dict(raw), config, conn=conn, scope=scope)
+        return None, meta
+    return _attach_regime(dict(raw), config, conn=conn, scope=scope), meta
 
 
 def _baseline_bundles_for_theses(
@@ -167,9 +179,10 @@ def _baseline_bundles_for_theses(
     *,
     scope: Scope,
     theses: list[dict[str, Any]],
-) -> dict[str, dict[str, Any] | None]:
-    by_recorded_at: dict[str, dict[str, Any] | None] = {}
-    result: dict[str, dict[str, Any] | None] = {}
+) -> tuple[dict[str, dict[str, Any] | None], dict[str, dict[str, Any]]]:
+    by_recorded_at: dict[str, tuple[dict[str, Any] | None, dict[str, Any]]] = {}
+    bundles: dict[str, dict[str, Any] | None] = {}
+    resolutions: dict[str, dict[str, Any]] = {}
     for thesis in theses:
         thesis_id = thesis["id"]
         recorded_at = thesis.get("recorded_at") or ""
@@ -180,8 +193,38 @@ def _baseline_bundles_for_theses(
                 scope=scope,
                 recorded_at=recorded_at,
             )
-        result[thesis_id] = by_recorded_at[recorded_at]
-    return result
+        bundle, meta = by_recorded_at[recorded_at]
+        bundles[thesis_id] = bundle
+        resolutions[thesis_id] = meta
+    return bundles, resolutions
+
+
+def _load_replay_checkpoint_bundles(
+    conn: sqlite3.Connection,
+    config,
+    *,
+    scope: Scope,
+    after_exclusive: str,
+    through_inclusive: str,
+) -> list[dict[str, Any]]:
+    as_ofs = list_context_snapshot_as_ofs_between(
+        conn,
+        scope=scope,
+        after_exclusive=after_exclusive,
+        through_inclusive=through_inclusive,
+    )
+    if through_inclusive and (
+        not as_ofs or as_ofs[-1] != through_inclusive
+    ):
+        as_ofs.append(through_inclusive)
+    bundles: list[dict[str, Any]] = []
+    for as_of in as_ofs:
+        try:
+            raw = load_context_bundle_snapshot(conn, scope=scope, as_of=as_of)
+        except SnapshotNotFoundError:
+            continue
+        bundles.append(_attach_regime(dict(raw), config, conn=conn, scope=scope))
+    return bundles
 
 
 def _effective_allocation_inputs(
@@ -208,6 +251,7 @@ def _attach_expectation_review(
     theses: list[dict[str, Any]] | None,
     target_pct: dict[str, float] | None,
     band: float | None,
+    expectation_replay: bool = False,
 ) -> dict[str, Any]:
     if not theses:
         return bundle
@@ -215,7 +259,7 @@ def _attach_expectation_review(
     if not validated:
         return bundle
 
-    baseline_bundles = _baseline_bundles_for_theses(
+    baseline_bundles, baseline_resolutions = _baseline_bundles_for_theses(
         conn,
         config,
         scope=scope,
@@ -233,7 +277,33 @@ def _attach_expectation_review(
         theses=validated,
         target_pct=effective_target,
         band=effective_band,
+        baseline_resolutions=baseline_resolutions,
     )
+    if expectation_replay and review.get("available"):
+        baseline_as_ofs = [
+            str(meta["resolved_as_of"])
+            for meta in baseline_resolutions.values()
+            if meta.get("resolved_as_of")
+        ]
+        after_exclusive = min(baseline_as_ofs) if baseline_as_ofs else ""
+        through = str(bundle.get("as_of") or "")
+        checkpoints = _load_replay_checkpoint_bundles(
+            conn,
+            config,
+            scope=scope,
+            after_exclusive=after_exclusive,
+            through_inclusive=through,
+        )
+        current_as_of = str(bundle.get("as_of") or "")
+        if not checkpoints or str(checkpoints[-1].get("as_of")) != current_as_of:
+            checkpoints.append(bundle)
+        review["replay"] = build_expectation_replay(
+            checkpoint_bundles=checkpoints,
+            baseline_bundles=baseline_bundles,
+            theses=validated,
+            target_pct=effective_target,
+            band=effective_band,
+        )
     result = dict(bundle)
     result["expectation_review"] = review
     return result
@@ -377,19 +447,29 @@ def get_context_at(
     *,
     scope: Scope = "daily",
     as_of: str,
-    match: Literal["exact", "at_or_before"] = "at_or_before",
+    match: Literal["exact", "at_or_before", "thesis_baseline"] = "at_or_before",
     assets: list[str] | None = None,
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
 ) -> dict[str, Any]:
     view_assets, assets_omitted = resolve_view_assets(assets, conn=conn)
+    baseline_mode: str | None = None
     try:
-        resolved = resolve_context_snapshot_as_of(
-            conn,
-            scope=scope,
-            as_of=as_of,
-            mode=match,
-        )
+        if match == "thesis_baseline":
+            resolved, baseline_mode = resolve_thesis_baseline_as_of(
+                conn,
+                scope=scope,
+                recorded_at=as_of,
+            )
+            if resolved is None:
+                raise SnapshotNotFoundError(f"no {scope} snapshot for thesis baseline")
+        else:
+            resolved = resolve_context_snapshot_as_of(
+                conn,
+                scope=scope,
+                as_of=as_of,
+                mode=match,
+            )
         bundle = load_context_bundle_snapshot(conn, scope=scope, as_of=resolved)
     except SnapshotNotFoundError as exc:
         return {
@@ -415,6 +495,8 @@ def get_context_at(
     bundle["snapshot_as_of"] = resolved
     bundle["requested_as_of"] = as_of
     bundle["match"] = match
+    if baseline_mode is not None:
+        bundle["baseline_resolution"] = baseline_mode
     return attach_assets_omitted(bundle, assets_omitted)
 
 
@@ -521,6 +603,7 @@ def get_context_bundle(
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
     theses: list[dict[str, Any]] | None = None,
+    expectation_replay: bool = False,
 ) -> dict[str, Any]:
     now = (as_of or utc_now()).replace(microsecond=0)
     if now.tzinfo is None:
@@ -589,6 +672,7 @@ def get_context_bundle(
         theses=theses,
         target_pct=target_pct,
         band=band,
+        expectation_replay=expectation_replay,
     )
     if target_pct is not None:
         bundle["target_pct"] = validate_target_pct(target_pct)

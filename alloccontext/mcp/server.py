@@ -32,6 +32,7 @@ from alloccontext.mcp.tool_fields import (
     Scope,
     TargetPct,
     WalletAddress,
+    ExpectationReplay,
 )
 from alloccontext.store.db import connect
 
@@ -119,6 +120,7 @@ def create_server(
         target_pct: OptionalTargetPct = None,
         band: BandOptional = None,
         theses: OptionalTheses = None,
+        expectation_replay: ExpectationReplay = False,
     ) -> dict[str, Any]:
         """Return the full deterministic context bundle for daily or weekly scope."""
         validated_scope = handlers.validate_scope(scope)
@@ -134,6 +136,7 @@ def create_server(
                 target_pct=target_pct,
                 band=band,
                 theses=theses,
+                expectation_replay=expectation_replay,
             )
         finally:
             conn.close()
@@ -240,8 +243,10 @@ def create_server(
         band: BandOptional = None,
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
-        if match not in ("exact", "at_or_before"):
-            raise ValueError("match must be 'exact' or 'at_or_before'")
+        if match not in ("exact", "at_or_before", "thesis_baseline"):
+            raise ValueError(
+                "match must be 'exact', 'at_or_before', or 'thesis_baseline'"
+            )
         conn = connect(config.paths.db)
         try:
             return handlers.get_context_at(

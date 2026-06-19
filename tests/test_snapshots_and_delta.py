@@ -5,6 +5,10 @@ import json
 from alloccontext.mcp.handlers import get_context_at, get_context_delta
 from alloccontext.rollup.comparison import compare_context_bundles
 from alloccontext.rollup.context import build_context_bundle
+from alloccontext.rollup.snapshots import (
+    list_context_snapshot_as_ofs_between,
+    resolve_thesis_baseline_as_of,
+)
 
 
 def _save_snapshot(conn, scope: str, as_of: str, bundle: dict) -> None:
@@ -93,3 +97,40 @@ def test_compare_context_bundles_fear_greed_shift() -> None:
     diff = compare_context_bundles(prior, current)
     assert any("F&G" in line for line in diff["notable_shifts"])
     assert diff["fear_greed_change"] == -10
+
+
+def test_resolve_thesis_baseline_earliest_available(conn, config) -> None:
+    bundle = build_context_bundle(
+        conn,
+        config,
+        scope="daily",
+        rollup=config.rollup,
+        save_snapshot=False,
+    )
+    bundle["as_of"] = "2026-06-10T12:00:00+00:00"
+    _save_snapshot(conn, "daily", bundle["as_of"], bundle)
+
+    resolved, mode = resolve_thesis_baseline_as_of(
+        conn,
+        scope="daily",
+        recorded_at="2026-06-01T00:00:00Z",
+    )
+    assert mode == "earliest_available"
+    assert resolved == "2026-06-10T12:00:00+00:00"
+
+
+def test_list_context_snapshot_as_ofs_between_subsamples(conn, config) -> None:
+    for day in range(1, 12):
+        bundle = {"as_of": f"2026-06-{day:02d}T12:00:00+00:00"}
+        _save_snapshot(conn, "daily", bundle["as_of"], bundle)
+
+    as_ofs = list_context_snapshot_as_ofs_between(
+        conn,
+        scope="daily",
+        after_exclusive="2026-06-01T12:00:00+00:00",
+        through_inclusive="2026-06-11T12:00:00+00:00",
+        limit=5,
+    )
+    assert len(as_ofs) == 5
+    assert as_ofs[0] == "2026-06-02T12:00:00+00:00"
+    assert as_ofs[-1] == "2026-06-11T12:00:00+00:00"

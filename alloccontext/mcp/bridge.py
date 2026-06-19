@@ -63,6 +63,18 @@ def _fetch_upstream_baseline(user: UserConfig, *, scope: str, recorded_at: str) 
         {
             "scope": scope,
             "as_of": recorded_at,
+            "match": "thesis_baseline",
+        },
+    )
+
+
+def _fetch_upstream_checkpoint(user: UserConfig, *, scope: str, as_of: str) -> dict[str, Any]:
+    return call_upstream_tool(
+        user,
+        "get_context_at",
+        {
+            "scope": scope,
+            "as_of": as_of,
             "match": "at_or_before",
         },
     )
@@ -134,6 +146,7 @@ def create_bridge_server(user: UserConfig):
         target_pct: dict[str, float] | None = None,
         band: float | None = None,
         theses: list[dict[str, Any]] | None = None,
+        expectation_replay: bool = False,
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
         validated_freshness = handlers.validate_freshness(freshness)
@@ -192,6 +205,12 @@ def create_bridge_server(user: UserConfig):
                 user,
                 scope=kwargs["scope"],
                 recorded_at=kwargs["recorded_at"],
+            ),
+            expectation_replay=expectation_replay,
+            fetch_checkpoint=lambda **kwargs: _fetch_upstream_checkpoint(
+                user,
+                scope=kwargs["scope"],
+                as_of=kwargs["as_of"],
             ),
         )
         return attach_assets_scope(merged, assets_scope)
@@ -269,8 +288,10 @@ def create_bridge_server(user: UserConfig):
         band: float | None = None,
     ) -> dict[str, Any]:
         validated_scope = handlers.validate_scope(scope)
-        if match not in ("exact", "at_or_before"):
-            raise ValueError("match must be 'exact' or 'at_or_before'")
+        if match not in ("exact", "at_or_before", "thesis_baseline"):
+            raise ValueError(
+                "match must be 'exact', 'at_or_before', or 'thesis_baseline'"
+            )
         args: dict[str, Any] = {
             "as_of": as_of,
             "scope": validated_scope,
