@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
+from alloccontext.config import load_config
 from alloccontext.ingest.onchain_cycle import (
     BRK_DAY1_ORIGIN,
+    _filter_ingest_rows,
     day1_index_to_date,
     parse_bitview_bulk,
     refresh_onchain_cycle,
     upsert_onchain_cycle_rows,
 )
+from alloccontext.mcp.handlers import _attach_regime
 from alloccontext.rollup.cycle import build_cycle_context
 from alloccontext.rollup.regime import build_regime_context
 from alloccontext.timeutil import utc_now_iso
@@ -210,24 +213,147 @@ def test_regime_cycle_does_not_change_risk_off(conn, config) -> None:
     assert regime["risk_off"]["score"] == 0
 
 
-def test_refresh_onchain_cycle_glassnode_skips_without_key(conn, config, monkeypatch) -> None:
-    from dataclasses import replace
+def test_build_cycle_context_caps_at_reference_date(conn, config) -> None:
+    conn.execute(
+        """
+        INSERT INTO onchain_cycle_daily(
+          as_of_date, supply_profit_pct, supply_loss_pct,
+          supply_profit_btc, supply_loss_btc, btc_price_usd, source, ingested_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        ("2026-05-01", 40.0, 60.0, None, None, None, "bitview", utc_now_iso()),
+    )
+    conn.execute(
+        """
+        INSERT INTO onchain_cycle_daily(
+          as_of_date, supply_profit_pct, supply_loss_pct,
+          supply_profit_btc, supply_loss_btc, btc_price_usd, source, ingested_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        ("2026-06-15", 90.0, 10.0, None, None, None, "bitview", utc_now_iso()),
+    )
+    conn.commit()
+    ref = datetime(2026, 5, 3, tzinfo=timezone.utc)
+    cycle = build_cycle_context(conn, config, now=ref)
+    assert cycle["available"] is True
+    assert cycle["as_of"] == "2026-05-01"
+    assert cycle["supply_profit_pct"] == 40.0
 
-    from alloccontext.config import OnchainConfig, OnchainCycleConfig
 
-    cfg = replace(
-        config,
-        onchain=OnchainConfig(
-            cycle=replace(
-                config.onchain.cycle,
-                provider="glassnode",
-            )
+def test_history_7d_ignores_baseline_outside_window(conn, config) -> None:
+    today = date.today()
+    old = (today - timedelta(days=20)).isoformat()
+    week_ago = (today - timedelta(days=8)).isoformat()
+    conn.execute(
+        """
+        INSERT INTO onchain_cycle_daily(
+          as_of_date, supply_profit_pct, supply_loss_pct,
+          supply_profit_btc, supply_loss_btc, btc_price_usd, source, ingested_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (old, 10.0, 90.0, None, None, None, "bitview", utc_now_iso()),
+    )
+    conn.execute(
+        """
+        INSERT INTO onchain_cycle_daily(
+          as_of_date, supply_profit_pct, supply_loss_pct,
+          supply_profit_btc, supply_loss_btc, btc_price_usd, source, ingested_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (week_ago, 86.0, 14.0, None, None, None, "bitview", utc_now_iso()),
+    )
+    conn.execute(
+        """
+        INSERT INTO onchain_cycle_daily(
+          as_of_date, supply_profit_pct, supply_loss_pct,
+          supply_profit_btc, supply_loss_btc, btc_price_usd, source, ingested_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            today.isoformat(),
+            82.0,
+            18.0,
+            None,
+            None,
+            None,
+            "bitview",
+            utc_now_iso(),
         ),
     )
-    monkeypatch.delenv("GLASSNODE_API_KEY", raising=False)
-    result = refresh_onchain_cycle(conn, cfg)
-    assert result["skipped"] is True
-    assert result["reason"] == "missing_glassnode_key"
+    conn.commit()
+    cycle = build_cycle_context(conn, config)
+    assert cycle["phase"] == "DISTRIBUTION"
+
+
+def test_attach_regime_uses_bundle_as_of(conn, config) -> None:
+    conn.execute(
+        """
+        INSERT INTO onchain_cycle_daily(
+          as_of_date, supply_profit_pct, supply_loss_pct,
+          supply_profit_btc, supply_loss_btc, btc_price_usd, source, ingested_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        ("2026-05-01", 40.0, 60.0, None, None, None, "bitview", utc_now_iso()),
+    )
+    conn.execute(
+        """
+        INSERT INTO onchain_cycle_daily(
+          as_of_date, supply_profit_pct, supply_loss_pct,
+          supply_profit_btc, supply_loss_btc, btc_price_usd, source, ingested_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        ("2026-06-15", 90.0, 10.0, None, None, None, "bitview", utc_now_iso()),
+    )
+    conn.commit()
+    bundle = {
+        "as_of": "2026-05-03T12:00:00+00:00",
+        "portfolio": {"available": False},
+        "sentiment": {"available": False},
+        "delta": {"available": False},
+    }
+    updated = _attach_regime(bundle, config, conn=conn)
+    assert updated["regime"]["cycle"]["as_of"] == "2026-05-01"
+
+
+def test_filter_ingest_rows_drops_future_dates() -> None:
+    today = date(2026, 6, 1)
+    rows = [
+        {"as_of_date": "2026-05-31", "supply_profit_pct": 50.0, "supply_loss_pct": 50.0},
+        {"as_of_date": "2026-06-02", "supply_profit_pct": 60.0, "supply_loss_pct": 40.0},
+    ]
+    kept = _filter_ingest_rows(rows, today=today)
+    assert len(kept) == 1
+    assert kept[0]["as_of_date"] == "2026-05-31"
+
+
+def test_load_config_rejects_disallowed_bitview_host(tmp_path) -> None:
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(
+        """
+paths:
+  db: state/test.db
+onchain:
+  cycle:
+    bitview_base_url: https://evil.example.com
+"""
+    )
+    with pytest.raises(ValueError, match="not allowed"):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_glassnode_provider(tmp_path) -> None:
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(
+        """
+paths:
+  db: state/test.db
+onchain:
+  cycle:
+    provider: glassnode
+"""
+    )
+    with pytest.raises(ValueError, match="unsupported onchain.cycle.provider"):
+        load_config(cfg_path)
 
 
 def test_refresh_onchain_cycle_unhealthy_provider(conn, config, monkeypatch) -> None:
@@ -437,36 +563,3 @@ def test_check_provider_health_unhealthy(monkeypatch) -> None:
     monkeypatch.setattr("urllib.request.urlopen", lambda *a, **k: FakeResponse())
     result = check_provider_health(base_url="https://bitview.space", timeout=5.0)
     assert result["ok"] is False
-
-
-def test_refresh_onchain_cycle_glassnode_upserts(conn, config, monkeypatch) -> None:
-    from dataclasses import replace
-
-    from alloccontext.config import OnchainConfig
-
-    cfg = replace(
-        config,
-        onchain=OnchainConfig(
-            cycle=replace(
-                config.onchain.cycle,
-                provider="glassnode",
-            )
-        ),
-    )
-    monkeypatch.setenv("GLASSNODE_API_KEY", "test-key")
-    monkeypatch.setattr(
-        "alloccontext.ingest.onchain_cycle.fetch_glassnode_supply_pl",
-        lambda **kwargs: [
-            {
-                "as_of_date": date.today().isoformat(),
-                "supply_profit_pct": 61.0,
-                "supply_loss_pct": 39.0,
-                "supply_profit_btc": None,
-                "supply_loss_btc": None,
-                "btc_price_usd": None,
-            }
-        ],
-    )
-    result = refresh_onchain_cycle(conn, cfg)
-    assert result["ok"] is True
-    assert result["rows"] == 1

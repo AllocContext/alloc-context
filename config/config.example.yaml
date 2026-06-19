@@ -145,6 +145,7 @@ onchain:
     provider: bitview
     bitview_base_url: https://bitview.space
     brk_base_url: null
+    brk_allowed_hosts: []
     backfill_days: 3650
     max_staleness_days: 3
     timeout_seconds: 30
@@ -158,3 +159,5 @@ regime:
     distribution_profit_drop_pct: 3
     recovery_loss_pct: 25
     recovery_spread_widen_pct: 2
+    history_7d_min_days: 7
+    history_7d_max_days: 14

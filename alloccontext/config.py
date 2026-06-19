@@ -39,6 +39,22 @@ _KALSHI_ALLOWED_HOSTS = frozenset(
     }
 )
 
+_ONCHAIN_BITVIEW_HOSTS = frozenset({"bitview.space"})
+
+
+def _validate_https_host_url(url: str, *, allowed_hosts: frozenset[str], label: str) -> str:
+    normalized = url.strip().rstrip("/")
+    parsed = urlparse(normalized)
+    if parsed.scheme != "https":
+        raise ValueError(f"{label} must use https, got {parsed.scheme!r}")
+    host = (parsed.hostname or "").lower()
+    if not host or host not in allowed_hosts:
+        allowed = ", ".join(sorted(allowed_hosts))
+        raise ValueError(f"{label} host {host!r} not allowed ({allowed})")
+    if parsed.path not in ("", "/"):
+        raise ValueError(f"{label} must not include a path")
+    return normalized
+
 
 def _validate_kalshi_base_url(url: str) -> str:
     normalized = url.strip().rstrip("/")
@@ -185,6 +201,7 @@ class OnchainCycleConfig:
     provider: str
     bitview_base_url: str
     brk_base_url: str | None
+    brk_allowed_hosts: frozenset[str]
     backfill_days: int
     max_staleness_days: int
     timeout_seconds: float
@@ -199,6 +216,8 @@ class RegimeCycleConfig:
     distribution_profit_drop_pct: float
     recovery_loss_pct: float
     recovery_spread_widen_pct: float
+    history_7d_min_days: int
+    history_7d_max_days: int
 
 
 @dataclass(frozen=True)
@@ -493,15 +512,38 @@ def _load_onchain_config(raw: dict[str, Any]) -> OnchainConfig:
     cycle_raw = raw.get("cycle") or {}
     brk_base = cycle_raw.get("brk_base_url")
     provider = str(cycle_raw.get("provider") or "bitview").strip().lower()
-    if provider not in {"bitview", "brk", "glassnode"}:
+    if provider not in {"bitview", "brk"}:
         raise ValueError(f"unsupported onchain.cycle.provider: {provider}")
+    brk_allowed_hosts = frozenset(
+        str(host).strip().lower()
+        for host in (cycle_raw.get("brk_allowed_hosts") or [])
+        if str(host).strip()
+    )
+    bitview_base_url = _validate_https_host_url(
+        str(cycle_raw.get("bitview_base_url") or "https://bitview.space"),
+        allowed_hosts=_ONCHAIN_BITVIEW_HOSTS,
+        label="onchain.cycle.bitview_base_url",
+    )
+    brk_base_url: str | None = None
+    if brk_base:
+        if not brk_allowed_hosts:
+            raise ValueError(
+                "onchain.cycle.brk_allowed_hosts required when brk_base_url is set"
+            )
+        brk_base_url = _validate_https_host_url(
+            str(brk_base),
+            allowed_hosts=brk_allowed_hosts,
+            label="onchain.cycle.brk_base_url",
+        )
+    if provider == "brk":
+        if not brk_base_url:
+            raise ValueError("onchain.cycle.brk_base_url required when provider=brk")
     return OnchainConfig(
         cycle=OnchainCycleConfig(
             provider=provider,
-            bitview_base_url=str(
-                cycle_raw.get("bitview_base_url") or "https://bitview.space"
-            ).rstrip("/"),
-            brk_base_url=str(brk_base).rstrip("/") if brk_base else None,
+            bitview_base_url=bitview_base_url,
+            brk_base_url=brk_base_url,
+            brk_allowed_hosts=brk_allowed_hosts,
             backfill_days=int(cycle_raw.get("backfill_days") or 3650),
             max_staleness_days=int(cycle_raw.get("max_staleness_days") or 3),
             timeout_seconds=float(cycle_raw.get("timeout_seconds") or 30.0),
@@ -528,5 +570,7 @@ def _load_regime_config(raw: dict[str, Any]) -> RegimeConfig:
             recovery_spread_widen_pct=float(
                 cycle_raw.get("recovery_spread_widen_pct") or 2
             ),
+            history_7d_min_days=int(cycle_raw.get("history_7d_min_days") or 7),
+            history_7d_max_days=int(cycle_raw.get("history_7d_max_days") or 14),
         ),
     )

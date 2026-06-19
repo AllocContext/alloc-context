@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 import urllib.error
 import urllib.parse
@@ -25,22 +24,15 @@ def day1_index_to_date(index: int) -> date:
     return BRK_DAY1_ORIGIN + timedelta(days=int(index))
 
 
-def date_to_day1_index(value: date) -> int:
-    return (value - BRK_DAY1_ORIGIN).days
-
-
 def _base_url(config) -> str:
     cycle = config.onchain.cycle
-    provider = cycle.provider
-    if provider == "bitview":
-        return cycle.bitview_base_url.rstrip("/")
-    if provider == "brk":
+    if cycle.provider == "bitview":
+        return cycle.bitview_base_url
+    if cycle.provider == "brk":
         if not cycle.brk_base_url:
             raise ValueError("onchain.cycle.brk_base_url required when provider=brk")
-        return cycle.brk_base_url.rstrip("/")
-    if provider == "glassnode":
-        return "https://api.glassnode.com"
-    raise ValueError(f"unsupported onchain.cycle.provider: {provider}")
+        return cycle.brk_base_url
+    raise ValueError(f"unsupported onchain.cycle.provider: {cycle.provider}")
 
 
 def check_provider_health(*, base_url: str, timeout: float) -> dict[str, Any]:
@@ -124,75 +116,13 @@ def parse_bitview_bulk(payload: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def fetch_glassnode_supply_pl(
-    *,
-    api_key: str,
-    start: date,
-    end: date,
-    timeout: float,
-) -> list[dict[str, Any]]:
-    def _fetch_metric(path: str) -> list[dict[str, Any]]:
-        params = urllib.parse.urlencode(
-            {
-                "a": "BTC",
-                "api_key": api_key,
-                "s": int(
-                    datetime.combine(start, datetime.min.time(), timezone.utc).timestamp()
-                ),
-                "u": int(
-                    datetime.combine(end, datetime.max.time(), timezone.utc).timestamp()
-                ),
-                "i": "24h",
-            }
-        )
-        url = f"https://api.glassnode.com/v1/metrics/{path}?{params}"
-        request = urllib.request.Request(url, headers={"User-Agent": "alloc-context/0.1"})
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            raise ValueError(f"glassnode {path}: {exc}") from exc
-        if not isinstance(payload, list):
-            raise ValueError(f"invalid glassnode payload for {path}")
-        return payload
-
-    profit_payload = _fetch_metric("supply/profit_relative")
-    loss_payload = _fetch_metric("supply/loss_relative")
-
-    loss_by_date: dict[str, float] = {}
-    for row in loss_payload:
-        if not isinstance(row, dict):
-            continue
-        ts = row.get("t")
-        value = row.get("v")
-        if ts is None or value is None:
-            continue
-        day = datetime.fromtimestamp(int(ts), timezone.utc).date().isoformat()
-        loss_by_date[day] = float(value) * 100.0
-
-    rows: list[dict[str, Any]] = []
-    for row in profit_payload:
-        if not isinstance(row, dict):
-            continue
-        ts = row.get("t")
-        value = row.get("v")
-        if ts is None or value is None:
-            continue
-        day = datetime.fromtimestamp(int(ts), timezone.utc).date().isoformat()
-        if day > end.isoformat() or day < start.isoformat():
-            continue
-        rows.append(
-            {
-                "as_of_date": day,
-                "supply_profit_pct": float(value) * 100.0,
-                "supply_loss_pct": loss_by_date.get(day, 0.0),
-                "supply_profit_btc": None,
-                "supply_loss_btc": None,
-                "btc_price_usd": None,
-            }
-        )
-    rows.sort(key=lambda item: item["as_of_date"])
-    return rows
+def _filter_ingest_rows(rows: list[dict[str, Any]], *, today: date) -> list[dict[str, Any]]:
+    kept: list[dict[str, Any]] = []
+    for row in rows:
+        as_of = date.fromisoformat(str(row["as_of_date"]))
+        if as_of <= today:
+            kept.append(row)
+    return kept
 
 
 def upsert_onchain_cycle_rows(
@@ -250,36 +180,6 @@ def refresh_onchain_cycle(conn: sqlite3.Connection, config) -> dict[str, Any]:
     cycle = config.onchain.cycle
     provider = cycle.provider
 
-    if provider == "glassnode":
-        api_key = os.environ.get("GLASSNODE_API_KEY", "").strip()
-        if not api_key:
-            return {
-                "ok": True,
-                "rows": 0,
-                "skipped": True,
-                "reason": "missing_glassnode_key",
-            }
-        today = datetime.now(timezone.utc).date()
-        if _table_is_empty(conn):
-            start = today - timedelta(days=cycle.backfill_days)
-        else:
-            start = today - timedelta(days=14)
-        try:
-            rows = fetch_glassnode_supply_pl(
-                api_key=api_key,
-                start=start,
-                end=today,
-                timeout=cycle.timeout_seconds,
-            )
-        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-            conn.rollback()
-            return {"ok": False, "error": str(exc), "rows": 0}
-        if not rows:
-            return {"ok": False, "error": "empty_response", "rows": 0}
-        upserted = upsert_onchain_cycle_rows(conn, rows, source="glassnode")
-        conn.commit()
-        return {"ok": True, "rows": upserted, "latest": rows[-1]}
-
     try:
         base_url = _base_url(config)
     except ValueError as exc:
@@ -309,6 +209,8 @@ def refresh_onchain_cycle(conn: sqlite3.Connection, config) -> dict[str, Any]:
         conn.rollback()
         return {"ok": False, "error": str(exc), "rows": 0}
 
+    today = datetime.now(timezone.utc).date()
+    rows = _filter_ingest_rows(rows, today=today)
     if not rows:
         return {"ok": False, "error": "empty_response", "rows": 0}
 

@@ -25,19 +25,21 @@ def _history_row(
     conn: sqlite3.Connection,
     *,
     as_of_date: str,
-    min_age_days: int = 7,
+    min_age_days: int,
+    max_age_days: int,
 ) -> sqlite3.Row | None:
     current = date.fromisoformat(as_of_date)
-    cutoff = (current - timedelta(days=min_age_days)).isoformat()
+    oldest = (current - timedelta(days=max_age_days)).isoformat()
+    newest = (current - timedelta(days=min_age_days)).isoformat()
     return conn.execute(
         """
         SELECT as_of_date, supply_profit_pct, supply_loss_pct
         FROM onchain_cycle_daily
-        WHERE as_of_date <= ?
+        WHERE as_of_date <= ? AND as_of_date >= ?
         ORDER BY as_of_date DESC
         LIMIT 1
         """,
-        (cutoff,),
+        (newest, oldest),
     ).fetchone()
 
 
@@ -45,8 +47,14 @@ def _build_history_7d(
     conn: sqlite3.Connection,
     *,
     latest: sqlite3.Row,
+    thresholds: RegimeCycleConfig,
 ) -> dict[str, Any]:
-    prior = _history_row(conn, as_of_date=str(latest["as_of_date"]))
+    prior = _history_row(
+        conn,
+        as_of_date=str(latest["as_of_date"]),
+        min_age_days=thresholds.history_7d_min_days,
+        max_age_days=thresholds.history_7d_max_days,
+    )
     if prior is None:
         return {"available": False}
     current = _row_metrics(latest)
@@ -117,6 +125,7 @@ def build_cycle_context(
     cycle_cfg = config.onchain.cycle
     thresholds = config.regime.cycle
     ref = (now or datetime.now(timezone.utc)).replace(microsecond=0)
+    ref_date = ref.date().isoformat()
     latest = conn.execute(
         """
         SELECT
@@ -128,9 +137,11 @@ def build_cycle_context(
           source,
           ingested_at
         FROM onchain_cycle_daily
+        WHERE as_of_date <= ?
         ORDER BY as_of_date DESC
         LIMIT 1
-        """
+        """,
+        (ref_date,),
     ).fetchone()
     if latest is None:
         return _unavailable(reason="insufficient_history")
@@ -142,7 +153,7 @@ def build_cycle_context(
         return _unavailable(reason="stale_data")
 
     metrics = _row_metrics(latest)
-    history = _build_history_7d(conn, latest=latest)
+    history = _build_history_7d(conn, latest=latest, thresholds=thresholds)
     phase, phase_reason = _evaluate_phase(
         metrics=metrics,
         history=history,

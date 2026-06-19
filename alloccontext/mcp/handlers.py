@@ -434,6 +434,16 @@ def _attach_alt_quote_ingest(payload: dict[str, Any], refresh_result: dict[str, 
     payload["ingest"] = ingest
 
 
+def _bundle_reference_dt(bundle: dict[str, Any]) -> datetime | None:
+    raw = bundle.get("as_of")
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw))
+    except ValueError:
+        return None
+
+
 def _attach_regime(
     bundle: dict[str, Any],
     config,
@@ -461,6 +471,7 @@ def _attach_regime(
         prior_as_of=bundle.get("prior_as_of"),
         conn=conn,
         config=config,
+        now=_bundle_reference_dt(bundle),
     )
     if conn is not None:
         bundle = attach_regime_history(conn, scope=scope, bundle=bundle)
