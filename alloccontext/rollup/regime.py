@@ -238,8 +238,6 @@ def _notable_shift_symbol(line: str) -> str | None:
 def _allocation_hint_text(code: str) -> str:
     mapping = {
         "within_band": "Portfolio allocation is within the configured drift band.",
-        "consider_deploy_cash": "Cash weight is above target — consider deploying idle cash.",
-        "consider_trim_to_cash": "Cash weight is below target — consider trimming to raise cash.",
         "consider_rebalance": "Allocation drift exceeds the band — consider rebalancing.",
     }
     return mapping.get(code, f"Allocation hint: {code}.")
@@ -263,9 +261,9 @@ def _build_risk_off(
             score += 20
             signals.append(f"cash {cash * 100:.1f}% elevated vs risk-off ceiling")
         hint = str(portfolio.get("rebalance_hint") or "")
-        if hint == "consider_deploy_cash":
-            score += 15
-            signals.append("rebalance hint favors deploying cash")
+        if hint == "consider_rebalance":
+            score += 10
+            signals.append("rebalance hint favors rebalancing")
 
     fg = _fear_greed_block(sentiment) if sentiment.get("available") else None
     if fg and fg.get("value") is not None:

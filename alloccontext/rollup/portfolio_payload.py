@@ -4,7 +4,7 @@ from typing import Any
 
 from alloccontext.ingest.kraken_portfolio import PortfolioSnapshot
 from alloccontext.ingest.portfolio_holdings import band_allocation_pct
-from alloccontext.rollup.allocation_analysis import build_allocation_analysis
+from alloccontext.rollup.allocation_analysis import build_allocation_analysis_for_portfolio
 
 
 def portfolio_dict_from_snapshot(
@@ -42,8 +42,8 @@ def attach_allocation_analysis_to_payload(
     if not payload.get("available"):
         return payload
     result = dict(payload)
-    result["allocation_analysis"] = build_allocation_analysis(
-        payload.get("allocation_pct") or {},
+    result["allocation_analysis"] = build_allocation_analysis_for_portfolio(
+        payload,
         target_pct,
         band,
     )

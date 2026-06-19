@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from alloccontext.constants import ALLOCATION_ASSETS as _ASSETS
 from alloccontext.rollup.expectation_review import V0_CLAIM_TYPES
 
-_PCT_SUM_TOLERANCE = 0.02
+MAX_TARGET_PCT_SYMBOLS = 20
 MAX_ALLOCATION_BAND_SCENARIOS = 32
 
 
@@ -15,14 +14,34 @@ class McpValidationError(ValueError):
     """Raised when MCP tool inputs fail validation."""
 
 
+def normalize_allocation_pct(values: dict[str, Any]) -> dict[str, float]:
+    if not isinstance(values, dict):
+        return {}
+    normalized: dict[str, float] = {}
+    for key, raw in values.items():
+        asset = str(key).strip().upper()
+        if not asset:
+            continue
+        try:
+            normalized[asset] = float(raw)
+        except (TypeError, ValueError):
+            continue
+    return normalized
+
+
 def validate_target_pct(values: dict[str, Any]) -> dict[str, float]:
     if not isinstance(values, dict):
         raise McpValidationError("target_pct must be an object")
+    if not values:
+        raise McpValidationError("target_pct must not be empty")
+    if len(values) > MAX_TARGET_PCT_SYMBOLS:
+        raise McpValidationError(
+            f"target_pct exceeds maximum of {MAX_TARGET_PCT_SYMBOLS} symbols"
+        )
     normalized: dict[str, float] = {}
-    for asset in _ASSETS:
-        raw = values.get(asset)
-        if raw is None:
-            normalized[asset] = 0.0
+    for key, raw in values.items():
+        asset = str(key).strip().upper()
+        if not asset:
             continue
         try:
             pct = float(raw)
@@ -31,11 +50,8 @@ def validate_target_pct(values: dict[str, Any]) -> dict[str, float]:
         if pct < 0 or pct > 1:
             raise McpValidationError(f"target_pct.{asset} must be between 0 and 1")
         normalized[asset] = pct
-    total = sum(normalized.values())
-    if abs(total - 1.0) > _PCT_SUM_TOLERANCE:
-        raise McpValidationError(
-            f"target_pct must sum to approximately 1 (got {total:.4f})"
-        )
+    if not normalized:
+        raise McpValidationError("target_pct must include at least one symbol")
     return normalized
 
 

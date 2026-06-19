@@ -72,9 +72,13 @@ Example holding:
 
 ## allocation_analysis (opt-in)
 
-Separate block when drift math is requested. Same semantics as legacy portfolio
-drift fields. `regime.allocation` is populated only when this block (or legacy
-compat fields) is present.
+Separate block when drift math is requested. Evaluates **current holdings
+weights** vs the supplied target map (any symbols; values need not sum to 1).
+`portfolio.allocation_pct` remains a band-collapsed BTC/ETH/CASH view for
+backward compatibility — prefer `allocation_analysis.allocation_pct` for drift.
+
+Same semantics as legacy portfolio drift fields. `regime.allocation` is
+populated only when this block (or legacy compat fields) is present.
 
 When `theses[]` includes an `ALLOCATION_FIT` claim, the server may attach
 `allocation_analysis` automatically using configured `target_allocations` and

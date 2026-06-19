@@ -14,14 +14,15 @@ def test_check_allocation_band_within() -> None:
     assert result["hint"] == "within_band"
 
 
-def test_check_allocation_band_deploy_cash() -> None:
+def test_check_allocation_band_outside() -> None:
     result = check_allocation_band(
         {"BTC": 0.60, "ETH": 0.25, "CASH": 0.15},
         {"BTC": 0.70, "ETH": 0.30, "CASH": 0.0},
         0.10,
     )
     assert result["outside_band"] is True
-    assert result["hint"] == "consider_deploy_cash"
+    assert result["hint"] == "consider_rebalance"
+    assert result["max_drift_symbol"] == "CASH"
 
 
 def test_mcp_check_band_includes_staleness() -> None:

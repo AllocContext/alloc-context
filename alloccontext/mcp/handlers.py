@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from alloccontext.rollup.allocation_analysis import build_allocation_analysis
+from alloccontext.rollup.allocation_analysis import build_allocation_analysis_for_portfolio
 from alloccontext.rollup.band import check_allocation_band
 from alloccontext.ingest.exchange.live import (
     LivePortfolioError,
@@ -33,6 +33,7 @@ from alloccontext.mcp.validation import (
     validate_nav_usd,
     validate_target_pct,
     validate_theses,
+    normalize_allocation_pct,
 )
 from alloccontext.rollup.expectation_review import (
     build_expectation_review,
@@ -120,6 +121,12 @@ def _band_allocation_pct(portfolio: dict[str, Any]) -> dict[str, float]:
     from alloccontext.ingest.portfolio_holdings import band_allocation_pct
 
     return band_allocation_pct(portfolio.get("holdings") or [])
+
+
+def _portfolio_allocation_weights(portfolio: dict[str, Any]) -> dict[str, float]:
+    from alloccontext.rollup.allocation_analysis import allocation_weights_from_portfolio
+
+    return allocation_weights_from_portfolio(portfolio)
 
 
 def _load_baseline_bundle(
@@ -256,8 +263,8 @@ def _attach_allocation_analysis(
         else validate_band(config.portfolio.rebalance_band)
     )
     result = dict(bundle)
-    result["allocation_analysis"] = build_allocation_analysis(
-        _band_allocation_pct(portfolio),
+    result["allocation_analysis"] = build_allocation_analysis_for_portfolio(
+        portfolio,
         target,
         band_width,
     )
@@ -479,7 +486,7 @@ def check_allocation_bands(
             f"scenarios exceeds maximum of {MAX_ALLOCATION_BAND_SCENARIOS}"
         )
     now = (as_of or utc_now()).replace(microsecond=0)
-    normalized_allocation = _normalize_pct(allocation_pct)
+    normalized_allocation = normalize_allocation_pct(allocation_pct)
     results: list[dict[str, Any]] = []
     for index, scenario in enumerate(scenarios):
         name = str(scenario.get("name") or f"scenario_{index + 1}")
@@ -691,7 +698,7 @@ def get_rebalance_plan(
 ) -> dict[str, Any]:
     now = (as_of or utc_now()).replace(microsecond=0)
     exchange_id = validate_cex_exchange_id(exchange)
-    normalized_allocation = _normalize_pct(allocation_pct)
+    normalized_allocation = normalize_allocation_pct(allocation_pct)
     normalized_target = validate_target_pct(target_pct)
     nav = validate_nav_usd(nav_usd)
     plan = compute_rebalance_plan(
@@ -769,7 +776,7 @@ def check_band(
 ) -> dict[str, Any]:
     now = (as_of or utc_now()).replace(microsecond=0)
     result = check_allocation_band(
-        _normalize_pct(allocation_pct),
+        normalize_allocation_pct(allocation_pct),
         validate_target_pct(target_pct),
         validate_band(band),
     )

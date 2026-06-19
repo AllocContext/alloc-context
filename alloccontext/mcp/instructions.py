@@ -13,7 +13,6 @@ PRODUCT_INSTRUCTIONS = (
 
 REBALANCE_HINT_GUIDE = (
     "rebalance_hint codes (in allocation_analysis when opted in): within_band — "
-    "drift inside band; consider_deploy_cash — cash above target; "
-    "consider_trim_to_cash — cash below target; consider_rebalance — drift "
-    "exceeds band."
+    "drift inside band; consider_rebalance — at least one symbol exceeds the "
+    "configured band vs its target weight."
 )

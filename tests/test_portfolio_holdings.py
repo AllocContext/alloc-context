@@ -93,6 +93,18 @@ def test_resolve_prices_for_balances_hype_via_cmc(monkeypatch) -> None:
     assert unrecognized == []
 
 
+def test_build_allocation_analysis_alt_symbol() -> None:
+    analysis = build_allocation_analysis(
+        {"BTC": 0.7, "HYPE": 0.2, "CASH": 0.1},
+        {"BTC": 0.70, "HYPE": 0.15},
+        0.05,
+    )
+    assert analysis["available"] is True
+    assert analysis["drift"]["HYPE"] == pytest.approx(0.05)
+    assert analysis["max_drift_symbol"] == "HYPE"
+    assert analysis["rebalance_hint"] == "within_band"
+
+
 def test_build_allocation_analysis_is_separate_block() -> None:
     analysis = build_allocation_analysis(
         {"BTC": 0.7, "ETH": 0.2, "CASH": 0.1},
