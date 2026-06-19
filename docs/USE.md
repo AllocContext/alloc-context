@@ -43,6 +43,11 @@ When you use **official** hosted MCP or the default bridge upstream, see
 infrastructure for pass-through portfolio reads; one-time read-only;
 pass-through only.
 
+**Theses (`expectation_review`):** optional `theses[]` on `get_context_bundle`
+follow the same model — beliefs are pass-through only, scored in-request against
+public snapshot history, not stored server-side. See
+[mcp.md](mcp.md#privacy-theses-hosted-and-bridge).
+
 When you **self-host**, portfolio data may exist in **your** SQLite if you run
 ingest — that is your infrastructure, under your control.
 

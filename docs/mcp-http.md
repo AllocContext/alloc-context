@@ -79,6 +79,18 @@ See [Coinbase x402 seller quickstart](https://docs.cdp.coinbase.com/x402/quickst
 Discovery: [mcp-discovery.md](mcp-discovery.md) — Bazaar metadata, `llms.txt`,
 and `/.well-known/x402.json`.
 
+## Hosted `theses[]` (expectation review)
+
+Paid `get_context_bundle` accepts optional `theses[]` for deterministic
+`expectation_review` scoring. Privacy matches portfolio pass-through:
+
+- Thesis JSON is **not persisted** on the server after the response is sent.
+- Scoring reads **saved public market snapshots** at each thesis `recorded_at`
+  (same SQLite ingest history used for `get_context_at`).
+- No LLM runs on the hosted path.
+
+Full detail: [mcp.md#privacy-theses-hosted-and-bridge](mcp.md#privacy-theses-hosted-and-bridge).
+
 Verification scripts: `scripts/x402-production-check.py`,
 `scripts/x402-paid-smoke-test.py` (buyer wallet required; payer must differ
 from `X402_PAY_TO`).

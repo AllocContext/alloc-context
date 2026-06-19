@@ -28,14 +28,17 @@ Shared optional args on context tools:
 | `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields; unknown symbols (e.g. HYPE) are omitted and listed in `assets_omitted`. **Bridge:** when omitted (or `[]`) and exchange keys + x402 payer are set, symbols are derived from local portfolio holdings (symbols only sent upstream — no qty/NAV). Bridge responses include `assets_scope` (`portfolio`, `explicit`, `default`, `portfolio_unavailable`). **Bridge auto-scope does not apply** to `get_context_at` or `get_context_delta` — pass `assets` explicitly for historical/delta filters. |
 | `target_pct` | `get_context_bundle` | omitted | Opt-in: attach `allocation_analysis` drift math |
 | `band` | `get_context_bundle`, `get_rebalance_plan` | omitted / none | Drift band width when used with `target_pct` |
+| `theses` | `get_context_bundle` | omitted | Opt-in: attach `expectation_review` (pass-through beliefs; nothing stored) |
 
 Math tools require explicit `target_pct` and `band`. On `get_context_bundle`,
 pass `target_pct` (and optional `band`) to attach `allocation_analysis`.
+Pass `theses[]` to score local thesis claims deterministically — see
+[Privacy: theses](#privacy-theses-hosted-and-bridge) below.
 
 | Tool | Input | Output |
 |------|-------|--------|
 | `get_market_context` | `scope`, optional `freshness`, optional `assets` | Sentiment, macro, ETF, breadth, `market`, `as_of`, `age_seconds` |
-| `get_context_bundle` | `scope`, optional `freshness`, optional `assets`, optional `target_pct`, optional `band` | Full ContextBundle; optional `allocation_analysis` when targets supplied |
+| `get_context_bundle` | `scope`, optional `freshness`, optional `assets`, optional `target_pct`, optional `band`, optional `theses[]` | Full ContextBundle; optional `allocation_analysis` when targets supplied; optional `expectation_review` when `theses[]` supplied |
 | `get_context_at` | `as_of`, optional `scope`, `match`, optional `assets` | Saved snapshot from ingest history |
 | `get_context_delta` | `prior_as_of`, optional `scope`, optional `current_as_of`, optional `assets` | `notable_shifts` between two bundles |
 | `get_rebalance_plan` | `allocation_pct`, `target_pct`, `nav_usd`, optional `band` | USD deltas, move lines, optional `band_check` |
@@ -130,6 +133,29 @@ Bazaar listing title:
 pip install "alloc-context[mcp]"      # stdio MCP
 pip install "alloc-context[hosted]"   # HTTP + x402
 ```
+
+## Privacy: theses (hosted and bridge)
+
+Optional `theses[]` on `get_context_bundle` enables deterministic
+`expectation_review` scoring ([context-bundle.md](context-bundle.md)). Same
+privacy model as CEX keys and wallet addresses:
+
+| Pillar | Behavior |
+|--------|----------|
+| **Nothing stored** | Thesis payloads and scored `expectation_review` output are **not** written to hosted SQLite, logs, or long-lived cache. |
+| **One-time read-only** | Used only for the request lifecycle — score claims vs saved market snapshots, return JSON, discard. |
+| **Pass-through only** | Beliefs live in **your** agent, `user.yaml`, or operator config; the server never owns or edits them. |
+
+**Hosted MCP:** pass `theses[]` on the paid `get_context_bundle` tool call.
+Baselines resolve from the host's public ingest snapshot history at each thesis
+`recorded_at` — not from caller-supplied portfolio data unless you also call
+portfolio tools in the same session.
+
+**Bridge:** `theses:` in `user.yaml` (or per-call `theses`) are forwarded on
+upstream bundle reads when x402 payment is configured. Without a payer, bundle
+calls fail closed before exchange or thesis work runs.
+
+See also [user-config.md](user-config.md) and [USE.md](USE.md).
 
 ## Non-goals
 
