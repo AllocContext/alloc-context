@@ -337,8 +337,10 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "get_rebalance_plan": (
         "Compute read-only USD deltas and suggested exchange move lines to "
-        "reach a BTC/ETH/CASH target split. Pure math — no exchange API calls. "
-        "Requires allocation_pct, target_pct, and nav_usd. Use "
+        "reach a target allocation map. Pure math — no exchange API calls. "
+        "Requires allocation_pct, target_pct, and nav_usd. Evaluates every "
+        "symbol in target_pct (same model as allocation_analysis). Optional "
+        "pairs map overrides exchange product ids per symbol. Use "
         "get_portfolio_state or get_context_bundle when you need live or cached "
         "weights first. Use check_allocation_band for pass/fail drift only; use "
         "check_allocation_bands for multiple scenarios. Optional band adds a "
@@ -361,7 +363,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "hint within_band or consider_rebalance. Requires allocation_pct and "
         "target_pct; band defaults to 0.15. Single-scenario only — use "
         "check_allocation_bands for multiple targets in one call. Use "
-        "get_rebalance_plan when you need USD move lines (BTC/ETH/CASH only). "
+        "get_rebalance_plan when you need USD move lines for the same symbols. "
         "For bundle drift, pass target_pct on get_context_bundle to attach "
         "allocation_analysis instead."
     ),

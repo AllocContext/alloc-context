@@ -20,6 +20,26 @@ def test_deploy_cash_split_to_btc_and_eth() -> None:
     ]
 
 
+def test_rebalance_plan_trims_overweight_alt() -> None:
+    plan = compute_rebalance_plan(
+        1000.0,
+        {"BTC": 0.60, "HYPE": 0.15, "CASH": 0.25},
+        {"BTC": 0.65, "HYPE": 0.10, "CASH": 0.25},
+    )
+    assert plan["delta_usd"]["HYPE"] == -50.0
+    assert any("HYPE" in line and "Sell" in line for line in plan["moves"])
+
+
+def test_rebalance_plan_deploys_cash_to_alt() -> None:
+    plan = compute_rebalance_plan(
+        1000.0,
+        {"BTC": 0.50, "HYPE": 0.05, "CASH": 0.45},
+        {"BTC": 0.50, "HYPE": 0.15, "CASH": 0.35},
+    )
+    assert plan["delta_usd"]["HYPE"] == 100.0
+    assert any("HYPE" in line for line in plan["moves"])
+
+
 def test_format_rebalance_plan_includes_target_and_nav() -> None:
     plan = compute_rebalance_plan(
         640.0,
@@ -30,7 +50,9 @@ def test_format_rebalance_plan_includes_target_and_nav() -> None:
         plan,
         target_pct={"BTC": 0.65, "ETH": 0.20, "CASH": 0.15},
     )
-    assert "BTC 65%, ETH 20%, Cash 15%" in text
+    assert "BTC 65%" in text
+    assert "ETH 20%" in text
+    assert "Cash 15%" in text
     assert "$640" in text
     assert "Deploy ~$" in text
 
