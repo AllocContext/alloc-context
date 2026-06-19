@@ -711,6 +711,7 @@ def build_expectation_review(
     theses: list[dict[str, Any]],
     target_pct: dict[str, float] | None = None,
     band: float | None = None,
+    baseline_resolutions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Score local theses against baseline and current ContextBundles."""
     if not theses:
@@ -718,6 +719,7 @@ def build_expectation_review(
 
     claims_out: list[dict[str, Any]] = []
     baseline_as_ofs: set[str] = set()
+    used_earliest_tolerance = False
 
     for thesis in theses:
         if not isinstance(thesis, dict):
@@ -743,20 +745,27 @@ def build_expectation_review(
         anchor = _baseline_as_of(baseline)
         if anchor:
             baseline_as_ofs.add(anchor)
+        resolution = (baseline_resolutions or {}).get(thesis_id) or {}
+        if resolution.get("mode") == "earliest_available":
+            used_earliest_tolerance = True
 
         for claim in thesis.get("claims") or []:
             if not isinstance(claim, dict):
                 continue
-            claims_out.append(
-                _score_claim(
-                    thesis_id=thesis_id,
-                    claim=claim,
-                    baseline=baseline,
-                    current=current_bundle,
-                    target_pct=target_pct,
-                    band=band,
-                )
+            row = _score_claim(
+                thesis_id=thesis_id,
+                claim=claim,
+                baseline=baseline,
+                current=current_bundle,
+                target_pct=target_pct,
+                band=band,
             )
+            if resolution.get("mode") == "earliest_available":
+                requested = resolution.get("requested_as_of")
+                if requested and requested != anchor:
+                    row["evidence"]["baseline_requested_as_of"] = requested
+                    row["evidence"]["baseline_tolerance"] = "earliest_available"
+            claims_out.append(row)
 
     if not claims_out:
         return {"available": False, "reason": "no_valid_claims"}
@@ -766,7 +775,7 @@ def build_expectation_review(
     unknown = sum(1 for row in claims_out if row["status"] == "unknown")
 
     top_baseline_as_of = next(iter(baseline_as_ofs)) if len(baseline_as_ofs) == 1 else None
-    return {
+    result: dict[str, Any] = {
         "available": True,
         "baseline_as_of": top_baseline_as_of,
         "current_as_of": current_bundle.get("as_of"),
@@ -774,4 +783,137 @@ def build_expectation_review(
         "weakened": weakened,
         "unknown": unknown,
         "claims": claims_out,
+    }
+    if used_earliest_tolerance:
+        result["baseline_tolerance"] = "earliest_available"
+    return result
+
+
+def _claim_identity(row: dict[str, Any]) -> tuple[str, str, str | None]:
+    return (
+        str(row["thesis_id"]),
+        str(row["type"]),
+        str(row["asset"]) if row.get("asset") else None,
+    )
+
+
+def collect_replay_checkpoint_as_ofs_from_bundle(
+    bundle: dict[str, Any],
+    *,
+    after_exclusive: str,
+    through_inclusive: str,
+) -> list[str]:
+    """Bridge-sparse checkpoint dates from delta and regime history."""
+    candidates: list[str] = []
+    delta = bundle.get("delta") or {}
+    if isinstance(delta, dict) and delta.get("available") and delta.get("prior_as_of"):
+        candidates.append(str(delta["prior_as_of"]))
+    regime = bundle.get("regime") or {}
+    comparison = (regime.get("comparison") or {}) if isinstance(regime, dict) else {}
+    for row in comparison.get("history") or []:
+        if isinstance(row, dict) and row.get("baseline_as_of"):
+            candidates.append(str(row["baseline_as_of"]))
+    if through_inclusive:
+        candidates.append(str(through_inclusive))
+
+    filtered: list[str] = []
+    seen: set[str] = set()
+    for value in sorted(set(candidates)):
+        if value <= after_exclusive or value > through_inclusive:
+            continue
+        if value not in seen:
+            filtered.append(value)
+            seen.add(value)
+    return filtered
+
+
+def build_expectation_replay(
+    *,
+    checkpoint_bundles: list[dict[str, Any]],
+    baseline_bundles: dict[str, dict[str, Any] | None],
+    theses: list[dict[str, Any]],
+    target_pct: dict[str, float] | None = None,
+    band: float | None = None,
+) -> dict[str, Any]:
+    """Re-score theses at intervening snapshots (fixed baseline, rolling current)."""
+    if not checkpoint_bundles:
+        return {"available": False, "reason": "no_checkpoints"}
+
+    checkpoints_out: list[dict[str, Any]] = []
+    status_history: dict[tuple[str, str, str | None], list[tuple[str, str]]] = {}
+
+    for checkpoint in checkpoint_bundles:
+        as_of = str(checkpoint.get("as_of") or "")
+        compact_claims: list[dict[str, Any]] = []
+        supported = weakened = unknown = 0
+
+        for thesis in theses:
+            if not isinstance(thesis, dict):
+                continue
+            thesis_id = str(thesis.get("id") or "").strip()
+            if not thesis_id:
+                continue
+            baseline = baseline_bundles.get(thesis_id)
+            for claim in thesis.get("claims") or []:
+                if not isinstance(claim, dict):
+                    continue
+                row = _score_claim(
+                    thesis_id=thesis_id,
+                    claim=claim,
+                    baseline=baseline,
+                    current=checkpoint,
+                    target_pct=target_pct,
+                    band=band,
+                )
+                compact = {
+                    "thesis_id": thesis_id,
+                    "type": row["type"],
+                    "status": row["status"],
+                }
+                if row.get("asset"):
+                    compact["asset"] = row["asset"]
+                compact_claims.append(compact)
+                key = _claim_identity(row)
+                status_history.setdefault(key, []).append((as_of, row["status"]))
+                if row["status"] == "supported":
+                    supported += 1
+                elif row["status"] == "weakened":
+                    weakened += 1
+                else:
+                    unknown += 1
+
+        checkpoints_out.append(
+            {
+                "as_of": as_of,
+                "supported": supported,
+                "weakened": weakened,
+                "unknown": unknown,
+                "claims": compact_claims,
+            }
+        )
+
+    transitions: list[dict[str, Any]] = []
+    for (thesis_id, claim_type, asset), points in status_history.items():
+        first_supported: str | None = None
+        first_weakened: str | None = None
+        for point_as_of, status in points:
+            if status == "supported" and first_supported is None:
+                first_supported = point_as_of
+            if status == "weakened" and first_weakened is None:
+                first_weakened = point_as_of
+        transition: dict[str, Any] = {
+            "thesis_id": thesis_id,
+            "type": claim_type,
+            "first_supported_as_of": first_supported,
+            "first_weakened_as_of": first_weakened,
+        }
+        if asset:
+            transition["asset"] = asset
+        transitions.append(transition)
+
+    return {
+        "available": True,
+        "checkpoint_count": len(checkpoints_out),
+        "checkpoints": checkpoints_out,
+        "transitions": transitions,
     }

@@ -16,7 +16,11 @@ from alloccontext.rollup.portfolio_payload import (
     portfolio_dict_from_snapshot,
 )
 from alloccontext.mcp.validation import validate_band, validate_target_pct, validate_theses
-from alloccontext.rollup.expectation_review import build_expectation_review
+from alloccontext.rollup.expectation_review import (
+    build_expectation_replay,
+    build_expectation_review,
+    collect_replay_checkpoint_as_ofs_from_bundle,
+)
 from alloccontext.user_config import UserConfig
 
 AssetsScope = Literal["explicit", "portfolio", "default", "portfolio_unavailable"]
@@ -231,6 +235,8 @@ def attach_bridge_expectation_review(
     target_pct: dict[str, float] | None,
     band: float | None,
     fetch_baseline,
+    expectation_replay: bool = False,
+    fetch_checkpoint=None,
 ) -> dict[str, Any]:
     """Score local theses on a merged bridge bundle (baselines via upstream)."""
     effective_theses = theses if theses is not None else user.theses
@@ -241,19 +247,33 @@ def attach_bridge_expectation_review(
     if not validated:
         return bundle
 
-    by_recorded_at: dict[str, dict[str, Any] | None] = {}
+    by_recorded_at: dict[str, tuple[dict[str, Any] | None, dict[str, Any]]] = {}
     baseline_bundles: dict[str, dict[str, Any] | None] = {}
+    baseline_resolutions: dict[str, dict[str, Any]] = {}
     for thesis in validated:
         thesis_id = thesis["id"]
         recorded_at = thesis["recorded_at"]
         if recorded_at not in by_recorded_at:
             baseline = fetch_baseline(scope=scope, recorded_at=recorded_at)
-            by_recorded_at[recorded_at] = (
-                baseline
-                if isinstance(baseline, dict) and baseline.get("as_of")
-                else None
-            )
-        baseline_bundles[thesis_id] = by_recorded_at[recorded_at]
+            if isinstance(baseline, dict) and baseline.get("as_of"):
+                meta = {
+                    "requested_as_of": recorded_at,
+                    "resolved_as_of": baseline.get("snapshot_as_of") or baseline.get("as_of"),
+                    "mode": baseline.get("baseline_resolution") or "at_or_before",
+                }
+                by_recorded_at[recorded_at] = (baseline, meta)
+            else:
+                by_recorded_at[recorded_at] = (
+                    None,
+                    {
+                        "requested_as_of": recorded_at,
+                        "resolved_as_of": None,
+                        "mode": "missing",
+                    },
+                )
+        bundle_row, meta = by_recorded_at[recorded_at]
+        baseline_bundles[thesis_id] = bundle_row
+        baseline_resolutions[thesis_id] = meta
 
     effective_target = target_pct if target_pct is not None else user.target_allocation
     if effective_target is not None:
@@ -268,7 +288,36 @@ def attach_bridge_expectation_review(
         theses=validated,
         target_pct=effective_target,
         band=effective_band,
+        baseline_resolutions=baseline_resolutions,
     )
+    if expectation_replay and review.get("available") and fetch_checkpoint is not None:
+        baseline_as_ofs = [
+            str(meta["resolved_as_of"])
+            for meta in baseline_resolutions.values()
+            if meta.get("resolved_as_of")
+        ]
+        after_exclusive = min(baseline_as_ofs) if baseline_as_ofs else ""
+        through = str(bundle.get("as_of") or "")
+        as_ofs = collect_replay_checkpoint_as_ofs_from_bundle(
+            bundle,
+            after_exclusive=after_exclusive,
+            through_inclusive=through,
+        )
+        checkpoints: list[dict[str, Any]] = []
+        for as_of in as_ofs:
+            checkpoint = fetch_checkpoint(scope=scope, as_of=as_of)
+            if isinstance(checkpoint, dict) and checkpoint.get("as_of"):
+                checkpoints.append(checkpoint)
+        current_as_of = str(bundle.get("as_of") or "")
+        if not checkpoints or str(checkpoints[-1].get("as_of")) != current_as_of:
+            checkpoints.append(bundle)
+        review["replay"] = build_expectation_replay(
+            checkpoint_bundles=checkpoints,
+            baseline_bundles=baseline_bundles,
+            theses=validated,
+            target_pct=effective_target,
+            band=effective_band,
+        )
     result = dict(bundle)
     result["expectation_review"] = review
     return result

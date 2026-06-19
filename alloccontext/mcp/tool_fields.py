@@ -128,7 +128,17 @@ MatchMode = Annotated[
     Field(
         description=(
             "exact: snapshot at as_of only. at_or_before (default): latest "
-            "snapshot on or before as_of."
+            "snapshot on or before as_of. thesis_baseline: at_or_before, or "
+            "earliest saved snapshot when recorded_at predates history."
+        ),
+    ),
+]
+ExpectationReplay = Annotated[
+    bool,
+    Field(
+        description=(
+            "When true with theses[], attach expectation_review.replay "
+            "(counterfactual claim timeline vs intervening snapshots)."
         ),
     ),
 ]

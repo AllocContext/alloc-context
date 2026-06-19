@@ -92,9 +92,11 @@ bridge `user.yaml`). Pass-through beliefs only — nothing is stored server-side
 | Field | Meaning |
 |-------|---------|
 | `baseline_as_of` | Set only when every scored claim shares one baseline snapshot |
+| `baseline_tolerance` | `earliest_available` when thesis `recorded_at` predates first snapshot |
 | `current_as_of` | `as_of` of the current bundle |
 | `supported` / `weakened` / `unknown` | Claim outcome counts |
 | `claims[]` | Per-claim `{thesis_id, type, asset?, status, reason?, evidence}` |
+| `replay` | Present when `expectation_replay=true`; checkpoint timeline + transitions |
 
 Claim types (v0): `PRICE_STRENGTH`, `RELATIVE_STRENGTH`, `MARKET_SENTIMENT`,
 `VOLATILITY_REGIME`, `RISK_APPETITE`, `REGIME_EXPECTATION`, `ALLOCATION_FIT`.
