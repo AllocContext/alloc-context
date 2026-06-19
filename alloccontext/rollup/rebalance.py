@@ -91,12 +91,10 @@ def _deploy_move(exchange: str, asset: str, usd: float, pairs: dict[str, str] | 
 
 
 def format_target_pct_header(target_pct: dict[str, float]) -> str:
+    collapsed = collapse_cash_weights(target_pct)
     labels: list[str] = []
-    symbols = sorted(
-        _normalize_symbol(key) for key in target_pct if _normalize_symbol(key)
-    )
-    for symbol in symbols:
-        pct = round(float(target_pct.get(symbol) or target_pct.get(symbol.lower()) or 0) * 100)
+    for symbol in _target_symbols(collapsed):
+        pct = round(float(collapsed[symbol]) * 100)
         label = "Cash" if symbol == CASH_SYMBOL else symbol
         labels.append(f"{label} {pct}%")
     return ", ".join(labels)
@@ -115,13 +113,12 @@ def compute_rebalance_plan(
     if nav_usd <= 0:
         return {"available": False, "reason": "no_nav"}
 
-    symbols = _target_symbols(target_pct)
-    if not symbols:
-        return {"available": False, "reason": "empty_target"}
-
     exchange_key = exchange.strip().lower() if exchange else "kraken"
     current = collapse_cash_weights(current_pct)
     target = collapse_cash_weights(target_pct)
+    symbols = _target_symbols(target)
+    if not symbols:
+        return {"available": False, "reason": "empty_target"}
 
     current_usd: dict[str, float] = {}
     target_usd: dict[str, float] = {}

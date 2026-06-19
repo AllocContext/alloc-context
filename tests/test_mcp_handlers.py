@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from alloccontext.mcp.handlers import check_band, get_rebalance_plan
 from alloccontext.rollup.band import check_allocation_band
 
@@ -34,6 +36,19 @@ def test_mcp_check_band_includes_staleness() -> None:
     assert "as_of" in result
     assert "age_seconds" in result
     assert result["hint"] == "within_band"
+
+
+def test_rebalance_plan_band_check_uses_collapsed_cash() -> None:
+    result = get_rebalance_plan(
+        {"BTC": 0.50, "USDC": 0.50},
+        {"BTC": 0.60, "CASH": 0.40},
+        1000.0,
+        band=0.05,
+    )
+    band = result["band_check"]
+    assert band["outside_band"] is True
+    assert band["drift"]["CASH"] == pytest.approx(0.1)
+    assert result["delta_usd"]["CASH"] == -100.0
 
 
 def test_mcp_rebalance_plan_includes_staleness() -> None:

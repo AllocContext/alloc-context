@@ -16,7 +16,7 @@ from alloccontext.ingest.exchange.live import (
 from alloccontext.rollup.context import Scope
 from alloccontext.rollup.macro import build_macro_context
 from alloccontext.rollup.portfolio import build_market_context
-from alloccontext.rollup.rebalance import compute_rebalance_plan
+from alloccontext.rollup.rebalance import collapse_cash_weights, compute_rebalance_plan
 from alloccontext.rollup.sentiment import build_sentiment_context
 from alloccontext.mcp.assets import (
     apply_assets_filter_to_bundle,
@@ -700,6 +700,8 @@ def get_rebalance_plan(
     exchange_id = validate_cex_exchange_id(exchange)
     normalized_allocation = normalize_allocation_pct(allocation_pct)
     normalized_target = validate_target_pct(target_pct)
+    collapsed_allocation = collapse_cash_weights(normalized_allocation)
+    collapsed_target = collapse_cash_weights(normalized_target)
     nav = validate_nav_usd(nav_usd)
     plan = compute_rebalance_plan(
         nav,
@@ -714,8 +716,8 @@ def get_rebalance_plan(
     }
     if band is not None:
         body["band_check"] = check_allocation_band(
-            normalized_allocation,
-            normalized_target,
+            collapsed_allocation,
+            collapsed_target,
             validate_band(band),
         )
     return with_staleness(body, as_of=now)
