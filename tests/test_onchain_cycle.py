@@ -24,6 +24,19 @@ def test_day1_index_to_date_matches_brk_origin() -> None:
     assert day1_index_to_date(6379) == date(2026, 6, 20)
 
 
+def test_parse_bitview_bulk_allows_end_index_off_by_one() -> None:
+    """Bitview bulk often returns len(data) == end - start (not +1)."""
+    payload = [
+        {"start": 2729, "end": 6379, "data": [50.0] * 3650},
+        {"start": 2729, "end": 6379, "data": [50.0] * 3650},
+        {"start": 2729, "end": 6379, "data": [1.0] * 3650},
+        {"start": 2729, "end": 6379, "data": [1.0] * 3650},
+    ]
+    rows = parse_bitview_bulk(payload)
+    assert len(rows) == 3650
+    assert rows[0]["as_of_date"] == day1_index_to_date(2729).isoformat()
+
+
 def test_parse_bitview_bulk_maps_series_to_rows() -> None:
     payload = [
         {"start": 6377, "end": 6378, "data": [55.0, 54.0]},
