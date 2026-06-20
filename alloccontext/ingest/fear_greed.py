@@ -12,7 +12,7 @@ FNG_API = "https://api.alternative.me/fng/"
 
 
 def classify_fear_greed(value: int) -> str:
-    if value <= 24:
+    if value <= 25:
         return "Extreme Fear"
     if value <= 44:
         return "Fear"

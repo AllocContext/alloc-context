@@ -7,6 +7,8 @@ from alloccontext.ingest.fear_greed import classify_fear_greed, refresh_fear_gre
 
 def test_classify_fear_greed() -> None:
     assert classify_fear_greed(10) == "Extreme Fear"
+    assert classify_fear_greed(25) == "Extreme Fear"
+    assert classify_fear_greed(26) == "Fear"
     assert classify_fear_greed(50) == "Neutral"
     assert classify_fear_greed(80) == "Extreme Greed"
 
