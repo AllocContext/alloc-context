@@ -3,8 +3,9 @@
 # Self-host Cursor MCP does NOT need this file. Use mcp --config config/config.yaml
 # and .env for ingest keys instead (see docs/cursor-mcp.md).
 #
-# Copy to ~/.config/alloc-context/user.yaml only for bridge mode.
-# Bridge mode — local portfolio + upstream MCP (hosted upstream retired)
+# Copy to ~/.config/alloc-context/user.yaml only for legacy bridge mode.
+# Bridge upstream is retired — use mcp --config config/config.yaml instead.
+# See docs/user-config.md (archive).
 # self_host: true
 # config: /absolute/path/to/alloc-context/config/config.yaml
 
@@ -39,7 +40,7 @@ exchanges:
 #         posture: RISK_ON
 #         trajectory: STABLE   # optional
 
-# x402 payer — required for bridge → hosted upstream (Path A)
+# x402 payer — legacy bridge only (upstream retired)
 x402:
   payer_private_key_env: EVM_PRIVATE_KEY
   # payer_private_key_file: ~/.config/alloc-context/x402-payer.key

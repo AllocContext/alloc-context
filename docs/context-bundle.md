@@ -24,7 +24,7 @@ fields here.
 ```
 
 When allocation analysis is requested (`target_pct` / `band` on the tool, or
-`target_allocation` in bridge user config), the bundle may also include:
+`target_allocation` in config), the bundle may also include:
 
 ```json
 {
@@ -86,8 +86,8 @@ When `theses[]` includes an `ALLOCATION_FIT` claim, the server may attach
 
 ## expectation_review (opt-in)
 
-Present when `theses[]` is supplied on `get_context_bundle` (tool argument or
-bridge `user.yaml`). Pass-through beliefs only — nothing is stored server-side.
+Present when `theses[]` is supplied on `get_context_bundle` (tool argument).
+Pass-through beliefs only — nothing is stored server-side.
 
 | Field | Meaning |
 |-------|---------|
@@ -147,9 +147,8 @@ move ≥5% (24h or since prior).
 Band assets (BTC/ETH) use exchange OHLC bars. Alt holdings (e.g. HYPE) use
 cached quote snapshots when available; missing alts appear in `assets_omitted[]`.
 
-Use the `assets` tool argument to filter market/ETF fields (default `BTC`, `ETH`).
-On the stdio bridge, omit `assets` to auto-scope from local portfolio holdings
-(symbols only sent upstream).
+Use the `assets` tool argument to filter market/ETF fields (default `BTC`, `ETH`
+when omitted).
 
 ## Market coverage
 
@@ -164,7 +163,7 @@ What each symbol class gets in a ContextBundle (ADR-009):
 
 Missing alt data for a requested symbol → `assets_omitted[]` (fail-soft on
 `freshness=cached`). `freshness=live` refreshes quotes for requested symbols
-only (heavy x402 tier on hosted).
+only (heavier ingest work).
 
 ## sentiment
 
@@ -206,8 +205,8 @@ Computed vs the prior saved snapshot when `prior_as_of` is set:
 | `portfolio.rebalance_hint` | `allocation_analysis.rebalance_hint` |
 | (none) | `portfolio.holdings[]` |
 
-Legacy hosted snapshots may still expose drift on `portfolio` until dependents
-migrate; new bridge and self-host responses follow v2.
+Self-host responses follow v2. Legacy v1 portfolio drift fields may appear in
+old snapshots until dependents migrate.
 
 ## JSON Schema
 

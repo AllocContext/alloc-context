@@ -11,9 +11,10 @@ order placement, no gate authority, no bot shadow modes.
 `check_allocation_band`). Email, LLM synthesis, and alert delivery are out of
 scope for this repository.
 
-Agent-facing MCP + x402: [mcp.md](mcp.md).
+Agent-facing MCP: [mcp.md](mcp.md). Optional x402 on HTTP you operate:
+[mcp-http.md](mcp-http.md).
 
-For the **reusable architecture pattern** (ingest → store → rollup → MCP → x402)
+For the **reusable architecture pattern** (ingest → store → rollup → MCP)
 with AllocContext as the worked example, see
 [deterministic-context-mcp-pattern.md](deterministic-context-mcp-pattern.md).
 

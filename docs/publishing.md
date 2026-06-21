@@ -119,7 +119,7 @@ Verify sync: `python3 scripts/bump_version.py --check 0.1.1`
 | Situation | Action |
 |-----------|--------|
 | CI publish failed | Re-run the **release** run, or manual `twine upload` below |
-| VPS-only hotfix | `deploy/rsync-to-vps.sh` — [self-hosting.md](self-hosting.md) |
+| VPS-only hotfix | `deploy/rsync-to-vps.sh` — historical; see [self-hosting.md](self-hosting.md) |
 | Registry-only publish | Actions → **publish-mcp-registry** → Run workflow |
 
 Manual PyPI upload:

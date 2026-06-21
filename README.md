@@ -119,18 +119,16 @@ pytest
 
 Optional HTTP MCP + x402 on **your** host: [mcp-http.md](docs/mcp-http.md).
 
-## Hosted MCP (retired)
-
-AllocContext is **self-host only**. We no longer operate `mcp.alloc-context.com`.
-Legacy bridge/hosted docs: [agent-integration.md](docs/agent-integration.md).
+AllocContext is **self-host only** — we do not operate `mcp.alloc-context.com`.
+Quickstart: [agent-onramp.md](docs/agent-onramp.md) · [cursor-mcp.md](docs/cursor-mcp.md).
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [docs/cursor-mcp.md](docs/cursor-mcp.md) | **Start here** — Cursor stdio MCP |
+| [docs/agent-onramp.md](docs/agent-onramp.md) | **~2 min** quickstart |
+| [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP |
 | [docs/self-hosting.md](docs/self-hosting.md) | Local ingest + MCP |
-| [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` (legacy, optional) |
 | [docs/deterministic-context-mcp-pattern.md](docs/deterministic-context-mcp-pattern.md) | Ingest → rollup → MCP pattern |
 | [docs/mcp.md](docs/mcp.md) | MCP tools |
 | [docs/examples.md](docs/examples.md) | Sample tool JSON (redacted) |
@@ -140,7 +138,8 @@ Legacy bridge/hosted docs: [agent-integration.md](docs/agent-integration.md).
 | [docs/docker-self-host.md](docs/docker-self-host.md) | Docker Compose self-host |
 | [docs/distribution.md](docs/distribution.md) | PyPI and MCP Registry |
 | [docs/publishing.md](docs/publishing.md) | Release workflow |
-| [docs/agent-integration.md](docs/agent-integration.md) | Legacy hosted HTTP + x402 (retired) |
+| [docs/mcp-http.md](docs/mcp-http.md) | Optional HTTP + x402 (your host) |
+| [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` (legacy archive) |
 
 ## Contributing
 

@@ -1,8 +1,8 @@
 # MCP product
 
 AllocContext is an **agent-native portfolio context API**: discover holdings,
-market, sentiment, macro, and regime; optional allocation analysis —
-exposed as MCP tools, with a paid HTTP endpoint via x402 on Base.
+market, sentiment, macro, and regime; optional allocation analysis — exposed as
+MCP tools over **self-host** stdio or optional HTTP on your infrastructure.
 
 This repo is **facts only** — agents narrate JSON with their own model. Email,
 LLM synthesis, and alert delivery are out of scope here.
@@ -11,11 +11,13 @@ LLM synthesis, and alert delivery are out of scope here.
 
 | Surface | Audience |
 |---------|----------|
-| **MCP (stdio bridge)** | Cursor and local agents (default) |
-| **MCP (stdio self-host)** | Local ingest dev and operator-style |
-| **MCP (HTTP + x402)** | Agents and wallets on the public internet |
-| **Bazaar / discovery** | Agent search via CDP and `/.well-known/x402.json` |
-| **CLI + ingest** | Self-hosted cache for MCP context tools |
+| **MCP (stdio + `--config`)** | Cursor and local agents (**default**) |
+| **MCP (HTTP, loopback)** | `./scripts/local-up.sh`, Docker, [local-dev.md](local-dev.md) |
+| **MCP (HTTP + x402)** | Optional paid gate on **your** public URL — [mcp-http.md](mcp-http.md) |
+| **CLI + ingest** | SQLite cache for MCP context tools |
+
+AllocContext does **not** operate `mcp.alloc-context.com`. Quickstart:
+[cursor-mcp.md](cursor-mcp.md), [agent-onramp.md](agent-onramp.md).
 
 ## Tools
 
@@ -25,7 +27,7 @@ Shared optional args on context tools:
 
 | Arg | Tools | Default | Purpose |
 |-----|-------|---------|---------|
-| `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields; unknown symbols (e.g. HYPE) are omitted and listed in `assets_omitted`. **Bridge:** when omitted (or `[]`) and exchange keys + x402 payer are set, symbols are derived from local portfolio holdings (symbols only sent upstream — no qty/NAV). Bridge responses include `assets_scope` (`portfolio`, `explicit`, `default`, `portfolio_unavailable`). **Bridge auto-scope does not apply** to `get_context_at` or `get_context_delta` — pass `assets` explicitly for historical/delta filters. |
+| `assets` | `get_context_bundle`, `get_market_context`, `get_context_at`, `get_context_delta` | `["BTC","ETH"]` | Filter market and ETF fields; unknown symbols (e.g. HYPE) are omitted and listed in `assets_omitted`. Pass symbols explicitly for alts. |
 | `target_pct` | `get_context_bundle` | omitted | Opt-in: attach `allocation_analysis` drift math |
 | `band` | `get_context_bundle`, `get_rebalance_plan` | omitted / none | Drift band width when used with `target_pct` |
 | `theses` | `get_context_bundle` | omitted | Opt-in: attach `expectation_review` (pass-through beliefs; nothing stored) |
@@ -33,7 +35,7 @@ Shared optional args on context tools:
 Math tools require explicit `target_pct` and `band`. On `get_context_bundle`,
 pass `target_pct` (and optional `band`) to attach `allocation_analysis`.
 Pass `theses[]` to score local thesis claims deterministically — see
-[Privacy: theses](#privacy-theses-hosted-and-bridge) below.
+[Privacy: theses](#privacy-theses) below.
 
 | Tool | Input | Output |
 |------|-------|--------|
@@ -47,9 +49,9 @@ Pass `theses[]` to score local thesis claims deterministically — see
 | `check_allocation_bands` | `allocation_pct`, `scenarios[]` | Batch band checks for multiple targets |
 
 On a self-hosted install, `freshness=cached` reads the ingest SQLite DB.
-Hosted endpoints serve the host ingested cache unless the client requests
-`freshness=live` (targeted alt quote refresh for requested symbols; heavy x402
-tier).
+`freshness=live` triggers targeted alt quote refresh for requested symbols
+(requires ingest keys; heavier work — see [mcp-http.md](mcp-http.md) if you
+enable x402 pricing on HTTP).
 
 ### Market coverage
 
@@ -106,10 +108,11 @@ when the parent source is `macro_calendar` or `etf_flows`. Check `partial`,
 `optional_errors`, and `fatal_errors` in ingest JSON output; `python -m
 alloccontext status` includes `source_health` per source.
 
-## x402 pricing
+## Optional x402 pricing (self-operated HTTP)
 
-Hosted MCP uses **per-call x402 exact on Base mainnet**. Payer chooses a
-USD-pegged stable (default **USDC, EURC**; bridge to Base first):
+When you run HTTP MCP with `--x402` on **your** infrastructure, default tiers
+are per-call x402 exact on Base mainnet. Payer chooses a USD-pegged stable
+(default **USDC, EURC**):
 
 | Call type | Default price | Env |
 |-----------|---------------|-----|
@@ -118,24 +121,19 @@ USD-pegged stable (default **USDC, EURC**; bridge to Base first):
 
 `X402_ACCEPTED_STABLES` controls which stables appear in 402 `accepts`.
 Setup: [mcp-http.md](mcp-http.md). Discovery: [mcp-discovery.md](mcp-discovery.md).
-Agent integration: [agent-integration.md](agent-integration.md). Samples:
-[examples.md](examples.md).
+Samples: [examples.md](examples.md).
 
 Tool JSON contracts are validated in `tests/test_mcp_contracts.py` via
 `alloccontext.mcp.contracts` (required keys per tool).
 
-Bazaar listing title:
-
-> AllocContext — portfolio-aware crypto context for agents (MCP + x402)
-
 ## Packages
 
 ```text
-pip install "alloc-context[mcp]"      # stdio MCP
-pip install "alloc-context[hosted]"   # HTTP + x402
+pip install "alloc-context[mcp]"      # stdio MCP (default)
+pip install "alloc-context[hosted]"   # HTTP + optional x402 on your host
 ```
 
-## Privacy: theses (hosted and bridge)
+## Privacy: theses
 
 Optional `theses[]` on `get_context_bundle` enables deterministic
 `expectation_review` scoring ([context-bundle.md](context-bundle.md)). Same
@@ -143,20 +141,15 @@ privacy model as CEX keys and wallet addresses:
 
 | Pillar | Behavior |
 |--------|----------|
-| **Nothing stored** | Thesis payloads and scored `expectation_review` output are **not** written to hosted SQLite, logs, or long-lived cache. |
+| **Nothing stored** | Thesis payloads and scored output are **not** written to SQLite logs or long-lived cache beyond the request. |
 | **One-time read-only** | Used only for the request lifecycle — score claims vs saved market snapshots, return JSON, discard. |
-| **Pass-through only** | Beliefs live in **your** agent, `user.yaml`, or operator config; the server never owns or edits them. |
+| **Pass-through only** | Beliefs live in **your** agent or config; the server never owns or edits them. |
 
-**Hosted MCP:** pass `theses[]` on the paid `get_context_bundle` tool call.
-Baselines resolve from the host's public ingest snapshot history at each thesis
-`recorded_at` — not from caller-supplied portfolio data unless you also call
-portfolio tools in the same session.
+Pass `theses[]` on the tool call (or configure entries in legacy bridge
+`user.yaml` — [user-config.md](user-config.md)). Baselines resolve from ingest
+snapshot history at each thesis `recorded_at`.
 
-**Bridge:** `theses:` in `user.yaml` (or per-call `theses`) are forwarded on
-upstream bundle reads when x402 payment is configured. Without a payer, bundle
-calls fail closed before exchange or thesis work runs.
-
-See also [user-config.md](user-config.md) and [USE.md](USE.md).
+See also [USE.md](USE.md).
 
 ## Non-goals
 

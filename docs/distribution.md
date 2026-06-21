@@ -16,7 +16,7 @@ list or advertise it on directories.
 | **PyPI** | `pip install alloc-context[mcp]` | No — user runs locally |
 | **MCP Registry** | [`server.json`](../server.json) PyPI stdio package | No — no `remotes` URL |
 | **GitHub** | Repo + docs | No |
-| **Smithery / PulseMCP** | Smithery **closed**; PulseMCP optional self-host copy refresh |
+| **Smithery** | Closed (2026-06) | Listing removed |
 
 Registry listing is **discoverability for self-host**, not operation of a public
 endpoint. Users install the package and configure their own keys and
@@ -94,13 +94,10 @@ After the first PyPI release, README and project URLs point at the GitHub repo.
 
 ## Other directories
 
-| Directory | How to submit | Notes |
-|-----------|---------------|-------|
-| **MCP Registry** | `server.json` + `mcp-publisher` | Primary; package-only (stdio) |
-| **PulseMCP** | Ingests registry; email if stale listing persists | Request removal/update after registry republish |
-| **Smithery** | Closed (2026-06) | Listing removed |
-| **PulseMCP** | Optional update | Request self-host copy if stale slug persists |
-| **awesome-mcp** | PR to a maintained awesome list | Link `docs/cursor-mcp.md` |
+| Directory | Notes |
+|-----------|-------|
+| **MCP Registry** | Primary — PyPI stdio package via `server.json` |
+| **Smithery** | Closed (2026-06) |
 
 ## Related docs
 
@@ -109,4 +106,4 @@ After the first PyPI release, README and project URLs point at the GitHub repo.
 | [cursor-mcp.md](cursor-mcp.md) | Primary Cursor setup |
 | [self-hosting.md](self-hosting.md) | Local ingest + MCP |
 | [publishing.md](publishing.md) | PyPI + registry release workflow |
-| [agent-integration.md](agent-integration.md) | Legacy hosted HTTP (retired) |
+| [agent-onramp.md](agent-onramp.md) | ~2 min quickstart |

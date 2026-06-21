@@ -1,7 +1,8 @@
-# Bridge user config (`user.yaml`) — legacy optional
+# Bridge user config (`user.yaml`) — legacy archive
 
-> **Self-host:** use `mcp --config config/config.yaml` and `.env` instead. See
-> [cursor-mcp.md](cursor-mcp.md). This file documents **bridge mode** only.
+> **Retired:** Bridge mode depended on the hosted MCP upstream, which is closed.
+> Use `mcp --config config/config.yaml` and `.env` instead — [cursor-mcp.md](cursor-mcp.md).
+> This page is kept for reference only.
 
 Privacy: **nothing stored · one-time read-only · pass-through only.** See
 [USE.md](USE.md).
@@ -27,7 +28,7 @@ when operating bridge mode.
 
 | Mode | user.yaml | Behavior |
 |------|-----------|----------|
-| **Bridge (default)** | CEX keys + x402 payer | Portfolio local (CEX); context via hosted upstream |
+| **Bridge (legacy)** | CEX keys + x402 payer | Portfolio local; upstream MCP **retired** |
 | **Self-host** | `self_host: true` + `config:` | Full local ingest + MCP (no upstream paywall) |
 | **Legacy** | omit `--user-config`; no default file | Local server `config.yaml` only |
 
@@ -44,9 +45,12 @@ user config or `target_pct` on the tool call. Targets are a symbol→weight map
 (any held symbol; values need not sum to 1). When enabled, results appear in
 `allocation_analysis`, not mixed into default portfolio fields.
 
-## Bridge market auto-scoping (Path A)
+## Bridge market auto-scoping (legacy)
 
-When CEX keys and an x402 payer are configured, omitting `assets` on
+> **Retired** with bridge upstream. Self-host uses explicit `assets` (default
+> BTC/ETH when omitted).
+
+When CEX keys and an x402 payer were configured, omitting `assets` on
 `get_market_context` or `get_context_bundle` derives upstream symbol scope from
 local holdings (excluding stables/cash). Only **symbol strings** are sent to the
 hosted server — never quantities, NAV, or credentials.
@@ -80,22 +84,19 @@ never stores beliefs — pass-through only. Each thesis requires `id`,
 `recorded_at`, and `claims[]`. See
 [context-bundle.md](context-bundle.md) and `config/user.example.yaml`.
 
-**Hosted / bridge:** thesis payloads are not written to shared infrastructure;
-they exist only for the request that scores them. Bridge forwards `theses` on
-paid upstream `get_context_bundle` calls. Hosted privacy copy:
-[mcp.md](mcp.md#privacy-theses-hosted-and-bridge).
+**Legacy bridge:** thesis payloads were not written to shared infrastructure;
+they exist only for the request that scores them.
 
 `ALLOCATION_FIT` claims need `target_allocation` / `band` (here or on the tool
-call). Bridge mode loads baselines via hosted `get_context_at` per `recorded_at`.
+call).
 
-## Hosted wallet portfolio (no user.yaml)
+## Wallet portfolio (self-host)
 
-On the hosted MCP, call `get_portfolio_state` with `exchange=wallet` and a
-public EVM `wallet_address` (keyless for the caller). The server uses its own
-on-chain provider credentials — not your keys. See [mcp.md](mcp.md).
+Call `get_portfolio_state` with `exchange=wallet` and a public EVM
+`wallet_address` (keyless for the caller). The host needs on-chain provider
+credentials in `.env` — see [data-sources.md](data-sources.md) and [mcp.md](mcp.md).
 
 ## Related
 
 - [USE.md](USE.md) — license and allowed uses
-- [cursor-mcp.md](cursor-mcp.md) — stdio setup
-- [agent-integration.md](agent-integration.md) — hosted URL
+- [cursor-mcp.md](cursor-mcp.md) — self-host stdio MCP
