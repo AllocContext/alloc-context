@@ -57,54 +57,10 @@ Run MCP separately (stdio bridge via [cursor-mcp.md](cursor-mcp.md), self-host
 stdio, or HTTP + x402 for agents). See
 [docs/mcp-http.md](mcp-http.md).
 
-## CI release and deploy
+## CI release
 
-Production VPS deploys run from the **release** workflow — either
-**workflow_dispatch** (recommended) or a manual `vX.Y.Z` tag push. The same
-workflow publishes to PyPI. See [publishing.md](publishing.md).
+Production **VPS deploy has been removed** from the release workflow. Releases
+publish to PyPI and the MCP Registry only. Self-host via `pip install alloc-context`.
 
-| Repo | `main` push | Production deploy |
-|------|-------------|-------------------|
-| `alloc-context` | Tests only (`ci`) | **release** workflow |
-
-Release deploy requires repository secrets:
-
-| Secret | Required | Purpose |
-|--------|----------|---------|
-| `VPS_SSH_KEY` | Yes | Private key for SSH/rsync |
-| `VPS_HOST` | Yes | Hostname or IP (not logged in workflow output) |
-| `VPS_USER` | No | SSH user (default `root`) |
-| `EVM_PRIVATE_KEY` | Paid smoke only | Buyer wallet for weekly x402 settlement ([mcp-discovery.md](mcp-discovery.md)) |
-
-Application secrets (Kraken, data APIs, seller x402 keys) stay on the host — not in GitHub.
-
-Optional repository **variables** (Settings → Secrets and variables → Actions →
-Variables) for non-secret deploy paths:
-
-| Variable | Example | Purpose |
-|----------|---------|---------|
-| `ALLOC_CONTEXT_REMOTE` | `/opt/trading/alloc-context` | Rsync + systemd install root |
-| `ALLOC_CONTEXT_ENV_FILE` | `/opt/trading/shared/.env` | systemd `EnvironmentFile` |
-
-Template: [deploy/shared.env.example](../deploy/shared.env.example).
-
-If unset, defaults are `${REMOTE}/.env` and `/opt/alloc-context`.
-
-**Break-glass rsync** (no baked-in host or key):
-
-```bash
-VPS_HOST=your.host.example SSH_KEY=~/.ssh/deploy_key ./deploy/rsync-to-vps.sh
-```
-
-Set `ALLOC_CONTEXT_REMOTE` and optional `ALLOC_CONTEXT_ENV_FILE` when running
-`deploy/remote-install.sh` if your paths differ from the generic unit templates.
-
-Release deploy runs only on the primary GitHub repository; forks run tests
-only.
-
-After install, CI runs post-deploy smoke on the VPS via
-`deploy/run-vps-smoke.sh` (health checks plus cached `get_context_bundle`).
-When `X402_ENABLED=true` in the shared env file, CI also runs
-`deploy/run-vps-x402-check.sh` (discovery URLs, manifest, 402 gate, CDP
-facilitator when configured). Smoke or x402 failure marks the deploy job red
-but does not roll back rsync or systemd changes.
+Historical VPS layout and systemd units remain in `deploy/` for operators who
+run their own Linux host.

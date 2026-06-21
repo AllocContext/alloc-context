@@ -1,4 +1,8 @@
-# Agent integration (hosted MCP + x402)
+# Agent integration (legacy hosted MCP + x402)
+
+> **Retired:** AllocContext no longer operates `https://mcp.alloc-context.com/mcp`.
+> Use [cursor-mcp.md](cursor-mcp.md) and [self-hosting.md](self-hosting.md).
+> This page is kept for historical reference only.
 
 Use the **production** AllocContext endpoint from agents, wallets, or Cursor
 without running ingest locally. Payment is per-call x402 on Base mainnet.

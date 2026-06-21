@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.AllocContext/alloc-context",
   "title": "AllocContext",
-  "description": "Portfolio-aware MCP: holdings from CEX or EVM wallet; holdings-scoped market, sentiment. x402. ELv2.",
-  "websiteUrl": "https://mcp.alloc-context.com/llms.txt",
+  "description": "Self-host MCP: portfolio crypto context for agents. PyPI stdio; optional local ingest. ELv2.",
+  "websiteUrl": "https://github.com/AllocContext/alloc-context",
   "repository": {
     "url": "https://github.com/AllocContext/alloc-context",
     "source": "github"
@@ -26,12 +26,6 @@
           "description": "Run the AllocContext MCP server (stdio)"
         }
       ]
-    }
-  ],
-  "remotes": [
-    {
-      "type": "streamable-http",
-      "url": "https://mcp.alloc-context.com/mcp"
     }
   ]
 }

@@ -2,8 +2,7 @@
 
 Releases follow a **release-PR** flow. A version bump is reviewed as a normal
 pull request; merging it to `main` automatically tags the version and runs the
-release (PyPI, MCP Registry, VPS deploy). Production always runs what is on
-`main`, and every `vX.Y.Z` tag points at a real `main` commit.
+release (PyPI, MCP Registry). Production VPS deploy has been **removed**.
 
 ## How it works
 
@@ -12,7 +11,7 @@ Two workflows:
 | Workflow | Trigger | Does |
 |----------|---------|------|
 | **release-pr** | `workflow_dispatch` | Bumps version files, opens `release/vX.Y.Z` PR to `main`. No publish. |
-| **release** | push to `main` | If the current version has **no tag yet**: test → PyPI → MCP Registry + VPS → tag + GitHub release. |
+| **release** | push to `main` | If the current version has **no tag yet**: test → PyPI → MCP Registry → tag + GitHub release. |
 
 The release workflow keys off "version on `main` has no matching tag". Normal
 pushes (no version change) see the tag already exists and exit immediately.
@@ -21,7 +20,7 @@ run that the merge triggered — there is no reliance on tag-push events (which 
 `GITHUB_TOKEN`-pushed tag cannot trigger).
 
 Pipeline order: **check** (untagged version?) → **test** → **publish-pypi** →
-**publish-mcp-registry** + **deploy** (parallel) → **finalize** (tag + release).
+**publish-mcp-registry** → **finalize** (tag + release).
 
 **publish-mcp-registry** waits for PyPI to index the new release (60s initial
 delay, then polls until wheel + sdist artifacts appear for the version twice
@@ -39,7 +38,6 @@ One-time setup:
 |------|---------|
 | **Version files** | Kept in sync by `scripts/bump_version.py` |
 | **PyPI trusted publisher** | Owner `AllocContext`, repo `alloc-context`, workflow `release.yml`, environment *(blank)* |
-| **VPS secrets** | `VPS_SSH_KEY`, `VPS_HOST` — see [self-hosting.md](self-hosting.md) |
 | **Workflow permissions** | Repo Settings → Actions → General → **Read and write** for `GITHUB_TOKEN` |
 | **Actions can open PRs** | Org **and** repo: Settings → Actions → General → **Read and write permissions** + **Allow GitHub Actions to create and approve pull requests** (required for **release-pr**). Org first: [AllocContext Actions settings](https://github.com/organizations/AllocContext/settings/actions); then [repo Actions settings](https://github.com/AllocContext/alloc-context/settings/actions). |
 | **RELEASE_PR_TOKEN** *(optional)* | Repo secret — PAT with `repo` scope used when `GITHUB_TOKEN` cannot open PRs. Workflow falls back to `github.token` when unset. |
@@ -61,15 +59,15 @@ Version files updated by the bump script:
 
 2. Review the opened **`release/vX.Y.Z`** PR; wait for **ci** to pass.
 3. **Merge to `main`.** The **release** workflow runs automatically: test →
-   PyPI → MCP Registry + VPS deploy → tag `vX.Y.Z` + GitHub release.
+   PyPI → MCP Registry → tag `vX.Y.Z` + GitHub release.
 
 Concurrency: one **release** run at a time per repository.
 
 ## Branch protection on `main`
 
 The release PR is the human gate. The **release** workflow never pushes commits
-to `main` — it only pushes the `vX.Y.Z` tag after a successful publish and
-deploy, so no branch-protection bypass is required.
+to `main` — it only pushes the `vX.Y.Z` tag after a successful publish, so no
+branch-protection bypass is required.
 
 ## Troubleshooting **release-pr**
 

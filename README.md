@@ -6,32 +6,38 @@ mcp-name: io.github.AllocContext/alloc-context
 
 **Portfolio-aware crypto context for whatever you hold** — discover your
 holdings, holdings-scoped market data, sentiment, macro, and regime; optional
-allocation analysis when you supply targets. Deterministic JSON over MCP with
-x402 pay-per-call on Base.
+allocation analysis when you supply targets. Deterministic JSON over MCP.
 
-**New here?** [Agent on-ramp (~2 min)](docs/agent-onramp.md) — copy-paste path to
-your first ContextBundle. **Organization:**
-[AllocContext on GitHub](https://github.com/AllocContext) — overview and integration links.
+**New here?** [Cursor MCP setup](docs/cursor-mcp.md) — stdio in your editor, or
+[self-hosting](docs/self-hosting.md) with local ingest. **Organization:**
+[AllocContext on GitHub](https://github.com/AllocContext).
 
-> **Privacy:** nothing stored · one-time read-only · pass-through only — your
-> keys and portfolio never persist on our servers. See [USE.md](docs/USE.md).
+> **Privacy:** nothing stored · one-time read-only · pass-through only when
+> using live portfolio reads. See [USE.md](docs/USE.md).
 
-## Quick start (Cursor)
+## Quick start (Cursor, self-host)
 
 **1. Install**
 
 ```bash
-pip install "alloc-context[mcp,hosted]"
-# From source: pip install -e ".[mcp,hosted]"
+pip install "alloc-context[mcp]"
+# From source: pip install -e ".[mcp]"
 ```
 
 **2. User config**
 
 Copy [config/user.example.yaml](config/user.example.yaml) to
-`~/.config/alloc-context/user.yaml`. For portfolio discovery (optional): read-only
-CEX keys (e.g. Coinbase, Kraken) in user config, or call hosted
-`get_portfolio_state` with `exchange=wallet` and a public EVM address. Add an x402
-payer for hosted market context. See [user-config.md](docs/user-config.md).
+`~/.config/alloc-context/user.yaml` and enable self-host:
+
+```yaml
+self_host: true
+config: /absolute/path/to/alloc-context/config/config.yaml
+```
+
+Copy [config/config.example.yaml](config/config.example.yaml) to
+`config/config.yaml`, add API keys via `.env` when you want exchange or macro
+feeds, then run ingest. See [user-config.md](docs/user-config.md) and
+[self-hosting.md](docs/self-hosting.md).
 
 **3. MCP config**
 
@@ -52,33 +58,24 @@ Add to your Cursor `mcp.json` (or project `.cursor/mcp.json`):
 }
 ```
 
-Use an absolute path for `--user-config`. Example:
-[cursor-mcp-bridge.example.json](docs/cursor-mcp-bridge.example.json).
+Use an absolute path for `--user-config`.
 
-**4. Ask your agent**
+**4. Refresh facts (optional)**
 
-Call `get_context_bundle` for a full snapshot (holdings when a portfolio source
-is configured, market/sentiment/macro via hosted upstream). Pure math tools
+```bash
+python -m alloccontext --config config/config.yaml ingest
+```
+
+Run before a session or when you want fresh macro/regime data. No cron required.
+
+**5. Ask your agent**
+
+Call `get_context_bundle` for a full snapshot. Pure math tools
 (`check_allocation_band`, `get_rebalance_plan`) work without portfolio credentials.
 
-Full setup guide: [cursor-mcp.md](docs/cursor-mcp.md). Sample responses:
-[examples.md](docs/examples.md).
+Full setup: [cursor-mcp.md](docs/cursor-mcp.md). Samples: [examples.md](docs/examples.md).
 
 Not financial advice.
-
-## Hosted MCP
-
-| | |
-|--|--|
-| **URL** | `https://mcp.alloc-context.com/mcp` |
-| **Discovery** | [llms.txt](https://mcp.alloc-context.com/llms.txt), [x402 manifest](https://mcp.alloc-context.com/.well-known/x402.json) |
-| **Pricing** | **$0.02** cached context/math · **$0.05** live ingest or portfolio |
-| **Payment** | x402 on Base — USDC or EURC |
-| **Market scope** | Tailored to your holdings (band OHLC for BTC/ETH; alt quote snapshots); bridge auto-scopes from portfolio |
-
-Agents and wallets connect directly to the hosted endpoint — see
-[agent-integration.md](docs/agent-integration.md). The Cursor bridge above
-combines local portfolio reads with this upstream for market context.
 
 ## MCP tools
 
@@ -92,27 +89,26 @@ combines local portfolio reads with this upstream for market context.
 | `check_allocation_band` | Drift vs target and whether allocation is outside the band |
 | `check_allocation_bands` | Batch band checks for multiple target scenarios |
 | `get_portfolio_state` | Live NAV and holdings (CEX keys or public EVM wallet address) |
+| `get_expectation_review` | Score optional local theses against context (pass-through) |
 
 Market context is **holdings-scoped**: band assets (BTC/ETH) use OHLC bars; alt
-holdings (e.g. HYPE) use quote snapshots when cached. The bridge auto-scopes
-`assets` from your portfolio (symbols only upstream). See
+holdings (e.g. HYPE) use quote snapshots when cached. See
 [context-bundle.md#market-coverage](docs/context-bundle.md#market-coverage).
 
-See [mcp.md](docs/mcp.md) for arguments, pricing, and resources.
+See [mcp.md](docs/mcp.md) for arguments and resources.
 
 ## Self-host and development
 
-Run ingest and MCP entirely on your machine — no x402 upstream required.
-See [self-hosting.md](docs/self-hosting.md) (`self_host: true` in user config),
-[local-dev.md](docs/local-dev.md) for the native dev stack (`./scripts/dev-up.sh`),
-or `./docker/up.sh` / [docker-self-host.md](docs/docker-self-host.md) for Docker
-on loopback `:8000`.
+Run ingest and MCP on your machine — the primary supported path.
+
+See [self-hosting.md](docs/self-hosting.md), [local-dev.md](docs/local-dev.md)
+(`./scripts/dev-up.sh`), or [docker-self-host.md](docs/docker-self-host.md).
 
 ```bash
 git clone git@github.com:AllocContext/alloc-context.git
 cd alloc-context
 python3.11 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,mcp]"
 cp .env.example .env
 cp config/config.example.yaml config/config.yaml
 
@@ -128,33 +124,33 @@ pytest
 | `python -m alloccontext status` | Per-source ingest ages, snapshots, MCP `/health` |
 | `alloc-context mcp` | MCP server (stdio or HTTP) |
 
-HTTP MCP + x402: [mcp-http.md](docs/mcp-http.md). CLI entry point:
-`alloc-context` (same as `python -m alloccontext`).
+Optional HTTP MCP + x402 on **your** host: [mcp-http.md](docs/mcp-http.md).
+
+## Hosted MCP (retired)
+
+The official hosted endpoint at `mcp.alloc-context.com` is **no longer
+operated**. Use self-host (above) or the PyPI package via MCP Registry.
+
+Legacy bridge/hosted docs remain for reference:
+[agent-integration.md](docs/agent-integration.md).
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [docs/agent-onramp.md](docs/agent-onramp.md) | **Start here** — ~2 min to first ContextBundle |
-| [docs/deterministic-context-mcp-pattern.md](docs/deterministic-context-mcp-pattern.md) | Reusable ingest → rollup → MCP → x402 pattern |
-| [docs/langchain-integration.md](docs/langchain-integration.md) | LangChain tools for hosted MCP (x402) |
-| [docs/docker-self-host.md](docs/docker-self-host.md) | Docker Compose self-host evaluation |
-| [docs/cursor-mcp.md](docs/cursor-mcp.md) | Cursor stdio MCP (bridge default) |
-| [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` reference |
-| [docs/mcp.md](docs/mcp.md) | MCP tools and x402 |
-| [docs/agent-integration.md](docs/agent-integration.md) | Paid HTTP MCP + Bazaar for agents |
+| [docs/cursor-mcp.md](docs/cursor-mcp.md) | **Start here** — Cursor stdio MCP |
+| [docs/self-hosting.md](docs/self-hosting.md) | Local ingest + MCP |
+| [docs/user-config.md](docs/user-config.md) | `user.yaml` reference |
+| [docs/deterministic-context-mcp-pattern.md](docs/deterministic-context-mcp-pattern.md) | Ingest → rollup → MCP pattern |
+| [docs/mcp.md](docs/mcp.md) | MCP tools |
 | [docs/examples.md](docs/examples.md) | Sample tool JSON (redacted) |
 | [docs/context-bundle.md](docs/context-bundle.md) | ContextBundle schema |
-| [docs/USE.md](docs/USE.md) | Self-host vs hosted MCP (plain language) |
-| [docs/mcp-http.md](docs/mcp-http.md) | HTTP MCP + x402 setup |
-| [docs/mcp-discovery.md](docs/mcp-discovery.md) | Bazaar and agent discovery |
-| [docs/self-hosting.md](docs/self-hosting.md) | Optional Linux/systemd ingest + MCP |
+| [docs/USE.md](docs/USE.md) | License and use policy |
 | [docs/local-dev.md](docs/local-dev.md) | Local internal MCP + dev ingest |
-| [docs/architecture.md](docs/architecture.md) | Pipeline and trust boundaries |
-| [docs/data-sources.md](docs/data-sources.md) | Ingest sources |
-| [docs/distribution.md](docs/distribution.md) | GitHub, PyPI, MCP Registry, directories |
-| [docs/publishing.md](docs/publishing.md) | Release workflow and version bumps |
-| [docs/security-ci.md](docs/security-ci.md) | CI coverage, Bandit, and pip-audit gates |
+| [docs/docker-self-host.md](docs/docker-self-host.md) | Docker Compose self-host |
+| [docs/distribution.md](docs/distribution.md) | PyPI and MCP Registry |
+| [docs/publishing.md](docs/publishing.md) | Release workflow |
+| [docs/agent-integration.md](docs/agent-integration.md) | Legacy hosted HTTP + x402 (retired) |
 
 ## Contributing
 
@@ -165,5 +161,3 @@ Unsolicited pull requests are not expected — see [CONTRIBUTING.md](CONTRIBUTIN
 
 [Elastic License 2.0](LICENSE) — source-available, self-host friendly. See
 [docs/USE.md](docs/USE.md) for plain-language allowed uses.
-
-**Official hosted MCP:** `https://mcp.alloc-context.com/mcp`
