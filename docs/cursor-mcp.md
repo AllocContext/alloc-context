@@ -6,9 +6,8 @@ Use AllocContext in Cursor over stdio. The **default path** is **self-host**
 > **Privacy:** pass-through for live reads; local ingest data stays on your
 > machine. See [USE.md](USE.md).
 
-The former hosted bridge (`mcp.alloc-context.com`) is **retired**. Legacy bridge
-docs: [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json),
-[agent-integration.md](agent-integration.md), [user-config.md](user-config.md).
+The former hosted bridge (`mcp.alloc-context.com`) is **retired**. Legacy
+archive: [user-config.md](user-config.md), [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json).
 
 ## Install
 

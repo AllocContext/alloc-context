@@ -1,7 +1,8 @@
 # MCP HTTP + x402
 
-Streamable HTTP transport for paid/hosted MCP. Stdio remains available for
-local Cursor use.
+Streamable HTTP transport for MCP on **your** infrastructure. Optional x402
+payment gate for a public URL you operate. **Default path** is stdio self-host
+— see [cursor-mcp.md](cursor-mcp.md).
 
 ## Install
 
@@ -56,7 +57,7 @@ On systemd hosts, prefer `CDP_API_KEY_SECRET_FILE` pointing at a PEM file
 (mode `640`, service user) instead of a multi-line inline secret in `.env`.
 When both inline `CDP_API_KEY_SECRET` and `CDP_API_KEY_SECRET_FILE` are set,
 the inline value takes precedence.
-The hosted install includes `cdp-sdk`, which wires CDP credentials into the
+The HTTP + x402 install includes `cdp-sdk`, which wires CDP credentials into the
 facilitator client automatically.
 
 HTTP startup **exits** when CDP facilitator + `X402_PAY_TO` are set but
@@ -87,9 +88,9 @@ Paid `get_context_bundle` accepts optional `theses[]` for deterministic
 - Thesis JSON is **not persisted** on the server after the response is sent.
 - Scoring reads **saved public market snapshots** at each thesis `recorded_at`
   (same SQLite ingest history used for `get_context_at`).
-- No LLM runs on the hosted path.
+- No LLM runs on the HTTP MCP path.
 
-Full detail: [mcp.md#privacy-theses-hosted-and-bridge](mcp.md#privacy-theses-hosted-and-bridge).
+Full detail: [mcp.md#privacy-theses](mcp.md#privacy-theses).
 
 Verification scripts: `scripts/x402-production-check.py`,
 `scripts/x402-paid-smoke-test.py` (buyer wallet required; payer must differ
@@ -123,7 +124,7 @@ Top-level fields returned by the tool (after optional `assets` filtering):
 
 | Command | Use |
 |---------|-----|
-| `alloc-context mcp --user-config ~/.config/alloc-context/user.yaml` | stdio bridge (Cursor default) |
+| `alloc-context mcp --user-config ~/.config/alloc-context/user.yaml` | stdio bridge (**legacy**, upstream retired) |
 | `alloc-context mcp` | stdio self-host (local ingest config) |
 | `alloc-context mcp --transport http` | local HTTP |
 | `alloc-context mcp --transport http --x402` | paid HTTP |

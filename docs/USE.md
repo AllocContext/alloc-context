@@ -18,12 +18,11 @@ operated by AllocContext.
 ## Privacy (self-host)
 
 When you self-host, portfolio and ingest data stay on hardware you control.
-Optional live CEX reads are one-time per tool call — see
-[user-config.md](user-config.md).
+Optional live CEX reads are one-time per tool call — see [cursor-mcp.md](cursor-mcp.md).
 
 **Theses (`expectation_review`):** optional `theses[]` on `get_context_bundle`
 are pass-through only — beliefs are not stored server-side. See
-[mcp.md](mcp.md#privacy-theses-hosted-and-bridge).
+[mcp.md](mcp.md#privacy-theses).
 
 ## Related
 

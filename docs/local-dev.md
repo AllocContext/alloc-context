@@ -1,7 +1,7 @@
 # Local development stack
 
 One-command loopback MCP for core development and HTTP client testing without
-VPS access or x402.
+x402.
 
 ## Quick start
 

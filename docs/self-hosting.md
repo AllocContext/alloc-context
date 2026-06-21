@@ -1,8 +1,7 @@
-# Self-hosting (optional)
+# Self-hosting
 
-AllocContext ships as a **library, CLI, and MCP server** for local evaluation.
-Running scheduled ingest on your own Linux host keeps the MCP cache warm; it is
-not required for consumers of a hosted MCP endpoint.
+AllocContext ships as a **library, CLI, and MCP server** for local use.
+Running scheduled ingest on your machine keeps the MCP cache warm.
 
 Email, LLM synthesis, band alerts, and similar delivery workflows are **not**
 part of this repository.
@@ -50,7 +49,7 @@ deploy/systemd/                    # ingest timer + public MCP HTTP unit
    keys for ingest). See [Shared environment](#shared-environment) below.
 3. Install ingest units from `deploy/systemd/`.
 4. Or run `deploy/remote-install.sh` on the host after rsync (creates venv,
-   installs package, enables ingest timer, restarts public MCP).
+   installs package, enables ingest timer, restarts HTTP MCP if configured).
 
 ### Shared environment
 
@@ -69,9 +68,8 @@ configure — edit the `.service` files or override with drop-ins for your layou
 |-------|---------|---------|
 | Hourly | ingest | Refresh SQLite cache for MCP context tools |
 
-Run MCP separately (stdio bridge via [cursor-mcp.md](cursor-mcp.md), self-host
-stdio, or HTTP + x402 for agents). See
-[docs/mcp-http.md](mcp-http.md).
+Run MCP separately (stdio via [cursor-mcp.md](cursor-mcp.md), loopback HTTP via
+`./scripts/local-up.sh`, or optional HTTP + x402 — [mcp-http.md](mcp-http.md)).
 
 ## CI release
 

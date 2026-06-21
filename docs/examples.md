@@ -1,6 +1,6 @@
 # MCP tool output examples
 
-Redacted samples from hosted tools (`freshness=cached`). Values are
+Redacted samples from self-hosted MCP tools (`freshness=cached`). Values are
 illustrative — your `as_of`, prices, and NAV will differ. Not financial advice.
 
 **Privacy:** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.

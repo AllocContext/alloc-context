@@ -1,14 +1,15 @@
-# MCP discovery (Bazaar + agent search)
+# MCP discovery (self-hosted HTTP + x402)
 
-Paid AllocContext endpoints expose Bazaar metadata so CDP and other
-facilitators can index the service after the first successful settlement.
+Optional metadata for **your** AllocContext HTTP deployment when you enable
+x402 ([mcp-http.md](mcp-http.md)). AllocContext does **not** operate a public
+hosted endpoint — set `X402_PUBLIC_URL` to **your** HTTPS origin.
 
-For GitHub topics, PyPI, and the official MCP Registry, see
+For PyPI and the official MCP Registry (stdio self-host listing), see
 [distribution.md](distribution.md).
 
 ## Public URL
 
-Set the HTTPS origin agents will call (required for catalog `resource` URLs):
+Required for catalog `resource` URLs and static discovery files:
 
 ```bash
 export X402_PUBLIC_URL=https://mcp.yourdomain.com
@@ -26,16 +27,9 @@ may show localhost.
 | `GET /health` | Liveness |
 | `GET /llms.txt` | Agent-readable service summary |
 | `GET /.well-known/x402.json` | Machine-readable tool manifest |
-| `GET /.well-known/mcp/server-card.json` | Smithery static server card (tools without paying) |
+| `GET /.well-known/mcp/server-card.json` | Static server card (tool list without paying) |
 
 Paid MCP remains `POST /mcp` behind x402 when `--x402` is enabled.
-
-## Smithery directory
-
-Smithery scans `POST /mcp` by default; x402 servers return **402** on unpaid
-probes. Publish using the static server card at
-`/.well-known/mcp/server-card.json` (same tool list as Bazaar). Retry at
-[smithery.ai/new](https://smithery.ai/new) after deploy.
 
 ## Bazaar metadata
 
@@ -49,92 +43,36 @@ When x402 is enabled, `POST /mcp` declares:
 Indexing happens after the **first successful settlement** through your
 facilitator. Verify alone does not list the service.
 
-### Production checklist
+### Self-host checklist
 
 1. Deploy HTTP MCP with `[hosted]` and x402 env vars ([mcp-http.md](mcp-http.md)).
 2. Set `X402_PUBLIC_URL` to your HTTPS origin.
 3. `curl -i -X POST "$X402_PUBLIC_URL/mcp"` → expect **402**.
 4. Complete one paid call with an x402 client (any enabled Base stable).
-5. Search CDP Bazaar or use the discovery MCP (below).
+5. Search [CDP Bazaar](https://docs.cdp.coinbase.com/x402/bazaar) or use the
+   CDP discovery MCP after settlement.
 
 Run `scripts/x402-production-check.py` on the host after deploy.
 
 **After discovery copy changes:** refresh the CDP index with one paid call per
-tool (~$0.16 for cached math/context tools):
+tool:
 
 ```bash
-export EVM_PRIVATE_KEY=0x...   # buyer wallet
+export EVM_PRIVATE_KEY=0x...   # buyer wallet (must differ from X402_PAY_TO)
+export MCP_URL=https://mcp.yourdomain.com/mcp
 .venv/bin/python scripts/x402-reindex-burst.py
 ```
 
-## Weekly paid smoke (Bazaar activity)
-
-CDP Bazaar drops resources with **no paid calls in 30 days**. Keep the hosted
-listing warm with a cheap weekly settlement (~$0.02 for cached
-`get_market_context` on Base mainnet).
-
-### Buyer wallet
-
-Use a **dedicated tester wallet** — not the seller `X402_PAY_TO` address.
-CDP rejects payments when payer and payTo match (`self_send_not_allowed`).
-
-1. Create or reuse an EVM wallet for CI only.
-2. Fund it with a small balance of **Base mainnet USDC** (Circle on Base).
-   A few dollars lasts months at one call per week.
-3. Add the wallet private key as GitHub repository secret **`EVM_PRIVATE_KEY`**
-   on `AllocContext/alloc-context` (Settings → Secrets and variables → Actions).
-
-Testnet USDC does **not** count toward Bazaar visibility — production uses
-`eip155:8453` and the CDP facilitator.
-
-### Manual run
+### Manual smoke test
 
 ```bash
 pip install -e ".[hosted]"
-export EVM_PRIVATE_KEY=0x...   # buyer wallet; must differ from X402_PAY_TO
+export EVM_PRIVATE_KEY=0x...   # buyer wallet
+export MCP_URL=https://mcp.yourdomain.com/mcp
 .venv/bin/python scripts/x402-paid-smoke-test.py
 ```
 
-Or from repo root with a venv: `python scripts/x402-reindex-burst.py` (uses
-`.venv/bin/python` when present).
-
-Optional: `MCP_URL` (default `https://mcp.alloc-context.com/mcp`),
-`MCP_SMOKE_TOOL` (default `get_market_context`).
-
-Logs redact `0x` wallet and contract addresses by default. Set
-`SMOKE_LOG_ADDRESSES=1` for full addresses when debugging locally.
-
-### Scheduled CI
-
-Workflow [`.github/workflows/paid-smoke.yml`](../.github/workflows/paid-smoke.yml)
-runs **Wednesdays 06:45 UTC** and supports `workflow_dispatch`. After adding
-`EVM_PRIVATE_KEY`, trigger once manually to confirm settlement before relying
-on the schedule.
-
-## Discovery MCP in Cursor
-
-Add the CDP discovery MCP alongside the AllocContext bridge — see
-[cursor-mcp.md](cursor-mcp.md) for `mcp.json` (default `--user-config`).
-
-```json
-{
-  "mcpServers": {
-    "x402-discovery": {
-      "url": "https://api.cdp.coinbase.com/platform/v2/x402/discovery/mcp"
-    }
-  }
-}
-```
-
-1. Search Bazaar for portfolio holdings or crypto market context.
-2. Confirm AllocContext appears after your first paid settlement.
-3. Call paid tools via an x402 HTTP client against `X402_PUBLIC_URL/mcp`.
-
-For local bridge or self-host stdio, see [cursor-mcp.md](cursor-mcp.md).
-
-Paid HTTP integration (x402 client, Bazaar search flow):
-[agent-integration.md](agent-integration.md). Example tool JSON:
-[examples.md](examples.md).
+Optional: `MCP_SMOKE_TOOL` (default `get_market_context`).
 
 ## Listing title
 
@@ -142,7 +80,6 @@ Paid HTTP integration (x402 client, Bazaar search flow):
 
 Privacy and license copy also appear in `GET /llms.txt` (`## Privacy`,
 `## License`) and in the Bazaar listing description. Production checks validate
-those markers via `x402_production_check.py`.
+those markers via `scripts/x402-production-check.py`.
 
-Tags: `btc`, `eth`, `portfolio`, `holdings`, `mcp` (plus additional tags in
-`/.well-known/x402.json`)
+Example tool JSON: [examples.md](examples.md).
