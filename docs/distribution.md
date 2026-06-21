@@ -6,7 +6,21 @@ agent directories.
 **Primary install:** PyPI `alloc-context` → stdio MCP (self-host). See
 [cursor-mcp.md](cursor-mcp.md) and [self-hosting.md](self-hosting.md).
 
-The former hosted endpoint `mcp.alloc-context.com` is **retired**.
+The former hosted endpoint `mcp.alloc-context.com` is **retired** — do not
+list or advertise it on directories.
+
+## What we advertise
+
+| Channel | What it points to | Hosted service? |
+|---------|-------------------|-----------------|
+| **PyPI** | `pip install alloc-context[mcp]` | No — user runs locally |
+| **MCP Registry** | [`server.json`](../server.json) PyPI stdio package | No — no `remotes` URL |
+| **GitHub** | Repo + docs | No |
+| **Smithery / PulseMCP** | Update to self-host / remove hosted remote | No (delist hosted URL if present) |
+
+Registry listing is **discoverability for self-host**, not operation of a public
+endpoint. Users install the package and configure their own keys and
+`config/config.yaml`.
 
 ## Short blurb (copy-paste)
 

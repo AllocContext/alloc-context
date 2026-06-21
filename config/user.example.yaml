@@ -1,12 +1,12 @@
-# Copy to ~/.config/alloc-context/user.yaml (gitignored).
-# Privacy: pass-through for live reads; local ingest stays on your machine.
-
-# Recommended — full self-host (see docs/self-hosting.md)
-self_host: true
-config: /absolute/path/to/alloc-context/config/config.yaml
-
-# Legacy bridge (hosted upstream retired — do not use unless you operate upstream)
-# upstream: https://mcp.alloc-context.com/mcp
+# Bridge user config (legacy — optional)
+#
+# Self-host Cursor MCP does NOT need this file. Use mcp --config config/config.yaml
+# and .env for ingest keys instead (see docs/cursor-mcp.md).
+#
+# Copy to ~/.config/alloc-context/user.yaml only for bridge mode.
+# Bridge mode — local portfolio + upstream MCP (hosted upstream retired)
+# self_host: true
+# config: /absolute/path/to/alloc-context/config/config.yaml
 
 exchanges:
   primary: coinbase   # or kraken

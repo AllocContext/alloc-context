@@ -2,33 +2,33 @@
 
 Releases follow a **release-PR** flow. A version bump is reviewed as a normal
 pull request; merging it to `main` automatically tags the version and runs the
-release (PyPI, MCP Registry). Production VPS deploy has been **removed**.
+release (PyPI + self-host MCP Registry listing). Production VPS deploy and
+hosted MCP advertising have been **removed**.
 
 ## How it works
-
-Two workflows:
 
 | Workflow | Trigger | Does |
 |----------|---------|------|
 | **release-pr** | `workflow_dispatch` | Bumps version files, opens `release/vX.Y.Z` PR to `main`. No publish. |
-| **release** | push to `main` | If the current version has **no tag yet**: test → PyPI → MCP Registry → tag + GitHub release. |
+| **release** | push to `main` | If the current version has **no tag yet**: test → PyPI → MCP Registry (stdio package) → tag + GitHub release. |
+| **publish-mcp-registry** | `workflow_dispatch` | Re-publish `server.json` only (no PyPI upload). |
+
+The **release** registry step lists the **PyPI stdio package** for self-host
+install — not a hosted URL. See [distribution.md](distribution.md).
 
 The release workflow keys off "version on `main` has no matching tag". Normal
 pushes (no version change) see the tag already exists and exit immediately.
-Because the tag is created **after** publish and deploy succeed — in the same
-run that the merge triggered — there is no reliance on tag-push events (which a
+Because the tag is created **after** publish steps succeed — in the same run
+that the merge triggered — there is no reliance on tag-push events (which a
 `GITHUB_TOKEN`-pushed tag cannot trigger).
 
 Pipeline order: **check** (untagged version?) → **test** → **publish-pypi** →
 **publish-mcp-registry** → **finalize** (tag + release).
 
-**publish-mcp-registry** waits for PyPI to index the new release (60s initial
-delay, then polls until wheel + sdist artifacts appear for the version twice
-in a row) before calling `mcp-publisher`. Re-run the **release** job if registry
-publish still races PyPI propagation.
-
-Registry publish polls PyPI until the new version is indexed (avoids a race
-right after upload).
+**publish-mcp-registry** waits for PyPI to index the new release before calling
+`mcp-publisher`. Re-run the **release** job if registry publish races PyPI
+propagation. Use the standalone **publish-mcp-registry** workflow for
+registry-only republish without a version bump.
 
 ## Prerequisites
 
@@ -59,7 +59,7 @@ Version files updated by the bump script:
 
 2. Review the opened **`release/vX.Y.Z`** PR; wait for **ci** to pass.
 3. **Merge to `main`.** The **release** workflow runs automatically: test →
-   PyPI → MCP Registry → tag `vX.Y.Z` + GitHub release.
+   PyPI → MCP Registry (self-host stdio listing) → tag `vX.Y.Z` + GitHub release.
 
 Concurrency: one **release** run at a time per repository.
 
@@ -83,8 +83,7 @@ Current repo check (needs `admin:repo` PAT): `gh api repos/AllocContext/alloc-co
 
 If a release fails before tagging (e.g. PyPI hiccup), `main` stays untagged.
 **Re-run the failed `release` run** — `check` re-evaluates, PyPI publish uses
-`skip-existing`, the registry publish is idempotent, and the VPS deploy is
-repeatable, so a re-run completes safely.
+`skip-existing`, and registry publish is idempotent, so a re-run completes safely.
 
 ## Verify PyPI
 

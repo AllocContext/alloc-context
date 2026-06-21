@@ -162,3 +162,8 @@ def test_release_publish_mcp_registry_waits_with_version_env():
     assert job["env"]["PYPI_VERSION"] == "${{ needs.check.outputs.version }}"
     runs = [step.get("run", "") for step in _job_steps(workflow, "publish-mcp-registry")]
     assert any("wait-for-pypi.sh" in run for run in runs)
+
+
+def test_paid_smoke_and_vps_x402_workflows_removed():
+    assert not (WORKFLOWS_DIR / "paid-smoke.yml").exists()
+    assert not (WORKFLOWS_DIR / "x402-check.yml").exists()
