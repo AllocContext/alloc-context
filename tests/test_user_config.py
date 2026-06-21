@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from alloccontext.user_config import (
-    DEFAULT_UPSTREAM_URL,
     UserConfig,
     load_user_config,
     resolve_user_config_path,
@@ -16,7 +15,7 @@ def test_load_user_config_empty_when_missing(tmp_path: Path) -> None:
     path = tmp_path / "missing.yaml"
     user = load_user_config(path)
     assert user.path == path
-    assert user.upstream == DEFAULT_UPSTREAM_URL
+    assert user.upstream == ""
     assert user.self_host is False
     assert user.primary_exchange_credentials() is None
 

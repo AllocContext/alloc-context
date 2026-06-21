@@ -1,29 +1,45 @@
 # Cursor MCP setup
 
-Use AllocContext in Cursor over stdio. The **default path** is the local
-**bridge** (portfolio local + hosted market context). Self-host ingest remains
-available for power users.
+Use AllocContext in Cursor over stdio. The **default path** is **self-host**
+(local SQLite + ingest, or live portfolio reads only).
 
-> **Privacy:** nothing stored · one-time read-only · pass-through only. See
-> [USE.md](USE.md) and [user-config.md](user-config.md).
+> **Privacy:** pass-through for live reads; local ingest data stays on your
+> machine. See [USE.md](USE.md) and [user-config.md](user-config.md).
 
-For the **hosted paid endpoint** (x402 on `mcp.alloc-context.com`) without a
-local bridge, see [agent-integration.md](agent-integration.md).
+The former hosted bridge (`mcp.alloc-context.com`) is **retired**. Legacy bridge
+docs: [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json),
+[agent-integration.md](agent-integration.md).
 
 ## Install
 
 ```bash
 pip install -e ".[mcp]"
-# Bridge → hosted upstream (Path A):
-pip install -e ".[hosted]"
+# From PyPI: pip install "alloc-context[mcp]"
 ```
 
-## Default: bridge + user config (Path A)
+## Default: self-host (recommended)
 
-Copy [config/user.example.yaml](../config/user.example.yaml) to
-`~/.config/alloc-context/user.yaml` and add CEX keys for bridge portfolio
-(optional) and x402 payer config. For wallet holdings, use hosted
-`get_portfolio_state` (`exchange=wallet`). See [user-config.md](user-config.md).
+**1.** Copy [config/config.example.yaml](../config/config.example.yaml) →
+`config/config.yaml` and [config/user.example.yaml](../config/user.example.yaml) →
+`~/.config/alloc-context/user.yaml`.
+
+**2.** Enable self-host in `user.yaml`:
+
+```yaml
+self_host: true
+config: /absolute/path/to/alloc-context/config/config.yaml
+```
+
+**3.** Add keys to `.env` (from `.env.example`) when you want exchange portfolio
+or richer macro feeds.
+
+**4.** Populate SQLite (optional but recommended for macro/regime):
+
+```bash
+python -m alloccontext --config config/config.yaml ingest
+```
+
+**5.** Cursor `mcp.json`:
 
 ```json
 {
@@ -40,46 +56,24 @@ Copy [config/user.example.yaml](../config/user.example.yaml) to
 }
 ```
 
-Bridge portfolio requires CEX credentials in user config (or hosted wallet
-args). Market context calls
-the hosted upstream (x402 payer required). When both are configured, omitting
-`assets` on `get_market_context` / `get_context_bundle` auto-scopes market
-data to your holdings (symbols only upstream). See [user-config.md](user-config.md).
+Use an absolute path for `--user-config`. See [cursor-mcp.example.json](cursor-mcp.example.json).
 
-Examples: [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json).
-The repo [`.cursor/mcp.json`](../.cursor/mcp.json) uses the same bridge pattern.
+Alternative: set `ALLOC_CONTEXT_CONFIG` and omit bridge user config — see
+[self-hosting.md](self-hosting.md).
 
-## Self-host ingest (Path C)
+## Legacy: bridge + hosted upstream (retired)
 
-Requires a local SQLite DB populated by ingest (`python -m alloccontext ingest`).
-Use [cursor-mcp.example.json](cursor-mcp.example.json) or merge:
-
-```json
-{
-  "mcpServers": {
-    "alloc-context": {
-      "command": "alloc-context",
-      "args": ["mcp"],
-      "env": {
-        "ALLOC_CONTEXT_CONFIG": "/path/to/config/config.yaml"
-      }
-    }
-  }
-}
-```
-
-Or set `self_host: true` and `config:` in `user.yaml` instead of `--user-config`
-bridge mode. See [self-hosting.md](self-hosting.md).
-
-Alternative entry point: `alloc-context-mcp` (same stdio server).
+The bridge path called a paid hosted upstream for market context. That endpoint
+is no longer operated. Do not configure `upstream:` in `user.yaml` unless you
+point at infrastructure you control.
 
 ## Tools
 
 | Tool | Keys required |
 |------|----------------|
-| `get_context_bundle` | Bridge: x402 payer; portfolio: CEX keys in user.yaml. Self-host: local DB. |
-| `get_market_context` | Bridge: x402 payer. Self-host: local DB. |
-| `get_portfolio_state` | Bridge: CEX keys in user.yaml; hosted: CEX keys or `wallet_address` in tool args. |
+| `get_context_bundle` | Self-host: local DB and/or CEX keys in config |
+| `get_market_context` | Self-host: local DB |
+| `get_portfolio_state` | CEX keys in config or `wallet_address` in tool args |
 | `get_rebalance_plan` | None (pure math) |
 | `check_allocation_band` | None (pure math) |
 

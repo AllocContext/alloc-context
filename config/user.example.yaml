@@ -1,12 +1,12 @@
 # Copy to ~/.config/alloc-context/user.yaml (gitignored).
-# Privacy: nothing stored; one-time read-only; pass-through only.
+# Privacy: pass-through for live reads; local ingest stays on your machine.
 
-# Optional; default is hosted upstream
+# Recommended — full self-host (see docs/self-hosting.md)
+self_host: true
+config: /absolute/path/to/alloc-context/config/config.yaml
+
+# Legacy bridge (hosted upstream retired — do not use unless you operate upstream)
 # upstream: https://mcp.alloc-context.com/mcp
-
-# Opt-in full self-host (see docs/self-hosting.md)
-# self_host: true
-# config: /path/to/config/config.yaml
 
 exchanges:
   primary: coinbase   # or kraken

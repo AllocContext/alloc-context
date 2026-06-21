@@ -186,7 +186,7 @@ only — no speculative expansion in the reference implementation.
 
 ## Embed or license
 
-AllocContext is source-available ([Elastic License 2.0](../LICENSE)). Self-host
+AllocContext is [MIT licensed](../LICENSE). Self-host via PyPI; we do not operate
 and embed in your stack; **inbound** embed/license inquiries via
 [GitHub Issues](https://github.com/AllocContext/alloc-context/issues) only — no
 outbound sales motion.

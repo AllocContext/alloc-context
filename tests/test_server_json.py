@@ -30,6 +30,11 @@ def test_server_json_version_matches_pyproject():
     assert data["packages"][0]["version"] == py_ver
 
 
+def test_server_json_has_no_remote_endpoint():
+    data = json.loads(SERVER_JSON.read_text(encoding="utf-8"))
+    assert "remotes" not in data or not data.get("remotes")
+
+
 def test_readme_includes_mcp_registry_name_for_pypi():
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     assert "mcp-name: io.github.AllocContext/alloc-context" in readme

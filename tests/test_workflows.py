@@ -90,14 +90,16 @@ def test_release_workflow_gates_on_untagged_version():
     assert any("--current" in run for run in check_runs)
     assert any("ls-remote --tags" in run for run in check_runs)
     # Every downstream job is conditioned on the release decision.
-    for job_name in ("test", "publish-pypi", "publish-mcp-registry", "deploy", "finalize"):
+    for job_name in ("test", "publish-pypi", "publish-mcp-registry", "finalize"):
         cond = workflow["jobs"][job_name]["if"]
         assert "needs.check.outputs.release" in cond
 
 
-def test_release_workflow_publishes_then_deploys_then_finalizes():
+def test_release_workflow_publishes_then_finalizes():
     workflow = _load_workflow("release.yml")
     jobs = workflow["jobs"]
+
+    assert "deploy" not in jobs
 
     publish_steps = _job_steps(workflow, "publish-pypi")
     publish_runs = [step.get("run", "") for step in publish_steps]
@@ -115,19 +117,11 @@ def test_release_workflow_publishes_then_deploys_then_finalizes():
     ]
     assert any("publish-mcp-registry.sh" in run for run in registry_runs)
 
-    deploy_steps = _job_steps(workflow, "deploy")
-    names = [step.get("name", "") for step in deploy_steps]
-    assert "Rsync to VPS" in names
-    assert "Install on VPS" in names
-    install = next(step for step in deploy_steps if step.get("name") == "Install on VPS")
-    assert "deploy/remote-install.sh" in install["run"]
-
     finalize = jobs["finalize"]
     assert set(finalize["needs"]) == {
         "check",
         "publish-pypi",
         "publish-mcp-registry",
-        "deploy",
     }
     finalize_runs = [step.get("run", "") for step in _job_steps(workflow, "finalize")]
     assert any("git tag" in run for run in finalize_runs)

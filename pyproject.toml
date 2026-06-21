@@ -3,7 +3,7 @@ name = "alloc-context"
 version = "0.2.16"
 description = "Portfolio-aware crypto context — CEX or wallet holdings, holdings-scoped market, optional allocation analysis"
 readme = "README.md"
-license = { text = "Elastic-2.0" }
+license = { text = "MIT" }
 requires-python = ">=3.11"
 keywords = [
     "mcp",
@@ -25,6 +25,7 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -39,12 +40,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://mcp.alloc-context.com/llms.txt"
-Documentation = "https://github.com/AllocContext/alloc-context/blob/main/docs/agent-integration.md"
+Homepage = "https://github.com/AllocContext/alloc-context"
+Documentation = "https://github.com/AllocContext/alloc-context/blob/main/docs/cursor-mcp.md"
 Repository = "https://github.com/AllocContext/alloc-context"
 Issues = "https://github.com/AllocContext/alloc-context/issues"
 Changelog = "https://github.com/AllocContext/alloc-context/releases"
-"MCP Server" = "https://mcp.alloc-context.com/mcp"
 
 [project.optional-dependencies]
 mcp = [
