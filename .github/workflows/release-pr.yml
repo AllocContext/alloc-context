@@ -102,7 +102,7 @@ jobs:
           if ! PR_OUTPUT=$(gh pr create --repo "${GITHUB_REPOSITORY}" \
             --base main --head "${BRANCH}" \
             --title "Release v${VERSION}" \
-            --body "Automated version bump to ${VERSION}. Merging this PR to \`main\` tags \`v${VERSION}\` and runs the release (PyPI, MCP Registry, VPS deploy)." \
+            --body "Automated version bump to ${VERSION}. Merging this PR to \`main\` tags \`v${VERSION}\` and runs the release (PyPI + MCP Registry)." \
             2>&1); then
             if echo "${PR_OUTPUT}" | grep -q createPullRequest; then
               echo "::error title=Actions cannot open release PRs::Enable **Allow GitHub Actions to create and approve pull requests** in repo Settings → Actions → General (https://github.com/${GITHUB_REPOSITORY}/settings/actions). For org repos, enable it on the org first: https://github.com/organizations/AllocContext/settings/actions. Alternative: add a \`RELEASE_PR_TOKEN\` repo secret (PAT with \`repo\` scope). Branch ${BRANCH} was pushed — open the PR manually if needed."
