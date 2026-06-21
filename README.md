@@ -1,7 +1,5 @@
 # AllocContext
 
-[![smithery badge](https://smithery.ai/badge/alloccontext/alloc-context)](https://smithery.ai/servers/alloccontext/alloc-context)
-
 mcp-name: io.github.AllocContext/alloc-context
 
 **Portfolio-aware crypto context for whatever you hold** — discover your

@@ -16,7 +16,7 @@ list or advertise it on directories.
 | **PyPI** | `pip install alloc-context[mcp]` | No — user runs locally |
 | **MCP Registry** | [`server.json`](../server.json) PyPI stdio package | No — no `remotes` URL |
 | **GitHub** | Repo + docs | No |
-| **Smithery / PulseMCP** | Update to self-host / remove hosted remote | No (delist hosted URL if present) |
+| **Smithery / PulseMCP** | Smithery **closed**; PulseMCP optional self-host copy refresh |
 
 Registry listing is **discoverability for self-host**, not operation of a public
 endpoint. Users install the package and configure their own keys and
@@ -98,7 +98,8 @@ After the first PyPI release, README and project URLs point at the GitHub repo.
 |-----------|---------------|-------|
 | **MCP Registry** | `server.json` + `mcp-publisher` | Primary; package-only (stdio) |
 | **PulseMCP** | Ingests registry; email if stale listing persists | Request removal/update after registry republish |
-| **Smithery** | Dashboard update | Demote or remove hosted remote URL |
+| **Smithery** | Closed (2026-06) | Listing removed |
+| **PulseMCP** | Optional update | Request self-host copy if stale slug persists |
 | **awesome-mcp** | PR to a maintained awesome list | Link `docs/cursor-mcp.md` |
 
 ## Related docs
