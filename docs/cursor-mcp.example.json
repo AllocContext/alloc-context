@@ -2,10 +2,13 @@
   "mcpServers": {
     "alloc-context": {
       "command": "alloc-context",
-      "args": ["mcp"],
+      "args": [
+        "mcp",
+        "--config",
+        "/absolute/path/to/alloc-context/config/config.yaml"
+      ],
       "env": {
-        "ALLOC_CONTEXT_CONFIG": "/absolute/path/to/config/config.yaml",
-        "ALLOC_CONTEXT_DB": "/absolute/path/to/state/alloccontext.db"
+        "ALLOC_CONTEXT_DB": "/absolute/path/to/alloc-context/state/alloccontext.db"
       }
     }
   }

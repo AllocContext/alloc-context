@@ -1,14 +1,14 @@
 # Cursor MCP setup
 
 Use AllocContext in Cursor over stdio. The **default path** is **self-host**
-(local SQLite + ingest, or live portfolio reads only).
+(local SQLite + ingest).
 
 > **Privacy:** pass-through for live reads; local ingest data stays on your
-> machine. See [USE.md](USE.md) and [user-config.md](user-config.md).
+> machine. See [USE.md](USE.md).
 
 The former hosted bridge (`mcp.alloc-context.com`) is **retired**. Legacy bridge
 docs: [cursor-mcp-bridge.example.json](cursor-mcp-bridge.example.json),
-[agent-integration.md](agent-integration.md).
+[agent-integration.md](agent-integration.md), [user-config.md](user-config.md).
 
 ## Install
 
@@ -20,26 +20,19 @@ pip install -e ".[mcp]"
 ## Default: self-host (recommended)
 
 **1.** Copy [config/config.example.yaml](../config/config.example.yaml) →
-`config/config.yaml` and [config/user.example.yaml](../config/user.example.yaml) →
-`~/.config/alloc-context/user.yaml`.
+`config/config.yaml`.
 
-**2.** Enable self-host in `user.yaml`:
+**2.** Copy [.env.example](../.env.example) → `.env` and add read-only exchange
+keys plus optional feed keys (FRED, etc.).
 
-```yaml
-self_host: true
-config: /absolute/path/to/alloc-context/config/config.yaml
-```
-
-**3.** Add keys to `.env` (from `.env.example`) when you want exchange portfolio
-or richer macro feeds.
-
-**4.** Populate SQLite (optional but recommended for macro/regime):
+**3.** Populate SQLite (recommended before first MCP session):
 
 ```bash
+source .env   # optional if keys are exported elsewhere
 python -m alloccontext --config config/config.yaml ingest
 ```
 
-**5.** Cursor `mcp.json`:
+**4.** Cursor `mcp.json` — point MCP at your config and DB (absolute paths):
 
 ```json
 {
@@ -48,32 +41,36 @@ python -m alloccontext --config config/config.yaml ingest
       "command": "alloc-context",
       "args": [
         "mcp",
-        "--user-config",
-        "/Users/you/.config/alloc-context/user.yaml"
-      ]
+        "--config",
+        "/absolute/path/to/alloc-context/config/config.yaml"
+      ],
+      "env": {
+        "ALLOC_CONTEXT_DB": "/absolute/path/to/alloc-context/state/alloccontext.db"
+      }
     }
   }
 }
 ```
 
-Use an absolute path for `--user-config`. See [cursor-mcp.example.json](cursor-mcp.example.json).
+See [cursor-mcp.example.json](cursor-mcp.example.json). Reload Cursor after edits.
 
-Alternative: set `ALLOC_CONTEXT_CONFIG` and omit bridge user config — see
-[self-hosting.md](self-hosting.md).
+**Optional:** `scripts/local-up.sh` starts loopback HTTP MCP on `:8001` for
+orchestrator or other HTTP clients — see [self-hosting.md](self-hosting.md).
 
-## Legacy: bridge + hosted upstream (retired)
+## Bridge user config (legacy, optional)
 
-The bridge path called a paid hosted upstream for market context. That endpoint
-is no longer operated. Do not configure `upstream:` in `user.yaml` unless you
-point at infrastructure you control.
+`~/.config/alloc-context/user.yaml` is only needed for the retired **bridge**
+mode (local portfolio + paid upstream). Self-host does **not** require it.
+If that file exists, MCP auto-discovers it — remove or rename it when using
+`--config` directly.
 
 ## Tools
 
 | Tool | Keys required |
 |------|----------------|
-| `get_context_bundle` | Self-host: local DB and/or CEX keys in config |
-| `get_market_context` | Self-host: local DB |
-| `get_portfolio_state` | CEX keys in config or `wallet_address` in tool args |
+| `get_context_bundle` | Cached: local DB; live: `.env` keys + `freshness=live` |
+| `get_market_context` | Cached: local DB |
+| `get_portfolio_state` | CEX keys on tool call, or `wallet_address` |
 | `get_rebalance_plan` | None (pure math) |
 | `check_allocation_band` | None (pure math) |
 

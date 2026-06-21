@@ -2,16 +2,18 @@
 
 Releases follow a **release-PR** flow. A version bump is reviewed as a normal
 pull request; merging it to `main` automatically tags the version and runs the
-release (PyPI, MCP Registry). Production VPS deploy has been **removed**.
+release (PyPI). MCP Registry publish is **manual** via the
+**publish-mcp-registry** workflow. Production VPS deploy has been **removed**.
 
 ## How it works
 
-Two workflows:
+Three workflows:
 
 | Workflow | Trigger | Does |
 |----------|---------|------|
 | **release-pr** | `workflow_dispatch` | Bumps version files, opens `release/vX.Y.Z` PR to `main`. No publish. |
-| **release** | push to `main` | If the current version has **no tag yet**: test → PyPI → MCP Registry → tag + GitHub release. |
+| **release** | push to `main` | If the current version has **no tag yet**: test → PyPI → tag + GitHub release. |
+| **publish-mcp-registry** | `workflow_dispatch` | Publish `server.json` to MCP Registry (run after PyPI indexes the release). |
 
 The release workflow keys off "version on `main` has no matching tag". Normal
 pushes (no version change) see the tag already exists and exit immediately.
@@ -20,15 +22,10 @@ run that the merge triggered — there is no reliance on tag-push events (which 
 `GITHUB_TOKEN`-pushed tag cannot trigger).
 
 Pipeline order: **check** (untagged version?) → **test** → **publish-pypi** →
-**publish-mcp-registry** → **finalize** (tag + release).
+**finalize** (tag + release).
 
-**publish-mcp-registry** waits for PyPI to index the new release (60s initial
-delay, then polls until wheel + sdist artifacts appear for the version twice
-in a row) before calling `mcp-publisher`. Re-run the **release** job if registry
-publish still races PyPI propagation.
-
-Registry publish polls PyPI until the new version is indexed (avoids a race
-right after upload).
+After merge, optionally run **publish-mcp-registry** from the Actions tab when
+you want the MCP Registry listing updated.
 
 ## Prerequisites
 
@@ -59,7 +56,9 @@ Version files updated by the bump script:
 
 2. Review the opened **`release/vX.Y.Z`** PR; wait for **ci** to pass.
 3. **Merge to `main`.** The **release** workflow runs automatically: test →
-   PyPI → MCP Registry → tag `vX.Y.Z` + GitHub release.
+   PyPI → tag `vX.Y.Z` + GitHub release.
+4. *(Optional)* Actions → **publish-mcp-registry** → **Run workflow** after PyPI
+   indexes the new version.
 
 Concurrency: one **release** run at a time per repository.
 

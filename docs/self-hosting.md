@@ -9,8 +9,24 @@ part of this repository.
 
 ## Local CLI
 
-See the [README](../README.md) quick start. You need your own API keys in
-`.env` (never commit) and a copy of `config/config.yaml`.
+See the [README](../README.md) quick start. Layout under the repo checkout:
+
+```text
+alloc-context/
+  .env                 # secrets (copy from .env.example)
+  config/config.yaml   # copy from config.example.yaml
+  state/alloccontext.db
+```
+
+Run ingest before MCP sessions when you want fresh facts:
+
+```bash
+source .env
+python -m alloccontext --config config/config.yaml ingest
+```
+
+**Loopback HTTP MCP (orchestrator):** `./scripts/local-up.sh` — ingest + MCP on
+`:8001` (no x402). `./scripts/local-down.sh` to stop.
 
 **Docker Compose (local evaluation):** `./docker/up.sh` or
 [docker-self-host.md](docker-self-host.md) — HTTP MCP on loopback `:8000`,
@@ -60,7 +76,8 @@ stdio, or HTTP + x402 for agents). See
 ## CI release
 
 Production **VPS deploy has been removed** from the release workflow. Releases
-publish to PyPI and the MCP Registry only. Self-host via `pip install alloc-context`.
+publish to **PyPI** only. MCP Registry publish is a separate manual workflow
+(**publish-mcp-registry**). Self-host via `pip install alloc-context`.
 
 Historical VPS layout and systemd units remain in `deploy/` for operators who
 run their own Linux host.

@@ -4,9 +4,12 @@
       "command": "${workspaceFolder}/.venv/bin/alloc-context",
       "args": [
         "mcp",
-        "--user-config",
-        "${env:HOME}/.config/alloc-context/user.yaml"
+        "--config",
+        "${workspaceFolder}/config/config.yaml"
       ],
+      "env": {
+        "ALLOC_CONTEXT_DB": "${workspaceFolder}/state/alloccontext.db"
+      },
       "cwd": "${workspaceFolder}"
     }
   }

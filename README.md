@@ -24,20 +24,12 @@ pip install "alloc-context[mcp]"
 # From source: pip install -e ".[mcp]"
 ```
 
-**2. User config**
-
-Copy [config/user.example.yaml](config/user.example.yaml) to
-`~/.config/alloc-context/user.yaml` and enable self-host:
-
-```yaml
-self_host: true
-config: /absolute/path/to/alloc-context/config/config.yaml
-```
+**2. Config and secrets**
 
 Copy [config/config.example.yaml](config/config.example.yaml) to
-`config/config.yaml`, add API keys via `.env` when you want exchange or macro
-feeds, then run ingest. See [user-config.md](docs/user-config.md) and
-[self-hosting.md](docs/self-hosting.md).
+`config/config.yaml`. Copy [.env.example](.env.example) to `.env` and add
+read-only exchange keys when you want portfolio ingest or macro feeds.
+See [self-hosting.md](docs/self-hosting.md).
 
 **3. MCP config**
 
@@ -50,15 +42,18 @@ Add to your Cursor `mcp.json` (or project `.cursor/mcp.json`):
       "command": "alloc-context",
       "args": [
         "mcp",
-        "--user-config",
-        "/Users/you/.config/alloc-context/user.yaml"
-      ]
+        "--config",
+        "/absolute/path/to/alloc-context/config/config.yaml"
+      ],
+      "env": {
+        "ALLOC_CONTEXT_DB": "/absolute/path/to/alloc-context/state/alloccontext.db"
+      }
     }
   }
 }
 ```
 
-Use an absolute path for `--user-config`.
+Use absolute paths. See [cursor-mcp.example.json](docs/cursor-mcp.example.json).
 
 **4. Refresh facts (optional)**
 
@@ -137,7 +132,7 @@ Legacy bridge/hosted docs: [agent-integration.md](docs/agent-integration.md).
 |----------|---------|
 | [docs/cursor-mcp.md](docs/cursor-mcp.md) | **Start here** — Cursor stdio MCP |
 | [docs/self-hosting.md](docs/self-hosting.md) | Local ingest + MCP |
-| [docs/user-config.md](docs/user-config.md) | `user.yaml` reference |
+| [docs/user-config.md](docs/user-config.md) | Bridge `user.yaml` (legacy, optional) |
 | [docs/deterministic-context-mcp-pattern.md](docs/deterministic-context-mcp-pattern.md) | Ingest → rollup → MCP pattern |
 | [docs/mcp.md](docs/mcp.md) | MCP tools |
 | [docs/examples.md](docs/examples.md) | Sample tool JSON (redacted) |

@@ -1,11 +1,14 @@
-# User config (`user.yaml`)
+# Bridge user config (`user.yaml`) — legacy optional
+
+> **Self-host:** use `mcp --config config/config.yaml` and `.env` instead. See
+> [cursor-mcp.md](cursor-mcp.md). This file documents **bridge mode** only.
 
 Privacy: **nothing stored · one-time read-only · pass-through only.** See
 [USE.md](USE.md).
 
 The bridge reads `~/.config/alloc-context/user.yaml` (or `--user-config` /
 `ALLOC_CONTEXT_USER_CONFIG`). Copy [config/user.example.yaml](../config/user.example.yaml)
-as a starting point.
+when operating bridge mode.
 
 ## Cursor `mcp.json` (default path)
 
