@@ -90,7 +90,7 @@ def test_release_workflow_gates_on_untagged_version():
     assert any("--current" in run for run in check_runs)
     assert any("ls-remote --tags" in run for run in check_runs)
     # Every downstream job is conditioned on the release decision.
-    for job_name in ("test", "publish-pypi", "finalize"):
+    for job_name in ("test", "publish-pypi", "publish-mcp-registry", "finalize"):
         cond = workflow["jobs"][job_name]["if"]
         assert "needs.check.outputs.release" in cond
 
@@ -100,7 +100,6 @@ def test_release_workflow_publishes_then_finalizes():
     jobs = workflow["jobs"]
 
     assert "deploy" not in jobs
-    assert "publish-mcp-registry" not in jobs
 
     publish_steps = _job_steps(workflow, "publish-pypi")
     publish_runs = [step.get("run", "") for step in publish_steps]
@@ -113,10 +112,16 @@ def test_release_workflow_publishes_then_finalizes():
     # Idempotent re-runs must not fail on an already-uploaded version.
     assert pypi_step["with"]["skip-existing"] is True
 
+    registry_runs = [
+        step.get("run", "") for step in _job_steps(workflow, "publish-mcp-registry")
+    ]
+    assert any("publish-mcp-registry.sh" in run for run in registry_runs)
+
     finalize = jobs["finalize"]
     assert set(finalize["needs"]) == {
         "check",
         "publish-pypi",
+        "publish-mcp-registry",
     }
     finalize_runs = [step.get("run", "") for step in _job_steps(workflow, "finalize")]
     assert any("git tag" in run for run in finalize_runs)
@@ -149,6 +154,14 @@ def test_publish_mcp_registry_workflow_waits_before_publish():
     runs = [step.get("run", "") for step in _job_steps(workflow, "publish")]
     assert any("wait-for-pypi.sh" in run for run in runs)
     assert any("publish-mcp-registry.sh" in run for run in runs)
+
+
+def test_release_publish_mcp_registry_waits_with_version_env():
+    workflow = _load_workflow("release.yml")
+    job = workflow["jobs"]["publish-mcp-registry"]
+    assert job["env"]["PYPI_VERSION"] == "${{ needs.check.outputs.version }}"
+    runs = [step.get("run", "") for step in _job_steps(workflow, "publish-mcp-registry")]
+    assert any("wait-for-pypi.sh" in run for run in runs)
 
 
 def test_paid_smoke_and_vps_x402_workflows_removed():

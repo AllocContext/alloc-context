@@ -76,8 +76,8 @@ stdio, or HTTP + x402 for agents). See
 ## CI release
 
 Production **VPS deploy has been removed** from the release workflow. Releases
-publish to **PyPI** only. MCP Registry publish is a separate manual workflow
-(**publish-mcp-registry**). Self-host via `pip install alloc-context`.
+publish to **PyPI** and the **MCP Registry** (PyPI stdio package listing for
+self-host — no hosted URL). Self-host via `pip install alloc-context`.
 
 Historical VPS layout and systemd units remain in `deploy/` for operators who
 run their own Linux host.
