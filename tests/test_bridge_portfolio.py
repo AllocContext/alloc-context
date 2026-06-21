@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from alloccontext.mcp.bridge_portfolio import (
     UPSTREAM_CONTEXT_ARG_KEYS,
+    bridge_upstream_ready,
     build_bridge_expectation_review_payload,
     build_upstream_context_args,
     default_bridge_app_config,
@@ -99,3 +102,23 @@ def test_resolve_bridge_assets_from_holdings(tmp_path: Path) -> None:
     assets, scope = resolve_bridge_assets(user, config, None, portfolio=portfolio)
     assert assets == ["BTC", "HYPE"]
     assert scope == "portfolio"
+
+
+def test_bridge_upstream_ready_requires_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = _user_with_keys(tmp_path / "user.yaml")
+    monkeypatch.setenv("EVM_PRIVATE_KEY", "0x" + "22" * 32)
+    assert bridge_upstream_ready(user) is False
+
+    path = tmp_path / "user-upstream.yaml"
+    path.write_text(
+        """
+upstream: https://mcp.example.com/mcp
+x402:
+  payer_private_key_env: EVM_PRIVATE_KEY
+""",
+        encoding="utf-8",
+    )
+    user_with_url = load_user_config(path)
+    assert bridge_upstream_ready(user_with_url) is True

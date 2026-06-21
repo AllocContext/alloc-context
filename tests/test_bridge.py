@@ -49,7 +49,37 @@ def payer_ready():
 def test_call_upstream_without_payer_returns_setup(bridge_user: UserConfig) -> None:
     result = call_upstream_tool(bridge_user, "get_market_context", {"scope": "daily"})
     assert result["available"] is False
+    assert result["reason"] == "upstream_retired"
+
+
+def test_call_upstream_without_payer_but_url_returns_payment_setup(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "user.yaml"
+    path.write_text(
+        """
+upstream: https://mcp.example.com/mcp
+exchanges:
+  primary: kraken
+  kraken:
+    api_key: test-key
+    api_secret: dGVzdA==
+""",
+        encoding="utf-8",
+    )
+    user = load_user_config(path)
+    result = call_upstream_tool(user, "get_market_context", {"scope": "daily"})
+    assert result["available"] is False
     assert result["reason"] == "upstream_payment_required"
+
+
+def test_call_upstream_empty_url_returns_retired(
+    bridge_user: UserConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("EVM_PRIVATE_KEY", "0x" + "11" * 32)
+    result = call_upstream_tool(bridge_user, "get_market_context", {"scope": "daily"})
+    assert result["available"] is False
+    assert result["reason"] == "upstream_retired"
 
 
 def test_create_bridge_server_registers_tools(bridge_user: UserConfig) -> None:

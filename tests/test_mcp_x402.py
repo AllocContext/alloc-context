@@ -74,6 +74,18 @@ def test_build_http_app_rejects_public_bind_without_x402() -> None:
         build_http_app(host="0.0.0.0", x402=False)
 
 
+def test_allow_unpaid_http_does_not_permit_public_bind_without_self_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("x402")
+    monkeypatch.setenv("ALLOC_CONTEXT_ALLOW_UNPAID_HTTP", "1")
+    monkeypatch.delenv("ALLOC_CONTEXT_SELF_HOST_HTTP", raising=False)
+    from alloccontext.mcp.http import build_http_app
+
+    with pytest.raises(RuntimeError, match="non-loopback"):
+        build_http_app(host="0.0.0.0", x402=False)
+
+
 def test_build_http_app_allows_public_bind_with_self_host_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

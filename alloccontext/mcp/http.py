@@ -157,6 +157,7 @@ def _allow_unpaid_http_despite_payment_env() -> bool:
 
 
 def resolve_x402_enabled(*, cli_x402: bool = False) -> bool:
+    """Enable x402 unless an explicit unpaid loopback/self-host opt-in applies."""
     if _allow_unpaid_http_despite_payment_env():
         return False
     return cli_x402 or _truthy_env("X402_ENABLED")
@@ -184,6 +185,8 @@ def build_http_app(
     x402: bool = False,
 ) -> Starlette:
     enforce_x402_when_payment_env_configured(x402=x402)
+    # Non-loopback bind requires x402 or ALLOC_CONTEXT_SELF_HOST_HTTP (Docker).
+    # ALLOC_CONTEXT_ALLOW_UNPAID_HTTP alone is not sufficient for WAN exposure.
     if (
         not _is_loopback_host(host)
         and not x402

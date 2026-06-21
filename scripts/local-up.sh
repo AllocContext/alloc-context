@@ -10,6 +10,7 @@ PORT="${LOCAL_MCP_PORT:-8001}"
 HOST="${LOCAL_MCP_HOST:-127.0.0.1}"
 PIDFILE="${REPO_ROOT}/state/local-mcp.pid"
 LOGFILE="${REPO_ROOT}/state/local-mcp.log"
+LOCAL_DB="${ALLOC_CONTEXT_DB:-${REPO_ROOT}/state/alloccontext.db}"
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "error: curl is required" >&2
@@ -39,7 +40,7 @@ if [[ -f "${REPO_ROOT}/.env" ]]; then
 fi
 
 export ALLOC_CONTEXT_CONFIG="${CONFIG}"
-export ALLOC_CONTEXT_DB="${REPO_ROOT}/state/alloccontext.db"
+export ALLOC_CONTEXT_DB="${LOCAL_DB}"
 export ALLOC_CONTEXT_ALLOW_UNPAID_HTTP=1
 
 _stop() {
@@ -54,12 +55,39 @@ _stop() {
   rm -f "${PIDFILE}"
 }
 
+_port_listener_pid() {
+  if ! command -v lsof >/dev/null 2>&1; then
+    return 0
+  fi
+  lsof -ti "tcp:${PORT}" -sTCP:LISTEN 2>/dev/null | head -n 1
+}
+
+_assert_port_available() {
+  local listener
+  listener="$(_port_listener_pid)"
+  if [[ -z "${listener}" ]]; then
+    return 0
+  fi
+  if [[ -f "${PIDFILE}" ]] && [[ "$(cat "${PIDFILE}")" == "${listener}" ]]; then
+    return 0
+  fi
+  echo "error: port ${PORT} already in use (pid ${listener})" >&2
+  echo "       stop the other service or set LOCAL_MCP_PORT" >&2
+  exit 1
+}
+
 _stop
+_assert_port_available
 
 if [[ "${SKIP_LOCAL_INGEST:-}" != "1" ]]; then
   echo "Running ingest (${CONFIG})..."
   if ! "${PY}" -m alloccontext --config "${CONFIG}" ingest; then
-    echo "warning: ingest failed; continuing with existing database" >&2
+    if [[ -f "${LOCAL_DB}" ]]; then
+      echo "warning: ingest failed; continuing with existing ${LOCAL_DB}" >&2
+    else
+      echo "error: ingest failed and no database exists at ${LOCAL_DB}" >&2
+      exit 1
+    fi
   fi
 fi
 
@@ -81,6 +109,12 @@ done
 if [[ "${ready}" -ne 1 ]]; then
   echo "error: MCP did not become healthy; see ${LOGFILE}" >&2
   _stop
+  exit 1
+fi
+
+if ! kill -0 "$(cat "${PIDFILE}")" 2>/dev/null; then
+  echo "error: MCP exited during startup; see ${LOGFILE}" >&2
+  rm -f "${PIDFILE}"
   exit 1
 fi
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pay once against the hosted MCP and call an MCP tool (mainnet smoke test)."""
+"""Pay once against a self-hosted HTTP MCP and call a tool (x402 smoke test)."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ ensure_importable()
 from alloccontext.mcp.bazaar import smoke_tool_arguments
 from alloccontext.x402_smoke_redact import redact_evm_addresses, smoke_log
 
-MCP_URL = os.environ.get("MCP_URL", "https://mcp.alloc-context.com/mcp")
+MCP_URL = os.environ.get("MCP_URL", "").strip()
 TOOL = os.environ.get("MCP_SMOKE_TOOL", "get_market_context")
 
 
@@ -99,6 +99,12 @@ def _tools_call_payload(*, tool: str, arguments: dict) -> dict:
 
 
 def main() -> None:
+    if not MCP_URL:
+        _fail(
+            "Set MCP_URL to your self-hosted HTTP MCP endpoint "
+            "(e.g. https://mcp.yourdomain.com/mcp). Public hosted MCP is retired."
+        )
+
     private_key = os.environ.get("EVM_PRIVATE_KEY", "").strip()
     if not private_key:
         _fail("Set EVM_PRIVATE_KEY to your wallet private key (0x... or raw hex)")
