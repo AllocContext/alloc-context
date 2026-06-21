@@ -11,7 +11,7 @@ scheduled ingest in compose is a **v2** follow-up.
 
 **Privacy:** [USE.md](USE.md) — nothing stored · one-time read-only · pass-through only.
 
-Default quickstart: [agent-onramp.md](agent-onramp.md) (stdio bridge). Use this
+Default quickstart: [agent-onramp.md](agent-onramp.md) (stdio self-host). Use this
 doc when you want to **evaluate self-host HTTP + SQLite** without a host venv.
 Native venv alternative: [local-dev.md](local-dev.md) (`:8001`, no Docker).
 
@@ -150,6 +150,6 @@ production VPS systemd layout in [self-hosting.md](self-hosting.md).
 
 ## Related
 
-- [agent-onramp.md](agent-onramp.md) — default ~2 min path (stdio / hosted x402)
+- [agent-onramp.md](agent-onramp.md) — default ~2 min path (stdio self-host)
 - [local-dev.md](local-dev.md) — native venv dev stack (no Docker)
 - [mcp-http.md](mcp-http.md) — x402 and production HTTP MCP
