@@ -30,7 +30,9 @@ UPSTREAM_CONTEXT_ARG_KEYS = frozenset({"scope", "freshness", "assets"})
 
 
 def bridge_upstream_ready(user: UserConfig) -> bool:
-    """True when a payer key is configured for hosted upstream calls."""
+    """True when bridge has a non-empty upstream URL and x402 payer configured."""
+    if not user.upstream.strip():
+        return False
     try:
         return resolve_payer_private_key(user) is not None
     except PayerKeyError:

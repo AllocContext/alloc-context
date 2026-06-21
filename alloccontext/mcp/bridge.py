@@ -134,7 +134,7 @@ def create_bridge_server(user: UserConfig):
                 assets=effective_assets,
             ),
         )
-        if payload.get("reason") == "upstream_payment_required":
+        if payload.get("available") is False:
             return payload
         if portfolio is not None:
             payload = merge_assets_omitted(payload, portfolio)

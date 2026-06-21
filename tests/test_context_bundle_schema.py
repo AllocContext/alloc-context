@@ -31,7 +31,7 @@ def test_path_b_hosted_only_returns_payment_setup() -> None:
     user = UserConfig.empty()
     result = call_upstream_tool(user, "get_market_context", {"scope": "daily"})
     assert result["available"] is False
-    assert result["reason"] == "upstream_payment_required"
+    assert result["reason"] == "upstream_retired"
 
 
 def test_path_a_bridge_user_without_payer_gets_upstream_setup(
@@ -40,6 +40,25 @@ def test_path_a_bridge_user_without_payer_gets_upstream_setup(
     path = tmp_path / "user.yaml"
     path.write_text(
         """
+exchanges:
+  primary: kraken
+  kraken:
+    api_key: test
+    api_secret: dGVzdA==
+""",
+        encoding="utf-8",
+    )
+    user = load_user_config(path)
+    result = call_upstream_tool(user, "get_context_bundle", {"scope": "daily"})
+    assert result["reason"] == "upstream_retired"
+    assert result["setup"]["path"] == "bridge"
+
+
+def test_bridge_user_with_url_without_payer_gets_payment_setup(tmp_path: Path) -> None:
+    path = tmp_path / "user.yaml"
+    path.write_text(
+        """
+upstream: https://mcp.example.com/mcp
 exchanges:
   primary: kraken
   kraken:

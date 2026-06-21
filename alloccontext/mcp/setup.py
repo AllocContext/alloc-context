@@ -78,15 +78,34 @@ def portfolio_not_configured(*, path: str = "bridge") -> dict[str, Any]:
     )
 
 
+def bridge_upstream_retired(*, path: str = "bridge") -> dict[str, Any]:
+    return unavailable(
+        reason="upstream_retired",
+        message="Hosted MCP upstream is retired. Use self-host stdio MCP.",
+        setup=setup_block(
+            feature="bridge_upstream",
+            path=path,
+            reason="upstream_retired",
+            message="Hosted MCP upstream is retired. Use self-host stdio MCP.",
+            docs="docs/cursor-mcp.md",
+            steps=[
+                "Remove or rename ~/.config/alloc-context/user.yaml",
+                "Use alloc-context mcp --config config/config.yaml in mcp.json",
+                "See docs/cursor-mcp.md and docs/self-hosting.md",
+            ],
+        ),
+    )
+
+
 def upstream_payment_required(*, path: str = "bridge") -> dict[str, Any]:
     return unavailable(
         reason="upstream_payment_required",
-        message="Configure an x402 payer wallet to call hosted upstream.",
+        message="Configure an x402 payer wallet for a self-hosted HTTP MCP URL.",
         setup=setup_block(
             feature="x402_payment",
             path=path,
             reason="upstream_payment_required",
-            message="Configure an x402 payer wallet to call hosted upstream.",
+            message="Configure an x402 payer wallet for a self-hosted HTTP MCP URL.",
             include_privacy=True,
             steps=[
                 "Fund a Base wallet with USDC or EURC",

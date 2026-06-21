@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 from alloccontext.mcp.payer import PayerKeyError, resolve_payer_private_key
-from alloccontext.mcp.setup import upstream_payment_required
+from alloccontext.mcp.setup import bridge_upstream_retired, upstream_payment_required
 from alloccontext.user_config import UserConfig
 
 
@@ -113,6 +113,8 @@ def call_upstream_tool(
 ) -> dict[str, Any]:
     if not user.uses_upstream():
         raise UpstreamMcpError("upstream calls require bridge mode (not self_host)")
+    if not user.upstream.strip():
+        return bridge_upstream_retired()
     client = UpstreamMcpClient(user)
     try:
         return client.call_tool(name, arguments=arguments)
