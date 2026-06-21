@@ -135,8 +135,8 @@ Self-host: [self-hosting.md](self-hosting.md), [docker-self-host.md](docker-self
 **Integration paths for builders:**
 
 - [agent-onramp.md](agent-onramp.md) — ~2 min to first ContextBundle
-- [langchain-integration.md](langchain-integration.md) — LangChain StructuredTools + x402
-- [agent-integration.md](agent-integration.md) — programmatic x402 client
+- [LangChain MCP adapters](https://github.com/langchain-ai/langchain-mcp-adapters) — stdio MCP client (self-host)
+- [agent-integration.md](agent-integration.md) — legacy hosted HTTP + x402 (retired)
 
 **Scope today:** crypto; portfolio from CEX read-only keys (Coinbase, Kraken)
 or a public EVM wallet address on hosted MCP ([data-sources.md](data-sources.md)).

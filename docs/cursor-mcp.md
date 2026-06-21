@@ -77,3 +77,10 @@ If that file exists, MCP auto-discovers it — remove or rename it when using
 Missing config returns `available: false` with a `setup` block.
 
 All successful responses include `as_of` and `age_seconds`.
+
+## LangChain and other agent frameworks
+
+AllocContext does not ship a LangChain helper. Use
+[langchain-mcp-adapters](https://github.com/langchain-ai/langchain-mcp-adapters)
+to connect an agent to the stdio MCP server configured above (`alloc-context mcp
+--config …`).
