@@ -76,8 +76,9 @@ For custom agents, use the [Coinbase x402 seller quickstart](https://docs.cdp.co
 and [`@x402/mcp`](https://docs.cdp.coinbase.com/x402/bazaar) client patterns:
 wrap an MCP client with automatic payment on 402 responses.
 
-LangChain: [langchain-integration.md](langchain-integration.md) — importable
-``build_hosted_langchain_tools()`` for agent frameworks.
+For LangChain or other agent frameworks, use
+[langchain-mcp-adapters](https://github.com/langchain-ai/langchain-mcp-adapters)
+against stdio MCP (`alloc-context mcp --config …`). See [cursor-mcp.md](cursor-mcp.md).
 
 Minimal call shape:
 
