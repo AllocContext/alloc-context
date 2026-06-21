@@ -43,8 +43,8 @@ def test_listing_description_includes_privacy_and_license() -> None:
     assert "nothing stored" in lowered
     assert "one-time read-only" in lowered
     assert "pass-through only" in lowered
-    assert "elastic license" in lowered
-    assert "mcp.alloc-context.com/mcp" in lowered
+    assert "mit" in lowered
+    assert "github.com/alloccontext" in lowered
     assert "docs/use.md" in lowered
 
 

@@ -20,13 +20,13 @@ from alloccontext.mcp.tool_catalog import (
 )
 
 SERVICE_NAME = "AllocContext"
-OFFICIAL_HOSTED_MCP_URL = "https://mcp.alloc-context.com/mcp"
+GITHUB_REPO_URL = "https://github.com/AllocContext/alloc-context"
 USE_DOCS_PATH = "docs/USE.md"
 
 PRIVACY_COMPACT_COPY = (
-    "Privacy: nothing stored. One-time read-only fetch. Pass-through only — "
-    "your keys, wallet address, theses, and portfolio never persist on our "
-    "servers."
+    "Privacy: nothing stored on a shared service you do not control. One-time "
+    "read-only fetch where applicable. Pass-through only — keys, wallet "
+    "address, theses, and portfolio stay under your deployment."
 )
 
 PRIVACY_PILLAR_MARKERS = (
@@ -36,15 +36,14 @@ PRIVACY_PILLAR_MARKERS = (
 )
 
 LICENSE_DISCOVERY_LINE = (
-    "Source-available (Elastic License 2.0). Self-host friendly. Official hosted "
-    f"MCP only at {OFFICIAL_HOSTED_MCP_URL} — see {USE_DOCS_PATH}."
+    f"MIT license. Self-host via PyPI — {GITHUB_REPO_URL}. See {USE_DOCS_PATH}."
 )
 
 LICENSE_MARKERS = (
-    "elastic license",
+    "mit",
     "self-host",
+    "github.com/alloccontext",
     USE_DOCS_PATH.lower(),
-    OFFICIAL_HOSTED_MCP_URL.lower(),
 )
 
 SERVICE_TITLE = (
@@ -108,8 +107,8 @@ LISTING_DESCRIPTION = (
     "Structured "
     "JSON only — no LLM. "
     f"{PRIVACY_COMPACT_COPY} "
-    "Source-available (Elastic License 2.0); self-host friendly; official hosted "
-    f"MCP at {OFFICIAL_HOSTED_MCP_URL} — see {USE_DOCS_PATH}."
+    "MIT license; self-host via PyPI — "
+    f"{GITHUB_REPO_URL}. See {USE_DOCS_PATH}."
 )
 
 def smoke_tool_arguments(tool_name: str) -> dict[str, Any]:

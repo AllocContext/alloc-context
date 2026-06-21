@@ -15,7 +15,7 @@ AllocContext — portfolio-aware crypto context for AI agents over MCP. Self-hos
 via PyPI (stdio MCP); optional local ingest for macro, regime, and market
 rollups. Holdings from CEX read-only keys or a public EVM wallet;
 holdings-scoped market, sentiment, macro, and regime; optional allocation
-analysis. Source-available (Elastic License 2.0). GitHub: AllocContext/alloc-context
+analysis. MIT license. GitHub: AllocContext/alloc-context
 ```
 
 Architecture pattern: [deterministic-context-mcp-pattern.md](deterministic-context-mcp-pattern.md).
@@ -24,7 +24,7 @@ Architecture pattern: [deterministic-context-mcp-pattern.md](deterministic-conte
 
 | Field | Value |
 |-------|-------|
-| **Description** | Portfolio crypto context MCP for agents — self-host via PyPI; holdings-scoped market. ELv2. |
+| **Description** | Portfolio crypto context MCP for agents — self-host via PyPI; holdings-scoped market. MIT. |
 | **Topics** | `mcp`, `bitcoin`, `ethereum`, `model-context-protocol`, `agents`, `portfolio` |
 | **Website** | `https://github.com/AllocContext/alloc-context` |
 
@@ -32,7 +32,7 @@ Update via GitHub UI (gear next to About) or:
 
 ```bash
 gh repo edit AllocContext/alloc-context \
-  --description "Portfolio crypto context MCP for agents — self-host via PyPI; holdings-scoped market. ELv2." \
+  --description "Portfolio crypto context MCP for agents — self-host via PyPI; holdings-scoped market. MIT." \
   --add-topic mcp --add-topic bitcoin --add-topic ethereum \
   --add-topic model-context-protocol --add-topic agents --add-topic portfolio \
   --homepage "https://github.com/AllocContext/alloc-context"

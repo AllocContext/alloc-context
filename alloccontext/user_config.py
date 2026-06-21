@@ -8,7 +8,7 @@ from typing import Any
 import yaml
 
 DEFAULT_USER_CONFIG_PATH = Path.home() / ".config" / "alloc-context" / "user.yaml"
-DEFAULT_UPSTREAM_URL = "https://mcp.alloc-context.com/mcp"
+DEFAULT_UPSTREAM_URL = ""
 DEFAULT_PAYER_ENV = "EVM_PRIVATE_KEY"
 ENV_USER_CONFIG = "ALLOC_CONTEXT_USER_CONFIG"
 
@@ -137,7 +137,7 @@ def load_user_config(path: Path | None) -> UserConfig:
     if not isinstance(data, dict):
         raise ValueError(f"user config must be a YAML mapping: {path}")
 
-    upstream = str(data.get("upstream") or DEFAULT_UPSTREAM_URL).strip()
+    upstream = str(data.get("upstream") or "").strip()
     self_host = bool(data.get("self_host"))
     server_config = data.get("config")
     server_config_path = str(server_config).strip() if server_config else None

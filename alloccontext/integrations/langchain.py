@@ -1,4 +1,4 @@
-"""LangChain tools for the hosted AllocContext MCP (x402 on Base)."""
+"""LangChain tools for an upstream AllocContext MCP (x402 when remote)."""
 
 from __future__ import annotations
 
@@ -6,10 +6,9 @@ import json
 from dataclasses import replace
 from typing import Any
 
-from alloccontext.mcp.bazaar import OFFICIAL_HOSTED_MCP_URL, mcp_tool_specs
+from alloccontext.mcp.bazaar import mcp_tool_specs
 from alloccontext.mcp.upstream import call_upstream_tool
 from alloccontext.user_config import (
-    DEFAULT_UPSTREAM_URL,
     UserConfig,
     load_user_config,
     resolve_user_config_path,
@@ -23,29 +22,39 @@ DEFAULT_HOSTED_TOOLS = (
 )
 
 
-def hosted_user_config(*, upstream_url: str | None = None) -> UserConfig:
-    """Minimal bridge user config for hosted-only LangChain calls."""
+def hosted_user_config(*, upstream_url: str) -> UserConfig:
+    """Minimal bridge user config for LangChain calls to a configured MCP URL."""
+    if not upstream_url.strip():
+        raise ValueError("upstream_url is required")
     base = UserConfig.empty()
     return replace(
         base,
-        upstream=upstream_url or DEFAULT_UPSTREAM_URL,
+        upstream=upstream_url.strip(),
         self_host=False,
     )
 
 
 def resolve_hosted_user_config(*, upstream_url: str | None = None) -> UserConfig:
-    """Hosted bridge config: ``user.yaml`` when present, else env-only defaults.
+    """Bridge config: ``user.yaml`` when present, else explicit ``upstream_url``.
 
     Loads ``~/.config/alloc-context/user.yaml`` (or ``ALLOC_CONTEXT_USER_CONFIG``)
     so ``x402.payer_private_key_file`` and inline payer keys work like the stdio
-    bridge. Exchange blocks in ``user.yaml`` are ignored for hosted tool calls.
+    bridge. Exchange blocks in ``user.yaml`` are ignored for upstream tool calls.
     """
     path = resolve_user_config_path()
     if path is None or not path.is_file():
+        if not upstream_url:
+            raise ValueError(
+                "upstream_url is required when no user.yaml is configured"
+            )
         return hosted_user_config(upstream_url=upstream_url)
 
     loaded = load_user_config(path)
-    upstream = upstream_url or loaded.upstream
+    upstream = (upstream_url or loaded.upstream).strip()
+    if not upstream:
+        raise ValueError(
+            "Configure upstream in user.yaml or pass upstream_url explicitly"
+        )
     if loaded.self_host:
         return replace(
             hosted_user_config(upstream_url=upstream),
@@ -75,12 +84,14 @@ def build_hosted_langchain_tools(
     user: UserConfig | None = None,
     *,
     tool_names: tuple[str, ...] | None = None,
+    upstream_url: str | None = None,
 ) -> list[Any]:
-    """Return LangChain tools that call the hosted MCP with x402 payment.
+    """Return LangChain tools that call an upstream MCP with x402 when required.
 
     Requires ``langchain-core`` and ``alloc-context[hosted]``. Configure an x402
     payer via ``EVM_PRIVATE_KEY``, ``user.yaml`` (``x402.payer_private_key_file``),
-    or pass a ``UserConfig`` explicitly.
+    or pass a ``UserConfig`` explicitly. Set ``upstream_url`` or ``upstream`` in
+    ``user.yaml`` to your MCP endpoint.
     """
     try:
         from langchain_core.tools import StructuredTool
@@ -89,7 +100,7 @@ def build_hosted_langchain_tools(
             "LangChain integration requires langchain-core: pip install langchain-core"
         ) from exc
 
-    user = user or resolve_hosted_user_config()
+    user = user or resolve_hosted_user_config(upstream_url=upstream_url)
     selected = frozenset(tool_names or DEFAULT_HOSTED_TOOLS)
     specs = {spec["tool_name"]: spec for spec in mcp_tool_specs()}
     missing = selected - specs.keys()
@@ -105,7 +116,7 @@ def build_hosted_langchain_tools(
             payload = call_upstream_tool(user, _tool_name, arguments)
             if payload.get("reason") == "upstream_payment_required":
                 message = payload.get("message") or (
-                    "Configure an x402 payer wallet to call hosted upstream."
+                    "Configure an x402 payer wallet to call upstream MCP."
                 )
                 raise RuntimeError(message)
             return json.dumps(payload, separators=(",", ":"))
@@ -119,7 +130,3 @@ def build_hosted_langchain_tools(
             )
         )
     return tools
-
-
-def official_hosted_mcp_url() -> str:
-    return OFFICIAL_HOSTED_MCP_URL

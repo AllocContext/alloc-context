@@ -128,11 +128,8 @@ Optional HTTP MCP + x402 on **your** host: [mcp-http.md](docs/mcp-http.md).
 
 ## Hosted MCP (retired)
 
-The official hosted endpoint at `mcp.alloc-context.com` is **no longer
-operated**. Use self-host (above) or the PyPI package via MCP Registry.
-
-Legacy bridge/hosted docs remain for reference:
-[agent-integration.md](docs/agent-integration.md).
+AllocContext is **self-host only**. We no longer operate `mcp.alloc-context.com`.
+Legacy bridge/hosted docs: [agent-integration.md](docs/agent-integration.md).
 
 ## Documentation
 
@@ -159,5 +156,4 @@ Unsolicited pull requests are not expected — see [CONTRIBUTING.md](CONTRIBUTIN
 
 ## License
 
-[Elastic License 2.0](LICENSE) — source-available, self-host friendly. See
-[docs/USE.md](docs/USE.md) for plain-language allowed uses.
+[MIT License](LICENSE). Self-host via PyPI. See [docs/USE.md](docs/USE.md).
